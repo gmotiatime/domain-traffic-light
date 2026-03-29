@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/analyze.mjs": {
+      "maxDuration": 60
+    },
+    "api/health.mjs": {
+      "maxDuration": 10
+    },
+    "api/cache-stats.mjs": {
+      "maxDuration": 10
+    }
+  }
+}
