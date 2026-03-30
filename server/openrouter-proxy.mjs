@@ -16,12 +16,18 @@ const envFile = path.join(rootDir, ".env");
 import dotenv from "dotenv";
 import express from "express";
 import { Redis } from "@upstash/redis";
+import { getDatabase } from "./db-manager.mjs";
+import { autoMigrate } from "./db-migrate.mjs";
 
 dotenv.config({ path: envLocalFile });
 dotenv.config({ path: envFile });
 
 const corsOrigin = process.env.CORS_ORIGIN || "*";
 const app = express();
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ─── Rate Limiter (простой in-memory) ────────────────────────────────────────
 const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
@@ -69,7 +75,7 @@ setInterval(() => {
   }
 }, rateLimitWindowMs * 3);
 
-// ─── Кэш ответов AI (Vercel Redis / local JSON fallback) ────────────────────
+// ─── Кэш ответов AI (Vercel Redis / local DB fallback) ──────────────────────
 const cacheEnabled = process.env.CACHE_ENABLED !== "false";
 const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
 const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
@@ -84,7 +90,6 @@ const legacyCachePrefixes = String(
   .map((value) => value.trim())
   .filter(Boolean)
   .filter((value) => value !== cachePrefix);
-const dbPath = path.join(__dirname, "threat-db.json");
 const isVercelRuntime = Boolean(process.env.VERCEL);
 const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
 const redisRestToken =
@@ -92,7 +97,7 @@ const redisRestToken =
 const hasRedisCache = Boolean(cacheEnabled && redisRestUrl && redisRestToken);
 const localDiskCacheEnabled =
   Boolean(cacheEnabled && !hasRedisCache && !isVercelRuntime && process.env.LOCAL_THREAT_DB !== "false");
-const cacheStorage = hasRedisCache ? "vercel-redis" : localDiskCacheEnabled ? "local-json" : "memory";
+const cacheStorage = hasRedisCache ? "vercel-redis" : localDiskCacheEnabled ? "local-db-v2" : "memory";
 const adminToken = process.env.ADMIN_TOKEN || "";
 const responseCache = new Map();
 const redisCache = hasRedisCache
@@ -102,59 +107,34 @@ const redisCache = hasRedisCache
     })
   : null;
 
-if (localDiskCacheEnabled) {
-  try {
-    if (fs.existsSync(dbPath)) {
-      const data = JSON.parse(fs.readFileSync(dbPath, "utf-8"));
-      
-      // Группируем записи по host и оставляем только самую свежую для каждого
-      const hostToRecords = new Map();
-      for (const [key, record] of Object.entries(data)) {
-        const host = record?.host;
-        if (!host) {
-          responseCache.set(key, record);
-          continue;
-        }
-        
-        if (!hostToRecords.has(host)) {
-          hostToRecords.set(host, []);
-        }
-        hostToRecords.get(host).push({ key, record });
-      }
-      
-      // Для каждого хоста оставляем только самую свежую запись
-      for (const [host, records] of hostToRecords.entries()) {
-        const latest = records.reduce((prev, curr) => {
-          const prevTime = Number(prev.record?.updatedAt || prev.record?.createdAt || 0);
-          const currTime = Number(curr.record?.updatedAt || curr.record?.createdAt || 0);
-          return currTime > prevTime ? curr : prev;
-        });
-        responseCache.set(latest.key, latest.record);
-      }
-      
-      console.log(`[threat-db] Loaded ${responseCache.size} cached entries from disk (deduplicated).`);
+// Новая база данных
+const localDb = localDiskCacheEnabled ? getDatabase({
+  ttlMs: 7 * 24 * 60 * 60 * 1000,
+  autoSave: true,
+  saveDebounceMs: 2000
+}) : null;
+
+// Автоматическая миграция при старте (только для локальной разработки)
+if (localDb && !isVercelRuntime) {
+  setTimeout(() => {
+    try {
+      autoMigrate();
+    } catch (error) {
+      console.error(`[Migration] Error: ${error.message}`);
     }
-  } catch (e) {
-    console.log(`[threat-db] Error loading db: ${e.message}`);
-  }
+  }, 1000);
+}
+
+// База данных уже загружена через getDatabase()
+if (localDb) {
+  console.log("[threat-db] Using local DB v2.");
 } else if (hasRedisCache) {
   console.log("[threat-db] Using Vercel Redis cache.");
 }
 
 function saveDbAsync() {
-  if (!localDiskCacheEnabled) return;
-
-  try {
-    const obj = {};
-    for (const [key, value] of responseCache.entries()) {
-      obj[key] = value;
-    }
-    fs.promises.writeFile(dbPath, JSON.stringify(obj, null, 2), "utf-8").catch((e) => {
-      console.log(`[threat-db] Async save failed: ${e.message}`);
-    });
-  } catch (e) {
-    console.log(`[threat-db] Save failed: ${e.message}`);
-  }
+  // Сохранение теперь управляется DatabaseManager автоматически
+  // Эта функция оставлена для совместимости
 }
 const openPhishFeedUrl =
   process.env.OPENPHISH_FEED_URL ||
@@ -201,6 +181,13 @@ function sanitizeCacheInput(input, normalized) {
       (url.protocol === "http:" && url.port === "80")
     ) {
       url.port = "";
+    }
+
+    // Убираем www. для единообразия
+    let hostname = url.hostname.toLowerCase();
+    if (hostname.startsWith('www.')) {
+      hostname = hostname.substring(4);
+      url.hostname = hostname;
     }
 
     return url.toString().toLowerCase();
@@ -252,102 +239,301 @@ function buildCacheRecord(key, data, existingRecord = null) {
     null;
 
   const now = Date.now();
+  
+  // Извлекаем финальный результат для новой структуры
+  const result = data?.aiAdjustedResult || data?.enrichedLocalResult || data?.analysis;
+  
   return {
     key,
     host,
     createdAt: existingRecord?.createdAt || now,
     updatedAt: now,
     data,
+    // Дополнительные поля для новой БД
+    verdict: result?.verdict || "low",
+    score: Number(result?.score) || 0,
+    summary: result?.summary || "",
+    reasons: result?.reasons || [],
+    actions: result?.actions || [],
+    breakdown: result?.breakdown || {},
+    signals: {
+      threat: data?.threatIntel || null,
+      urlAbuse: data?.urlAbuseIntel || null,
+      network: data?.networkSignals || null,
+      ai: {
+        model: data?.model || null,
+        source: data?.source || null,
+        latencyMs: data?.latencyMs || null
+      }
+    }
   };
 }
 
-async function getCachedResponse(key) {
+async function getCachedResponse(key, normalized = null) {
   if (!cacheEnabled) return null;
-  if (redisCache) {
-    let entry = await redisCache.get(getCacheRecordKey(key));
-    if (!entry?.data) {
-      for (const prefix of legacyCachePrefixes) {
-        entry = await redisCache.get(getCacheRecordKeyForPrefix(prefix, key));
-        if (entry?.data) break;
+  
+  // Retry helper для надежности
+  async function retryOperation(operation, maxRetries = 3, delayMs = 100) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.error(`[Cache] Attempt ${attempt}/${maxRetries} failed:`, error.message);
+        if (attempt === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
       }
     }
-    if (!entry?.data) return null;
-    return {
-      ...entry.data,
-      cached: true,
-      cacheStorage,
-      cachedAt: entry.createdAt || null,
-    };
+  }
+  
+  // Попытка загрузки из Redis
+  if (redisCache) {
+    try {
+      const entry = await retryOperation(async () => {
+        let result = await redisCache.get(getCacheRecordKey(key));
+        if (!result?.data) {
+          for (const prefix of legacyCachePrefixes) {
+            result = await redisCache.get(getCacheRecordKeyForPrefix(prefix, key));
+            if (result?.data) {
+              console.log(`[Cache] Found in legacy prefix: ${prefix}`);
+              break;
+            }
+          }
+        }
+        return result;
+      });
+      
+      if (entry?.data) {
+        console.log(`[Cache] Redis hit for key: ${key}`);
+        return {
+          ...entry.data,
+          cached: true,
+          cacheStorage,
+          cachedAt: entry.createdAt || null,
+        };
+      }
+      console.log(`[Cache] Redis miss for key: ${key}`);
+    } catch (error) {
+      console.error(`[Cache] Redis error, falling back to local:`, error.message);
+      // Продолжаем к локальной БД
+    }
   }
 
-  const entry = responseCache.get(key);
-  if (!entry) return null;
-  return {
-    ...entry.data,
-    cached: true,
-    cacheStorage,
-    cachedAt: entry.createdAt || null,
-  };
+  // Попытка загрузки из локальной БД по host
+  if (localDb && normalized?.host) {
+    try {
+      const dbRecord = await retryOperation(() => Promise.resolve(localDb.getByHost(normalized.host)));
+      
+      if (dbRecord) {
+        console.log(`[Cache] Local DB hit for host: ${normalized.host}`);
+        // Преобразуем формат новой БД в старый формат ответа
+        return {
+          analysis: {
+            host: dbRecord.host,
+            verdict: dbRecord.verdict,
+            score: dbRecord.score,
+            verdictLabel: dbRecord.verdict === "high" ? "Высокий риск" : dbRecord.verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+            summary: dbRecord.summary,
+            reasons: dbRecord.reasons,
+            actions: dbRecord.actions,
+            breakdown: dbRecord.breakdown
+          },
+          aiAdjustedResult: {
+            host: dbRecord.host,
+            verdict: dbRecord.verdict,
+            score: dbRecord.score,
+            verdictLabel: dbRecord.verdict === "high" ? "Высокий риск" : dbRecord.verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+            summary: dbRecord.summary,
+            reasons: dbRecord.reasons,
+            actions: dbRecord.actions,
+            breakdown: dbRecord.breakdown,
+            analyzedAt: new Date(dbRecord.updatedAt).toISOString()
+          },
+          model: dbRecord.signals?.ai?.model,
+          source: dbRecord.signals?.ai?.source,
+          latencyMs: dbRecord.signals?.ai?.latencyMs,
+          moderated: dbRecord.moderated || false,
+          moderatedAt: dbRecord.moderatedAt || null,
+          threatIntel: dbRecord.signals?.threat,
+          urlAbuseIntel: dbRecord.signals?.urlAbuse,
+          networkSignals: dbRecord.signals?.network,
+          enrichedLocalResult: {
+            host: dbRecord.host,
+            verdict: dbRecord.verdict,
+            score: dbRecord.score,
+            verdictLabel: dbRecord.verdict === "high" ? "Высокий риск" : dbRecord.verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+            summary: dbRecord.summary,
+            reasons: dbRecord.reasons,
+            actions: dbRecord.actions,
+            breakdown: dbRecord.breakdown,
+            analyzedAt: new Date(dbRecord.updatedAt).toISOString()
+          },
+          cached: true,
+          cacheStorage,
+          cachedAt: dbRecord.createdAt || null,
+        };
+      }
+      console.log(`[Cache] Local DB miss for host: ${normalized.host}`);
+    } catch (error) {
+      console.error(`[Cache] Local DB error:`, error.message);
+      // Продолжаем к memory cache
+    }
+  }
+
+  // Fallback на responseCache (memory)
+  try {
+    const entry = responseCache.get(key);
+    if (entry) {
+      console.log(`[Cache] Memory hit for key: ${key}`);
+      return {
+        ...entry.data,
+        cached: true,
+        cacheStorage: 'memory',
+        cachedAt: entry.createdAt || null,
+      };
+    }
+    console.log(`[Cache] Memory miss for key: ${key}`);
+  } catch (error) {
+    console.error(`[Cache] Memory cache error:`, error.message);
+  }
+  
+  return null;
 }
 
 async function setCachedResponse(key, data, telemetryConsent = false) {
   if (!cacheEnabled || !telemetryConsent) return;
   
-  // Проверяем, есть ли уже запись для этого хоста
-  let existingRecord = null;
-  if (redisCache && data?.aiAdjustedResult?.host) {
-    existingRecord = await redisCache.get(getCacheHostKey(data.aiAdjustedResult.host));
-  } else if (data?.aiAdjustedResult?.host) {
-    for (const [existingKey, record] of responseCache.entries()) {
-      if (record?.host === data.aiAdjustedResult.host) {
-        existingRecord = record;
-        break;
+  let host = data?.aiAdjustedResult?.host || data?.enrichedLocalResult?.host || data?.analysis?.host;
+  if (!host) {
+    console.warn('[Cache] Cannot save: no host found in data');
+    return;
+  }
+  
+  // Нормализуем host: убираем www.
+  if (host.startsWith('www.')) {
+    host = host.substring(4);
+  }
+  
+  // Retry helper для надежности записи
+  async function retryWrite(operation, maxRetries = 3, delayMs = 100) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.error(`[Cache] Write attempt ${attempt}/${maxRetries} failed:`, error.message);
+        if (attempt === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
       }
     }
   }
   
+  // Проверяем, есть ли уже запись для этого хоста
+  let existingRecord = null;
+  try {
+    if (redisCache) {
+      existingRecord = await retryWrite(() => redisCache.get(getCacheHostKey(host)));
+    } else if (localDb) {
+      existingRecord = localDb.getByHost(host);
+    } else {
+      for (const [existingKey, record] of responseCache.entries()) {
+        if (record?.host === host) {
+          existingRecord = record;
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Cache] Error checking existing record:', error.message);
+  }
+  
   const record = buildCacheRecord(key, data, existingRecord);
+  record.host = host;
 
+  // Сохранение в Redis
   if (redisCache) {
-    // Для Redis: удалить старую запись для этого хоста, если она есть
-    if (record.host) {
-      const oldRecord = await redisCache.get(getCacheHostKey(record.host));
-      if (oldRecord?.key && oldRecord.key !== record.key) {
-        await Promise.all([
-          redisCache.del(getCacheRecordKey(oldRecord.key)),
-          redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
-        ]);
-      }
-    }
+    try {
+      await retryWrite(async () => {
+        // Удалить старую запись для этого хоста, если она есть
+        if (record.host) {
+          const oldRecord = await redisCache.get(getCacheHostKey(record.host));
+          if (oldRecord?.key && oldRecord.key !== record.key) {
+            await Promise.all([
+              redisCache.del(getCacheRecordKey(oldRecord.key)),
+              redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
+            ]);
+          }
+        }
 
-    const writes = [
-      redisCache.set(getCacheRecordKey(key), record),
-      redisCache.sadd(cacheIndexKey, getCacheRecordKey(key)),
-    ];
+        const writes = [
+          redisCache.set(getCacheRecordKey(key), record),
+          redisCache.sadd(cacheIndexKey, getCacheRecordKey(key)),
+        ];
 
-    if (record.host) {
-      writes.push(redisCache.set(getCacheHostKey(record.host), record));
-    }
+        if (record.host) {
+          writes.push(redisCache.set(getCacheHostKey(record.host), record));
+        }
 
-    await Promise.all(writes);
-    return;
-  }
-
-  // Для локального кэша: удалить все старые записи для этого хоста
-  if (record.host) {
-    const keysToDelete = [];
-    for (const [existingKey, existingRecord] of responseCache.entries()) {
-      if (existingRecord?.host === record.host && existingKey !== key) {
-        keysToDelete.push(existingKey);
-      }
-    }
-    for (const keyToDelete of keysToDelete) {
-      responseCache.delete(keyToDelete);
+        await Promise.all(writes);
+      });
+      console.log(`[Cache] Saved to Redis: ${host}`);
+      return;
+    } catch (error) {
+      console.error(`[Cache] Redis save failed, falling back to local:`, error.message);
+      // Продолжаем к локальной БД
     }
   }
 
-  responseCache.set(key, record);
-  saveDbAsync();
+  // Сохранение в локальную БД
+  if (localDb && record.host) {
+    try {
+      await retryWrite(() => {
+        localDb.set(record.host, {
+          verdict: record.verdict,
+          score: record.score,
+          summary: record.summary,
+          reasons: record.reasons,
+          actions: record.actions,
+          breakdown: record.breakdown,
+          threatIntel: record.signals?.threat,
+          urlAbuseIntel: record.signals?.urlAbuse,
+          networkSignals: record.signals?.network,
+          model: record.signals?.ai?.model,
+          source: record.signals?.ai?.source,
+          latencyMs: record.signals?.ai?.latencyMs
+        });
+        return Promise.resolve();
+      });
+      
+      // Также сохраняем в responseCache для совместимости
+      responseCache.set(key, record);
+      console.log(`[Cache] Saved to local DB: ${host}`);
+      return;
+    } catch (error) {
+      console.error(`[Cache] Local DB save failed:`, error.message);
+      // Продолжаем к memory cache
+    }
+  }
+
+  // Fallback: сохранение в memory cache
+  try {
+    // Удалить все старые записи для этого хоста
+    if (record.host) {
+      const keysToDelete = [];
+      for (const [existingKey, existingRecord] of responseCache.entries()) {
+        if (existingRecord?.host === record.host && existingKey !== key) {
+          keysToDelete.push(existingKey);
+        }
+      }
+      for (const keyToDelete of keysToDelete) {
+        responseCache.delete(keyToDelete);
+      }
+    }
+
+    responseCache.set(key, record);
+    saveDbAsync();
+    console.log(`[Cache] Saved to memory: ${host}`);
+  } catch (error) {
+    console.error(`[Cache] Memory save failed:`, error.message);
+  }
 }
 
 function getAdminTokenFromHeaders(headers = {}) {
@@ -393,7 +579,13 @@ function normalizeCacheHostInput(input) {
     return normalized;
   }
 
-  return { host: normalized.host };
+  // Убираем www. для единообразия
+  let host = normalized.host;
+  if (host.startsWith('www.')) {
+    host = host.substring(4);
+  }
+
+  return { host };
 }
 
 function serializeAdminEntry(record) {
@@ -414,6 +606,7 @@ function serializeAdminEntry(record) {
     moderated: Boolean(record.data?.moderation?.moderated),
     moderation: record.data?.moderation || null,
     data: record.data,
+    reports: record.reports || [],
     preview: current
       ? {
           verdict: current.verdict || null,
@@ -426,36 +619,121 @@ function serializeAdminEntry(record) {
 
 async function getRawCacheRecordByHost(hostInput) {
   const normalized = normalizeCacheHostInput(hostInput);
-  if ("error" in normalized) return null;
+  if ("error" in normalized) {
+    console.warn(`[Cache] Invalid host input: ${hostInput}`);
+    return null;
+  }
 
-  if (redisCache) {
-    let record = await redisCache.get(getCacheHostKey(normalized.host));
-    if (!record?.data) {
-      for (const prefix of legacyCachePrefixes) {
-        record = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
-        if (record?.data) break;
+  // Retry helper для надежности
+  async function retryOperation(operation, maxRetries = 3, delayMs = 100) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.error(`[Cache] getRawCacheRecordByHost attempt ${attempt}/${maxRetries} failed:`, error.message);
+        if (attempt === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
       }
     }
-    if (!record?.data) return null;
-    return record;
   }
 
-  // Для локального кэша: найти все записи для хоста и вернуть самую свежую
-  let matchingRecords = [];
-  for (const record of responseCache.values()) {
-    if (record?.host === normalized.host) {
-      matchingRecords.push(record);
+  // Попытка загрузки из Redis
+  if (redisCache) {
+    try {
+      const record = await retryOperation(async () => {
+        let result = await redisCache.get(getCacheHostKey(normalized.host));
+        if (!result?.data) {
+          for (const prefix of legacyCachePrefixes) {
+            result = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
+            if (result?.data) {
+              console.log(`[Cache] Found host in legacy prefix: ${prefix}`);
+              break;
+            }
+          }
+        }
+        return result;
+      });
+      
+      if (record?.data) {
+        console.log(`[Cache] Redis hit for host: ${normalized.host}`);
+        return record;
+      }
+      console.log(`[Cache] Redis miss for host: ${normalized.host}`);
+    } catch (error) {
+      console.error(`[Cache] Redis error in getRawCacheRecordByHost, falling back:`, error.message);
+      // Продолжаем к локальной БД
     }
   }
 
-  if (matchingRecords.length === 0) return null;
+  // Попытка загрузки из локальной БД
+  if (localDb) {
+    try {
+      const dbRecord = await retryOperation(() => Promise.resolve(localDb.getByHost(normalized.host)));
+      
+      if (dbRecord) {
+        console.log(`[Cache] Local DB hit for host: ${normalized.host}`);
+        // Преобразуем формат новой БД в старый формат для совместимости
+        return {
+          key: dbRecord.id,
+          host: dbRecord.host,
+          createdAt: dbRecord.createdAt,
+          updatedAt: dbRecord.updatedAt,
+          reports: dbRecord.reports || [],
+          data: {
+            aiAdjustedResult: {
+              host: dbRecord.host,
+              verdict: dbRecord.verdict,
+              score: dbRecord.score,
+              verdictLabel: dbRecord.verdict === "high" ? "Высокий риск" : dbRecord.verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+              summary: dbRecord.summary,
+              reasons: dbRecord.reasons,
+              actions: dbRecord.actions,
+              breakdown: dbRecord.breakdown,
+              analyzedAt: new Date(dbRecord.updatedAt).toISOString()
+            },
+            model: dbRecord.signals?.ai?.model,
+            source: dbRecord.signals?.ai?.source,
+            latencyMs: dbRecord.signals?.ai?.latencyMs,
+            threatIntel: dbRecord.signals?.threat,
+            urlAbuseIntel: dbRecord.signals?.urlAbuse,
+            networkSignals: dbRecord.signals?.network
+          }
+        };
+      }
+      console.log(`[Cache] Local DB miss for host: ${normalized.host}`);
+    } catch (error) {
+      console.error(`[Cache] Local DB error in getRawCacheRecordByHost:`, error.message);
+      // Продолжаем к memory cache
+    }
+  }
 
-  // Вернуть запись с максимальным updatedAt или createdAt
-  return matchingRecords.reduce((latest, current) => {
-    const latestTime = Number(latest?.updatedAt || latest?.createdAt || 0);
-    const currentTime = Number(current?.updatedAt || current?.createdAt || 0);
-    return currentTime > latestTime ? current : latest;
-  });
+  // Fallback: поиск в memory cache
+  try {
+    let matchingRecords = [];
+    for (const record of responseCache.values()) {
+      if (record?.host === normalized.host) {
+        matchingRecords.push(record);
+      }
+    }
+
+    if (matchingRecords.length === 0) {
+      console.log(`[Cache] Memory miss for host: ${normalized.host}`);
+      return null;
+    }
+
+    // Вернуть запись с максимальным updatedAt или createdAt
+    const latest = matchingRecords.reduce((latest, current) => {
+      const latestTime = Number(latest?.updatedAt || latest?.createdAt || 0);
+      const currentTime = Number(current?.updatedAt || current?.createdAt || 0);
+      return currentTime > latestTime ? current : latest;
+    });
+    
+    console.log(`[Cache] Memory hit for host: ${normalized.host}`);
+    return latest;
+  } catch (error) {
+    console.error(`[Cache] Memory cache error in getRawCacheRecordByHost:`, error.message);
+    return null;
+  }
 }
 
 async function saveRawCacheRecord(record) {
@@ -494,6 +772,34 @@ async function saveRawCacheRecord(record) {
     return nextRecord;
   }
 
+  // Используем новую БД
+  if (localDb && nextRecord.host) {
+    const result = nextRecord.data?.aiAdjustedResult || nextRecord.data?.enrichedLocalResult || nextRecord.data?.analysis;
+    
+    localDb.update(nextRecord.host, {
+      verdict: result?.verdict || "low",
+      score: Number(result?.score) || 0,
+      summary: result?.summary || "",
+      reasons: result?.reasons || [],
+      actions: result?.actions || [],
+      breakdown: result?.breakdown || {},
+      signals: {
+        threat: nextRecord.data?.threatIntel,
+        urlAbuse: nextRecord.data?.urlAbuseIntel,
+        network: nextRecord.data?.networkSignals,
+        ai: {
+          model: nextRecord.data?.model,
+          source: nextRecord.data?.source,
+          latencyMs: nextRecord.data?.latencyMs
+        }
+      }
+    });
+    
+    // Также обновляем responseCache для совместимости
+    responseCache.set(nextRecord.key, nextRecord);
+    return nextRecord;
+  }
+
   // Для локального кэша: удалить все старые записи для этого хоста
   if (nextRecord.host) {
     const keysToDelete = [];
@@ -529,6 +835,24 @@ async function deleteRawCacheRecordByHost(hostInput) {
     return true;
   }
 
+  // Используем новую БД
+  if (localDb) {
+    const deleted = localDb.deleteByHost(normalized.host);
+    
+    // Также удаляем из responseCache для совместимости
+    const keysToDelete = [];
+    for (const [key, record] of responseCache.entries()) {
+      if (record?.host === normalized.host) {
+        keysToDelete.push(key);
+      }
+    }
+    for (const key of keysToDelete) {
+      responseCache.delete(key);
+    }
+    
+    return deleted;
+  }
+
   // Для локального кэша: удалить ВСЕ записи для этого хоста
   let deleted = false;
   const keysToDelete = [];
@@ -560,6 +884,37 @@ async function listRecentCacheEntries(limit = 20) {
         .slice(0, 200)
         .map((key) => redisCache.get(key).catch(() => null)),
     );
+  } else if (localDb) {
+    // Используем новую БД
+    const dbRecords = localDb.getRecent(limit);
+    
+    // Преобразуем в старый формат
+    records = dbRecords.map(dbRecord => ({
+      key: dbRecord.id,
+      host: dbRecord.host,
+      createdAt: dbRecord.createdAt,
+      updatedAt: dbRecord.updatedAt,
+      reports: dbRecord.reports || [],
+      data: {
+        aiAdjustedResult: {
+          host: dbRecord.host,
+          verdict: dbRecord.verdict,
+          score: dbRecord.score,
+          verdictLabel: dbRecord.verdict === "high" ? "Высокий риск" : dbRecord.verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+          summary: dbRecord.summary,
+          reasons: dbRecord.reasons,
+          actions: dbRecord.actions,
+          breakdown: dbRecord.breakdown,
+          analyzedAt: new Date(dbRecord.updatedAt).toISOString()
+        },
+        model: dbRecord.signals?.ai?.model,
+        source: dbRecord.signals?.ai?.source,
+        latencyMs: dbRecord.signals?.ai?.latencyMs,
+        threatIntel: dbRecord.signals?.threat,
+        urlAbuseIntel: dbRecord.signals?.urlAbuse,
+        networkSignals: dbRecord.signals?.network
+      }
+    }));
   } else {
     records = [...responseCache.values()];
   }
@@ -638,6 +993,7 @@ function matchesTlsSubject(host, subject) {
   if (!normalizedHost || !normalizedSubject) return false;
   if (normalizedHost === normalizedSubject) return true;
 
+  // Wildcard сертификат (*.example.com)
   if (normalizedSubject.startsWith("*.")) {
     const wildcardBase = normalizedSubject.slice(2);
 
@@ -649,6 +1005,23 @@ function matchesTlsSubject(host, subject) {
       sameRegistrableDomain(normalizedHost, wildcardBase) &&
       (normalizedHost === wildcardBase || normalizedHost === `www.${wildcardBase}`)
     ) {
+      return true;
+    }
+  }
+
+  // Apex домен запрошен, но сертификат выдан на www поддомен (нормальная практика)
+  // Например: запрос к linkedin.com, сертификат на www.linkedin.com
+  if (normalizedSubject.startsWith("www.")) {
+    const apexDomain = normalizedSubject.slice(4); // убираем "www."
+    if (normalizedHost === apexDomain) {
+      return true; // это нормально - apex редиректит на www
+    }
+  }
+
+  // Обратная ситуация: запрос к www, сертификат на apex
+  if (normalizedHost.startsWith("www.")) {
+    const apexDomain = normalizedHost.slice(4);
+    if (normalizedSubject === apexDomain) {
       return true;
     }
   }
@@ -2280,6 +2653,8 @@ ${networkSummary}
 - Если http redirect ведёт на ДРУГОЙ registrable domain → это critical: redirect-маскировка.
 - Если apex-домен просто ведёт на \`www\` того же registrable domain — это НОРМАЛЬНО и не должно считаться риском.
 - Если tls_subject — wildcard внутри того же registrable domain (\`*.example.com\` для \`www.example.com\` или \`example.com\`) — это не сигнал риска само по себе.
+- Если запрос к apex домену (example.com), а TLS сертификат выдан на www поддомен (www.example.com) — это НОРМАЛЬНАЯ практика редиректа и НЕ является риском.
+- Если запрос к www поддомену (www.example.com), а TLS сертификат выдан на apex домен (example.com) — это тоже НОРМАЛЬНО.
 - Если tls_available=no для https-ссылки → warning: сертификат не получен.
 - Если http_status=4xx или 5xx → warning: сайт может быть недействителен.
 
@@ -2451,6 +2826,20 @@ export async function cacheStatsResponse() {
     } catch {
       size = null;
     }
+  } else if (localDb) {
+    const stats = localDb.getStats();
+    return {
+      size: stats.active,
+      total: stats.total,
+      expired: stats.expired,
+      verdicts: stats.verdicts,
+      enabled: cacheEnabled,
+      storage: cacheStorage,
+      persistent: true,
+      dbSize: stats.dbSize,
+      oldestRecord: stats.oldestRecord ? new Date(stats.oldestRecord).toISOString() : null,
+      newestRecord: stats.newestRecord ? new Date(stats.newestRecord).toISOString() : null,
+    };
   }
 
   return {
@@ -2658,7 +3047,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   const cacheKey = getCacheKey(input, enrichedLocalAnalysis, normalized);
   if (!skipCache) {
-    const cached = await getCachedResponse(cacheKey);
+    const cached = await getCachedResponse(cacheKey, normalized);
     if (cached) {
       log("info", "Cache hit", { host: normalized.host, storage: cacheStorage });
       return { status: 200, body: { ...cached, cached: true } };
@@ -2785,6 +3174,74 @@ app.post("/api/analyze", async (req, res) => {
   res.status(response.status).json(response.body);
 });
 
+app.post("/api/report", async (req, res) => {
+  try {
+    const { host, verdict, score, reportText } = req.body;
+
+    if (!host || !reportText) {
+      res.status(400).json({ error: "Поля host и reportText обязательны." });
+      return;
+    }
+
+    const db = getDatabase();
+    const record = db.addReport(host, {
+      text: reportText,
+      verdict,
+      score,
+    });
+
+    if (!record) {
+      res.status(404).json({ error: "Запись для этого домена не найдена." });
+      return;
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: "Жалоба успешно отправлена.",
+      host: record.host,
+      reportsCount: record.reports?.length || 0,
+    });
+  } catch (error) {
+    log("error", "Report error", { error: error.message });
+    res.status(500).json({ error: "Ошибка при сохранении жалобы." });
+  }
+});
+
+app.delete("/api/report", async (req, res) => {
+  try {
+    const token = req.headers["x-admin-token"];
+    if (!token || token !== adminToken) {
+      res.status(403).json({ error: "Доступ запрещён." });
+      return;
+    }
+
+    const { host, reportId } = req.query;
+
+    if (!host || !reportId) {
+      res.status(400).json({ error: "Поля host и reportId обязательны." });
+      return;
+    }
+
+    const db = getDatabase();
+    const record = db.deleteReport(host, reportId);
+
+    if (!record) {
+      res.status(404).json({ error: "Жалоба не найдена." });
+      return;
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: "Жалоба удалена.",
+      host: record.host,
+      reportsCount: record.reports?.length || 0,
+    });
+  } catch (error) {
+    log("error", "Delete report error", { error: error.message });
+    res.status(500).json({ error: "Ошибка при удалении жалобы." });
+  }
+});
+
 app.get("/api/lookup", async (req, res) => {
   const url = String(req.query?.url || req.query?.link || "").trim();
   
@@ -2851,6 +3308,9 @@ if (fs.existsSync(indexFile)) {
 const port = Number(process.env.PORT || 8787);
 
 export default app;
+
+// Экспорт функций для тестирования
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
