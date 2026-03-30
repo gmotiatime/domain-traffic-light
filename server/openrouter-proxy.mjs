@@ -2303,6 +2303,13 @@ ${networkSummary}
 ✅ Хорошо: "TLS сертификат выдан на *.cloudflare.com, а не на ${normalized.host}"
 ✅ Хорошо: "DNS не резолвится — домен может быть свежим или уже заблокирован"
 
+## ИЗВЕСТНЫЕ ФИШИНГОВЫЕ ТЕХНИКИ (из реальной базы угроз)
+1. **Discord-фишинг**: dicsord, discrod, dlscord, disc0rd, disccord — вариации с заменой букв
+2. **Steam-фишинг**: steamcommunity с опечатками (steancommunity, steamcomminity, etc)
+3. **Префиксы-ловушки**: free-, get-, claim-, verify-, official-, secure-
+4. **Подозрительные TLD**: .tk, .ml, .ga, .cf, .gq, .xyz часто используются для фишинга
+5. **Комбинации**: discord-nitro, steam-gift, free-robux — сочетание бренда + приманка
+
 ## ФОРМАТ ОТВЕТА (строго JSON)
 {"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }

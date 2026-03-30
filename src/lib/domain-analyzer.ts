@@ -180,11 +180,12 @@ const criticalTlds = new Map<string, number>([
   ["zip", 24],
   ["mov", 18],
   ["cam", 16],
-  ["tk", 20],
-  ["ml", 18],
-  ["ga", 18],
-  ["cf", 18],
-  ["gq", 18],
+  ["tk", 22],
+  ["ml", 20],
+  ["ga", 20],
+  ["cf", 20],
+  ["gq", 20],
+  ["pw", 16],
 ]);
 
 const elevatedTlds = new Set([
@@ -229,6 +230,15 @@ const elevatedTlds = new Set([
   "info",
   "mobi",
   "pro",
+  "store",
+  "shop",
+  "gift",
+  "gifts",
+  "codes",
+  "host",
+  "digital",
+  "cloud",
+  "app",
 ]);
 
 const trustedTlds = new Set([
@@ -269,6 +279,40 @@ const ignoredDomainTokens = new Set([
   "co",
   "pp",
 ]);
+
+// Фишинговые префиксы из реальной базы угроз
+const phishingPrefixes = new Set([
+  "free",
+  "get",
+  "claim",
+  "verify",
+  "secure",
+  "official",
+  "app",
+  "login",
+  "account",
+  "support",
+  "help",
+  "gift",
+  "promo",
+  "bonus",
+  "reward",
+  "win",
+  "prize",
+]);
+
+// Известные фишинговые паттерны (typosquatting популярных сервисов)
+const knownPhishingPatterns = [
+  // Discord variations
+  /d[i1l][sc][c]?[o0][r]?[d]/i,
+  /disc[o0]r[d]?/i,
+  /dics[o0]rd/i,
+  // Steam variations  
+  /st[e3][a@][m]/i,
+  /ste[a@]m/i,
+  /steam.*community/i,
+  /steam.*powered/i,
+];
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
@@ -504,6 +548,22 @@ function findNearOfficialMatch(host: string): string | null {
   }
 
   return null;
+}
+
+function hasPhishingPrefix(host: string): string | null {
+  const parts = host.split(".");
+  for (const part of parts) {
+    for (const prefix of phishingPrefixes) {
+      if (part.startsWith(prefix + "-") || part === prefix) {
+        return prefix;
+      }
+    }
+  }
+  return null;
+}
+
+function matchesKnownPhishingPattern(host: string): boolean {
+  return knownPhishingPatterns.some(pattern => pattern.test(host));
 }
 
 type ProtectedBrandMatch = {
@@ -769,6 +829,29 @@ export function analyzeDomainInput(input: string): AnalysisResult {
       `Домен ${canonicalHost} — это сервис сокращения ссылок. За короткой ссылкой может скрываться любой адрес, включая фишинговый.`,
       18,
       "warning",
+    );
+  }
+
+  // ── 8c. Проверка на известные фишинговые паттерны ──────────────────────────
+
+  if (matchesKnownPhishingPattern(host)) {
+    pushReason(
+      "Известный фишинговый паттерн",
+      "Домен соответствует известным паттернам фишинговых сайтов из базы угроз (например, вариации discord, steam с опечатками).",
+      45,
+      "critical",
+    );
+  }
+
+  // ── 8d. Проверка на фишинговые префиксы ────────────────────────────────────
+
+  const phishingPrefix = hasPhishingPrefix(host);
+  if (phishingPrefix) {
+    pushReason(
+      "Подозрительный префикс",
+      `Обнаружен префикс '${phishingPrefix}', который часто используется в фишинговых доменах (free-, get-, claim-, verify- и т.п.).`,
+      22,
+      "critical",
     );
   }
 
