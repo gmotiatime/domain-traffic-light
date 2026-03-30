@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import dns from "node:dns/promises";
+import tls from "node:tls";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 
@@ -13,6 +15,7 @@ const envFile = path.join(rootDir, ".env");
 
 import dotenv from "dotenv";
 import express from "express";
+import { Redis } from "@upstash/redis";
 
 dotenv.config({ path: envLocalFile });
 dotenv.config({ path: envFile });
@@ -66,16 +69,107 @@ setInterval(() => {
   }
 }, rateLimitWindowMs * 3);
 
-// ─── Кэш ответов AI ──────────────────────────────────────────────────────────
+// ─── Кэш ответов AI (Vercel Redis / local JSON fallback) ────────────────────
 const cacheEnabled = process.env.CACHE_ENABLED !== "false";
-const cacheTtlMs = Number(process.env.CACHE_TTL_MS) || 5 * 60_000;
-const cacheMaxSize = Number(process.env.CACHE_MAX_SIZE) || 500;
+const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
+const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
+const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
+const cacheRecordPrefix = `${cachePrefix}:record`;
+const cacheHostPrefix = `${cachePrefix}:host`;
+const cacheIndexKey = `${cachePrefix}:keys`;
+const legacyCachePrefixes = String(
+  process.env.THREAT_CACHE_LEGACY_PREFIXES || "threat-cache:v7,threat-cache:v6",
+)
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean)
+  .filter((value) => value !== cachePrefix);
+const dbPath = path.join(__dirname, "threat-db.json");
+const isVercelRuntime = Boolean(process.env.VERCEL);
+const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
+const redisRestToken =
+  process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
+const hasRedisCache = Boolean(cacheEnabled && redisRestUrl && redisRestToken);
+const localDiskCacheEnabled =
+  Boolean(cacheEnabled && !hasRedisCache && !isVercelRuntime && process.env.LOCAL_THREAT_DB !== "false");
+const cacheStorage = hasRedisCache ? "vercel-redis" : localDiskCacheEnabled ? "local-json" : "memory";
+const adminToken = process.env.ADMIN_TOKEN || "";
 const responseCache = new Map();
+const redisCache = hasRedisCache
+  ? new Redis({
+      url: redisRestUrl,
+      token: redisRestToken,
+    })
+  : null;
+
+if (localDiskCacheEnabled) {
+  try {
+    if (fs.existsSync(dbPath)) {
+      const data = JSON.parse(fs.readFileSync(dbPath, "utf-8"));
+      
+      // Группируем записи по host и оставляем только самую свежую для каждого
+      const hostToRecords = new Map();
+      for (const [key, record] of Object.entries(data)) {
+        const host = record?.host;
+        if (!host) {
+          responseCache.set(key, record);
+          continue;
+        }
+        
+        if (!hostToRecords.has(host)) {
+          hostToRecords.set(host, []);
+        }
+        hostToRecords.get(host).push({ key, record });
+      }
+      
+      // Для каждого хоста оставляем только самую свежую запись
+      for (const [host, records] of hostToRecords.entries()) {
+        const latest = records.reduce((prev, curr) => {
+          const prevTime = Number(prev.record?.updatedAt || prev.record?.createdAt || 0);
+          const currTime = Number(curr.record?.updatedAt || curr.record?.createdAt || 0);
+          return currTime > prevTime ? curr : prev;
+        });
+        responseCache.set(latest.key, latest.record);
+      }
+      
+      console.log(`[threat-db] Loaded ${responseCache.size} cached entries from disk (deduplicated).`);
+    }
+  } catch (e) {
+    console.log(`[threat-db] Error loading db: ${e.message}`);
+  }
+} else if (hasRedisCache) {
+  console.log("[threat-db] Using Vercel Redis cache.");
+}
+
+function saveDbAsync() {
+  if (!localDiskCacheEnabled) return;
+
+  try {
+    const obj = {};
+    for (const [key, value] of responseCache.entries()) {
+      obj[key] = value;
+    }
+    fs.promises.writeFile(dbPath, JSON.stringify(obj, null, 2), "utf-8").catch((e) => {
+      console.log(`[threat-db] Async save failed: ${e.message}`);
+    });
+  } catch (e) {
+    console.log(`[threat-db] Save failed: ${e.message}`);
+  }
+}
 const openPhishFeedUrl =
   process.env.OPENPHISH_FEED_URL ||
   "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt";
 const openPhishRefreshMs =
   Number(process.env.OPENPHISH_REFRESH_MS) || 30 * 60_000;
+const urlAbuseApiUrl =
+  process.env.URLABUSE_API_URL || "https://urlabuse.com/get_record_by_rowid";
+const urlAbuseEmail = process.env.URLABUSE_EMAIL || "";
+const urlAbuseToken = process.env.URLABUSE_TOKEN || "";
+const urlAbuseAcl = process.env.URLABUSE_ACL || "ALL";
+const urlAbuseRefreshMs = Number(process.env.URLABUSE_REFRESH_MS) || 5 * 60_000;
+const urlAbuseMaxPages = Number(process.env.URLABUSE_MAX_PAGES) || 1;
+const networkSignalTimeoutMs =
+  Number(process.env.NETWORK_SIGNAL_TIMEOUT_MS) || 3_000;
 
 const openPhishState = {
   urls: new Set(),
@@ -84,11 +178,41 @@ const openPhishState = {
   loadingPromise: null,
   lastError: null,
 };
+const urlAbuseState = {
+  urls: new Set(),
+  hosts: new Map(),
+  fetchedAt: 0,
+  loadingPromise: null,
+  lastError: null,
+  lastRowId: 0,
+};
 
-function getCacheKey(input, localAnalysis) {
+function sanitizeCacheInput(input, normalized) {
+  if (normalized?.url instanceof URL) {
+    const url = new URL(normalized.url.toString());
+    url.username = "";
+    url.password = "";
+    url.pathname = "/"; // Убираем путь - кэш только по домену
+    url.search = "";
+    url.hash = "";
+
+    if (
+      (url.protocol === "https:" && url.port === "443") ||
+      (url.protocol === "http:" && url.port === "80")
+    ) {
+      url.port = "";
+    }
+
+    return url.toString().toLowerCase();
+  }
+
+  return String(input || "").trim().toLowerCase();
+}
+
+function getCacheKey(input, localAnalysis, normalized) {
   const payload = JSON.stringify({
-    version: 4,
-    input: String(input || "").trim().toLowerCase(),
+    version: cacheVersion,
+    input: sanitizeCacheInput(input, normalized),
     verdict: localAnalysis?.verdict,
     score: localAnalysis?.score,
     summary: String(localAnalysis?.summary || "").trim().slice(0, 180),
@@ -104,24 +228,352 @@ function getCacheKey(input, localAnalysis) {
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }
 
-function getCachedResponse(key) {
-  if (!cacheEnabled) return null;
-  const entry = responseCache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.createdAt > cacheTtlMs) {
-    responseCache.delete(key);
-    return null;
-  }
-  return entry.data;
+function getCacheRecordKey(key) {
+  return `${cacheRecordPrefix}:${key}`;
 }
 
-function setCachedResponse(key, data) {
-  if (!cacheEnabled) return;
-  if (responseCache.size >= cacheMaxSize) {
-    const oldestKey = responseCache.keys().next().value;
-    responseCache.delete(oldestKey);
+function getCacheHostKey(host) {
+  return `${cacheHostPrefix}:${String(host || "unknown").toLowerCase()}`;
+}
+
+function getCacheRecordKeyForPrefix(prefix, key) {
+  return `${prefix}:record:${key}`;
+}
+
+function getCacheHostKeyForPrefix(prefix, host) {
+  return `${prefix}:host:${String(host || "unknown").toLowerCase()}`;
+}
+
+function buildCacheRecord(key, data, existingRecord = null) {
+  const host =
+    data?.aiAdjustedResult?.host ||
+    data?.enrichedLocalResult?.host ||
+    data?.analysis?.host ||
+    null;
+
+  const now = Date.now();
+  return {
+    key,
+    host,
+    createdAt: existingRecord?.createdAt || now,
+    updatedAt: now,
+    data,
+  };
+}
+
+async function getCachedResponse(key) {
+  if (!cacheEnabled) return null;
+  if (redisCache) {
+    let entry = await redisCache.get(getCacheRecordKey(key));
+    if (!entry?.data) {
+      for (const prefix of legacyCachePrefixes) {
+        entry = await redisCache.get(getCacheRecordKeyForPrefix(prefix, key));
+        if (entry?.data) break;
+      }
+    }
+    if (!entry?.data) return null;
+    return {
+      ...entry.data,
+      cached: true,
+      cacheStorage,
+      cachedAt: entry.createdAt || null,
+    };
   }
-  responseCache.set(key, { data, createdAt: Date.now() });
+
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  return {
+    ...entry.data,
+    cached: true,
+    cacheStorage,
+    cachedAt: entry.createdAt || null,
+  };
+}
+
+async function setCachedResponse(key, data, telemetryConsent = false) {
+  if (!cacheEnabled || !telemetryConsent) return;
+  
+  // Проверяем, есть ли уже запись для этого хоста
+  let existingRecord = null;
+  if (redisCache && data?.aiAdjustedResult?.host) {
+    existingRecord = await redisCache.get(getCacheHostKey(data.aiAdjustedResult.host));
+  } else if (data?.aiAdjustedResult?.host) {
+    for (const [existingKey, record] of responseCache.entries()) {
+      if (record?.host === data.aiAdjustedResult.host) {
+        existingRecord = record;
+        break;
+      }
+    }
+  }
+  
+  const record = buildCacheRecord(key, data, existingRecord);
+
+  if (redisCache) {
+    // Для Redis: удалить старую запись для этого хоста, если она есть
+    if (record.host) {
+      const oldRecord = await redisCache.get(getCacheHostKey(record.host));
+      if (oldRecord?.key && oldRecord.key !== record.key) {
+        await Promise.all([
+          redisCache.del(getCacheRecordKey(oldRecord.key)),
+          redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
+        ]);
+      }
+    }
+
+    const writes = [
+      redisCache.set(getCacheRecordKey(key), record),
+      redisCache.sadd(cacheIndexKey, getCacheRecordKey(key)),
+    ];
+
+    if (record.host) {
+      writes.push(redisCache.set(getCacheHostKey(record.host), record));
+    }
+
+    await Promise.all(writes);
+    return;
+  }
+
+  // Для локального кэша: удалить все старые записи для этого хоста
+  if (record.host) {
+    const keysToDelete = [];
+    for (const [existingKey, existingRecord] of responseCache.entries()) {
+      if (existingRecord?.host === record.host && existingKey !== key) {
+        keysToDelete.push(existingKey);
+      }
+    }
+    for (const keyToDelete of keysToDelete) {
+      responseCache.delete(keyToDelete);
+    }
+  }
+
+  responseCache.set(key, record);
+  saveDbAsync();
+}
+
+function getAdminTokenFromHeaders(headers = {}) {
+  const direct = headers["x-admin-token"] || headers["X-Admin-Token"];
+  if (typeof direct === "string" && direct.trim()) {
+    return direct.trim();
+  }
+
+  if (Array.isArray(direct) && typeof direct[0] === "string" && direct[0].trim()) {
+    return direct[0].trim();
+  }
+
+  const auth = headers.authorization || headers.Authorization;
+  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+    return auth.slice("Bearer ".length).trim();
+  }
+
+  return "";
+}
+
+function assertAdminAccess(headers = {}) {
+  if (!adminToken) {
+    return {
+      status: 503,
+      body: { error: "ADMIN_TOKEN не настроен." },
+    };
+  }
+
+  const providedToken = getAdminTokenFromHeaders(headers);
+  if (!providedToken || providedToken !== adminToken) {
+    return {
+      status: 401,
+      body: { error: "Недостаточно прав." },
+    };
+  }
+
+  return null;
+}
+
+function normalizeCacheHostInput(input) {
+  const normalized = normalizeInput(String(input || "").trim());
+  if ("error" in normalized) {
+    return normalized;
+  }
+
+  return { host: normalized.host };
+}
+
+function serializeAdminEntry(record) {
+  if (!record?.data) return null;
+
+  const current =
+    record.data.aiAdjustedResult ||
+    record.data.enrichedLocalResult ||
+    record.data.analysis ||
+    null;
+
+  return {
+    key: record.key || null,
+    host: record.host || current?.host || null,
+    createdAt: record.createdAt || null,
+    updatedAt: record.updatedAt || null,
+    model: record.data.model || null,
+    moderated: Boolean(record.data?.moderation?.moderated),
+    moderation: record.data?.moderation || null,
+    data: record.data,
+    preview: current
+      ? {
+          verdict: current.verdict || null,
+          score: Number.isFinite(Number(current.score)) ? Number(current.score) : null,
+          summary: current.summary || "",
+        }
+      : null,
+  };
+}
+
+async function getRawCacheRecordByHost(hostInput) {
+  const normalized = normalizeCacheHostInput(hostInput);
+  if ("error" in normalized) return null;
+
+  if (redisCache) {
+    let record = await redisCache.get(getCacheHostKey(normalized.host));
+    if (!record?.data) {
+      for (const prefix of legacyCachePrefixes) {
+        record = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
+        if (record?.data) break;
+      }
+    }
+    if (!record?.data) return null;
+    return record;
+  }
+
+  // Для локального кэша: найти все записи для хоста и вернуть самую свежую
+  let matchingRecords = [];
+  for (const record of responseCache.values()) {
+    if (record?.host === normalized.host) {
+      matchingRecords.push(record);
+    }
+  }
+
+  if (matchingRecords.length === 0) return null;
+
+  // Вернуть запись с максимальным updatedAt или createdAt
+  return matchingRecords.reduce((latest, current) => {
+    const latestTime = Number(latest?.updatedAt || latest?.createdAt || 0);
+    const currentTime = Number(current?.updatedAt || current?.createdAt || 0);
+    return currentTime > latestTime ? current : latest;
+  });
+}
+
+async function saveRawCacheRecord(record) {
+  if (!record?.key) return;
+
+  const normalizedHost = record.host || record?.data?.aiAdjustedResult?.host || record?.data?.analysis?.host;
+  const nextRecord = {
+    ...record,
+    host: normalizedHost || record.host || null,
+    updatedAt: Date.now(),
+  };
+
+  if (redisCache) {
+    // Для Redis: удалить старую запись для этого хоста, если она есть
+    if (nextRecord.host) {
+      const oldRecord = await redisCache.get(getCacheHostKey(nextRecord.host));
+      if (oldRecord?.key && oldRecord.key !== nextRecord.key) {
+        // Удалить старую запись из индекса и по ключу
+        await Promise.all([
+          redisCache.del(getCacheRecordKey(oldRecord.key)),
+          redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
+        ]);
+      }
+    }
+
+    const writes = [
+      redisCache.set(getCacheRecordKey(nextRecord.key), nextRecord),
+      redisCache.sadd(cacheIndexKey, getCacheRecordKey(nextRecord.key)),
+    ];
+
+    if (nextRecord.host) {
+      writes.push(redisCache.set(getCacheHostKey(nextRecord.host), nextRecord));
+    }
+
+    await Promise.all(writes);
+    return nextRecord;
+  }
+
+  // Для локального кэша: удалить все старые записи для этого хоста
+  if (nextRecord.host) {
+    const keysToDelete = [];
+    for (const [key, existingRecord] of responseCache.entries()) {
+      if (existingRecord?.host === nextRecord.host && key !== nextRecord.key) {
+        keysToDelete.push(key);
+      }
+    }
+    for (const key of keysToDelete) {
+      responseCache.delete(key);
+    }
+  }
+
+  responseCache.set(nextRecord.key, nextRecord);
+  saveDbAsync();
+  return nextRecord;
+}
+
+async function deleteRawCacheRecordByHost(hostInput) {
+  const normalized = normalizeCacheHostInput(hostInput);
+  if ("error" in normalized) return false;
+
+  if (redisCache) {
+    const hostKey = getCacheHostKey(normalized.host);
+    const record = await redisCache.get(hostKey);
+    if (!record?.key) return false;
+
+    await Promise.all([
+      redisCache.del(hostKey),
+      redisCache.del(getCacheRecordKey(record.key)),
+      redisCache.srem(cacheIndexKey, getCacheRecordKey(record.key)),
+    ]);
+    return true;
+  }
+
+  // Для локального кэша: удалить ВСЕ записи для этого хоста
+  let deleted = false;
+  const keysToDelete = [];
+  for (const [key, record] of responseCache.entries()) {
+    if (record?.host === normalized.host) {
+      keysToDelete.push(key);
+      deleted = true;
+    }
+  }
+
+  for (const key of keysToDelete) {
+    responseCache.delete(key);
+  }
+
+  if (deleted) {
+    saveDbAsync();
+  }
+
+  return deleted;
+}
+
+async function listRecentCacheEntries(limit = 20) {
+  let records = [];
+
+  if (redisCache) {
+    const keys = await redisCache.smembers(cacheIndexKey);
+    records = await Promise.all(
+      (Array.isArray(keys) ? keys : [])
+        .slice(0, 200)
+        .map((key) => redisCache.get(key).catch(() => null)),
+    );
+  } else {
+    records = [...responseCache.values()];
+  }
+
+  return records
+    .filter((record) => record?.data)
+    .sort((left, right) => {
+      const rightTime = Number(right?.updatedAt || right?.createdAt || 0);
+      const leftTime = Number(left?.updatedAt || left?.createdAt || 0);
+      return rightTime - leftTime;
+    })
+    .slice(0, limit)
+    .map(serializeAdminEntry)
+    .filter(Boolean);
 }
 
 function normalizeThreatUrl(rawUrl) {
@@ -153,6 +605,83 @@ function sortReasons(reasons) {
     if (byTone !== 0) return byTone;
     return Math.abs(right.scoreDelta) - Math.abs(left.scoreDelta);
   });
+}
+
+function sameRegistrableDomain(hostA, hostB) {
+  const left = buildBreakdown(String(hostA || "").toLowerCase()).registrableDomain;
+  const right = buildBreakdown(String(hostB || "").toLowerCase()).registrableDomain;
+  return Boolean(left && right && left === right);
+}
+
+function isBenignSameSiteRedirect(sourceHost, redirectHost) {
+  const source = String(sourceHost || "").toLowerCase();
+  const target = String(redirectHost || "").toLowerCase();
+  if (!source || !target) return false;
+  if (source === target) return true;
+  if (!sameRegistrableDomain(source, target)) return false;
+
+  const sourceBreakdown = buildBreakdown(source);
+  const targetBreakdown = buildBreakdown(target);
+
+  const sourceIsApex = !sourceBreakdown.subdomain;
+  const targetIsApex = !targetBreakdown.subdomain;
+
+  if (sourceIsApex && target === `www.${source}`) return true;
+  if (targetIsApex && source === `www.${target}`) return true;
+
+  return sourceIsApex !== targetIsApex;
+}
+
+function matchesTlsSubject(host, subject) {
+  const normalizedHost = String(host || "").toLowerCase();
+  const normalizedSubject = String(subject || "").toLowerCase().trim();
+  if (!normalizedHost || !normalizedSubject) return false;
+  if (normalizedHost === normalizedSubject) return true;
+
+  if (normalizedSubject.startsWith("*.")) {
+    const wildcardBase = normalizedSubject.slice(2);
+
+    if (normalizedHost.endsWith(`.${wildcardBase}`)) {
+      return true;
+    }
+
+    if (
+      sameRegistrableDomain(normalizedHost, wildcardBase) &&
+      (normalizedHost === wildcardBase || normalizedHost === `www.${wildcardBase}`)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isBenignNetworkReason(reason, normalized) {
+  const title = String(reason?.title || "").toLowerCase();
+  const detail = String(reason?.detail || "").toLowerCase();
+  const host = String(normalized?.host || "").toLowerCase();
+
+  if (/redirect|редирект|перенаправ/.test(title + " " + detail)) {
+    const wwwHost = `www.${host}`;
+    if (
+      detail.includes(wwwHost) &&
+      detail.includes("нормаль")
+    ) {
+      return true;
+    }
+  }
+
+  if (/tls|https|сертификат/.test(title + " " + detail)) {
+    const registrableDomain = buildBreakdown(host).registrableDomain.toLowerCase();
+    if (
+      detail.includes(`*.${registrableDomain}`) &&
+      (/соответств|не вызывает подозр|нормаль/.test(detail) || matchesTlsSubject(host, `*.${registrableDomain}`))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function refreshOpenPhishFeed() {
@@ -306,6 +835,403 @@ async function lookupThreatIntel(normalized) {
   };
 }
 
+async function refreshUrlAbuseFeed() {
+  if (!urlAbuseEmail || !urlAbuseToken) {
+    urlAbuseState.lastError = "URLAbuse credentials are not configured.";
+    return;
+  }
+
+  if (
+    urlAbuseState.loadingPromise &&
+    Date.now() - urlAbuseState.fetchedAt < urlAbuseRefreshMs
+  ) {
+    return urlAbuseState.loadingPromise;
+  }
+
+  urlAbuseState.loadingPromise = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12_000);
+
+    try {
+      let nextRowId = urlAbuseState.lastRowId;
+      let pagesFetched = 0;
+      let fetchedAny = false;
+
+      while (pagesFetched < urlAbuseMaxPages) {
+        const params = new URLSearchParams({
+          email: urlAbuseEmail,
+          token: urlAbuseToken,
+          acl: urlAbuseAcl,
+        });
+
+        if (nextRowId > 0) {
+          params.set("rowid", String(nextRowId));
+        }
+
+        const response = await fetch(`${urlAbuseApiUrl}?${params.toString()}`, {
+          headers: {
+            "User-Agent": "domain-traffic-light/1.0",
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`URLAbuse HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        if (!payload?.success) {
+          throw new Error(
+            sanitizeString(payload?.msg || "URLAbuse returned unsuccessful payload.", 180),
+          );
+        }
+
+        const records = Array.isArray(payload?.attr) ? payload.attr : [];
+        if (records.length === 0) {
+          break;
+        }
+
+        fetchedAny = true;
+        pagesFetched += 1;
+
+        for (const record of records) {
+          const normalizedUrl = normalizeThreatUrl(record?.url);
+          if (!normalizedUrl) continue;
+
+          urlAbuseState.urls.add(normalizedUrl);
+
+          try {
+            const host = new URL(normalizedUrl).hostname.toLowerCase();
+            urlAbuseState.hosts.set(host, (urlAbuseState.hosts.get(host) || 0) + 1);
+          } catch {
+            // ignore malformed record
+          }
+
+          const rowId = Number(record?.rowid);
+          if (Number.isFinite(rowId) && rowId > nextRowId) {
+            nextRowId = rowId;
+          }
+        }
+
+        if (records.length < 100) {
+          break;
+        }
+      }
+
+      if (fetchedAny) {
+        urlAbuseState.lastRowId = nextRowId;
+      }
+
+      urlAbuseState.fetchedAt = Date.now();
+      urlAbuseState.lastError = null;
+
+      log("info", "URLAbuse feed refreshed", {
+        urls: urlAbuseState.urls.size,
+        hosts: urlAbuseState.hosts.size,
+        lastRowId: urlAbuseState.lastRowId,
+      });
+    } catch (error) {
+      urlAbuseState.lastError =
+        error instanceof Error ? error.message : "URLAbuse refresh failed.";
+      log("warn", "URLAbuse refresh failed", {
+        error: urlAbuseState.lastError,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+      const finishedPromise = urlAbuseState.loadingPromise;
+      setTimeout(() => {
+        if (urlAbuseState.loadingPromise === finishedPromise) {
+          urlAbuseState.loadingPromise = null;
+        }
+      }, 0);
+    }
+  })();
+
+  return urlAbuseState.loadingPromise;
+}
+
+async function ensureUrlAbuseFeed() {
+  if (!urlAbuseEmail || !urlAbuseToken) {
+    return;
+  }
+
+  const isFresh =
+    urlAbuseState.fetchedAt > 0 &&
+    Date.now() - urlAbuseState.fetchedAt < urlAbuseRefreshMs &&
+    (urlAbuseState.urls.size > 0 || urlAbuseState.lastRowId > 0);
+
+  if (isFresh) {
+    return;
+  }
+
+  await refreshUrlAbuseFeed();
+}
+
+async function lookupUrlAbuseIntel(normalized) {
+  if (!urlAbuseEmail || !urlAbuseToken) {
+    return {
+      source: "urlabuse",
+      status: "unavailable",
+      note: "URLAbuse не настроен.",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  await ensureUrlAbuseFeed();
+
+  if (urlAbuseState.urls.size === 0) {
+    return {
+      source: "urlabuse",
+      status: "unavailable",
+      note: urlAbuseState.lastError
+        ? `URLAbuse недоступен: ${sanitizeString(urlAbuseState.lastError, 120)}`
+        : "URLAbuse временно недоступен.",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  const exactUrl = normalizeThreatUrl(normalized.url.toString());
+  const rootUrl = normalizeThreatUrl(`${normalized.url.protocol}//${normalized.host}/`);
+  const host = normalized.host.toLowerCase();
+  const exactMatch = urlAbuseState.urls.has(exactUrl);
+  const rootMatch = urlAbuseState.urls.has(rootUrl);
+  const hostMatches = urlAbuseState.hosts.get(host) || 0;
+
+  if (exactMatch || rootMatch) {
+    return {
+      source: "urlabuse",
+      status: "hit",
+      matchType: exactMatch ? "exact-url" : "host-root",
+      confidence: "high",
+      note: "Точный адрес найден в URLAbuse.",
+      checkedAt: new Date().toISOString(),
+      hostMatches,
+      lastRowId: urlAbuseState.lastRowId,
+    };
+  }
+
+  if (hostMatches > 0) {
+    return {
+      source: "urlabuse",
+      status: "hit",
+      matchType: "host",
+      confidence: "medium",
+      note:
+        hostMatches > 1
+          ? `Для этого хоста в URLAbuse найдено ${hostMatches} записей.`
+          : "Для этого хоста в URLAbuse найдена запись.",
+      checkedAt: new Date().toISOString(),
+      hostMatches,
+      lastRowId: urlAbuseState.lastRowId,
+    };
+  }
+
+  return {
+    source: "urlabuse",
+    status: "clear",
+    matchType: "none",
+    confidence: "low",
+    note: "Совпадений в URLAbuse не найдено.",
+    checkedAt: new Date().toISOString(),
+    hostMatches: 0,
+    lastRowId: urlAbuseState.lastRowId,
+  };
+}
+
+setTimeout(() => {
+  void refreshOpenPhishFeed();
+  if (urlAbuseEmail && urlAbuseToken) {
+    void refreshUrlAbuseFeed();
+  }
+}, 0);
+
+function withTimeout(promise, timeoutMs, label) {
+  let timeoutId;
+
+  const timer = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs);
+  });
+
+  return Promise.race([promise, timer]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+async function lookupDnsSignals(host) {
+  const [ipv4, ipv6, cnames] = await Promise.allSettled([
+    withTimeout(dns.resolve4(host), networkSignalTimeoutMs, "DNS A"),
+    withTimeout(dns.resolve6(host), networkSignalTimeoutMs, "DNS AAAA"),
+    withTimeout(dns.resolveCname(host), networkSignalTimeoutMs, "DNS CNAME"),
+  ]);
+
+  const ipv4List = ipv4.status === "fulfilled" ? ipv4.value : [];
+  const ipv6List = ipv6.status === "fulfilled" ? ipv6.value : [];
+  const cnameList = cnames.status === "fulfilled" ? cnames.value : [];
+  const resolved =
+    ipv4List.length > 0 || ipv6List.length > 0 || cnameList.length > 0;
+
+  return {
+    resolved,
+    ipv4Count: ipv4List.length,
+    ipv6Count: ipv6List.length,
+    cnames: cnameList.slice(0, 2),
+    note: resolved
+      ? `DNS есть: A ${ipv4List.length}, AAAA ${ipv6List.length}, CNAME ${cnameList.length}.`
+      : "DNS-ответ не получен.",
+  };
+}
+
+async function lookupHttpSignals(normalized) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), networkSignalTimeoutMs);
+
+  try {
+    let response = await fetch(normalized.url.toString(), {
+      method: "HEAD",
+      redirect: "manual",
+      signal: controller.signal,
+      headers: {
+        "user-agent": "DomainTrafficLight/1.0",
+      },
+    });
+
+    if (response.status === 405 || response.status === 403) {
+      response = await fetch(normalized.url.toString(), {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          "user-agent": "DomainTrafficLight/1.0",
+        },
+      });
+    }
+
+    const location = response.headers.get("location");
+    let redirectHost = null;
+
+    if (location) {
+      try {
+        redirectHost = new URL(location, normalized.url).hostname.toLowerCase();
+      } catch {
+        redirectHost = null;
+      }
+    }
+
+    return {
+      reachable: true,
+      status: response.status,
+      redirected: Boolean(redirectHost),
+      redirectHost,
+      note: redirectHost
+        ? `HTTP ${response.status}, redirect на ${redirectHost}.`
+        : `HTTP ${response.status} без внешнего redirect.`,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? sanitizeString(error.message, 120) : "HTTP check failed.";
+    return {
+      reachable: false,
+      status: null,
+      redirected: false,
+      redirectHost: null,
+      note: `HTTP недоступен: ${message}`,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function lookupTlsSignals(host) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+
+    const socket = tls.connect(
+      {
+        host,
+        servername: host,
+        port: 443,
+        rejectUnauthorized: false,
+      },
+      () => {
+        const certificate = socket.getPeerCertificate();
+        done({
+          available: Boolean(certificate && Object.keys(certificate).length > 0),
+          subject: certificate?.subject?.CN || null,
+          issuer: certificate?.issuer?.CN || null,
+          validTo: certificate?.valid_to || null,
+          note:
+            certificate && Object.keys(certificate).length > 0
+              ? `TLS сертификат есть: ${certificate?.subject?.CN || "CN не указан"}.`
+              : "TLS сертификат не получен.",
+        });
+        socket.end();
+      },
+    );
+
+    socket.setTimeout(networkSignalTimeoutMs, () => {
+      done({
+        available: false,
+        subject: null,
+        issuer: null,
+        validTo: null,
+        note: "TLS-проверка не успела завершиться.",
+      });
+      socket.destroy();
+    });
+
+    socket.on("error", (error) => {
+      done({
+        available: false,
+        subject: null,
+        issuer: null,
+        validTo: null,
+        note: `TLS недоступен: ${sanitizeString(error.message, 120)}`,
+      });
+    });
+  });
+}
+
+async function lookupNetworkSignals(normalized) {
+  const dnsSignal = await lookupDnsSignals(normalized.host).catch((error) => ({
+    resolved: false,
+    ipv4Count: 0,
+    ipv6Count: 0,
+    cnames: [],
+    note:
+      error instanceof Error
+        ? `DNS недоступен: ${sanitizeString(error.message, 120)}`
+        : "DNS lookup failed.",
+  }));
+
+  const [httpSignal, tlsSignal] = await Promise.all([
+    lookupHttpSignals(normalized),
+    normalized.url.protocol === "https:"
+      ? lookupTlsSignals(normalized.host)
+      : Promise.resolve({
+          available: false,
+          subject: null,
+          issuer: null,
+          validTo: null,
+          note: "TLS не проверялся для HTTP-ссылки.",
+        }),
+  ]);
+
+  return {
+    source: "network",
+    checkedAt: new Date().toISOString(),
+    dns: dnsSignal,
+    http: httpSignal,
+    tls: tlsSignal,
+  };
+}
+
 function applyThreatIntelToAnalysis(localAnalysis, threatIntel, normalized) {
   if (!localAnalysis || !normalized || threatIntel?.source !== "openphish") {
     return localAnalysis;
@@ -367,6 +1293,165 @@ function applyThreatIntelToAnalysis(localAnalysis, threatIntel, normalized) {
   };
 }
 
+function applyUrlAbuseToAnalysis(localAnalysis, urlAbuseIntel, normalized) {
+  if (!localAnalysis || !normalized || urlAbuseIntel?.source !== "urlabuse") {
+    return localAnalysis;
+  }
+
+  if (urlAbuseIntel.status !== "hit") {
+    return localAnalysis;
+  }
+
+  const baseReasons = Array.isArray(localAnalysis.reasons)
+    ? [...localAnalysis.reasons]
+    : [];
+  const baseActions = Array.isArray(localAnalysis.actions)
+    ? [...localAnalysis.actions]
+    : [];
+  const isExact =
+    urlAbuseIntel.matchType === "exact-url" || urlAbuseIntel.matchType === "host-root";
+  const scoreDelta = isExact ? 62 : 44;
+
+  baseReasons.unshift({
+    title: isExact ? "Есть в URLAbuse" : "Хост есть в URLAbuse",
+    detail: isExact
+      ? "Точный адрес найден в URLAbuse. Это сильный сигнал реального фишинга."
+      : urlAbuseIntel.hostMatches > 1
+        ? `Для этого хоста в URLAbuse найдено ${urlAbuseIntel.hostMatches} записей.`
+        : "Для этого хоста в URLAbuse найдена phishing-запись.",
+    scoreDelta,
+    tone: "critical",
+  });
+
+  return {
+    ...localAnalysis,
+    host: normalized.host,
+    breakdown: buildBreakdown(normalized.host),
+    analyzedAt: new Date().toISOString(),
+    score: Math.min(100, Math.max(Number(localAnalysis.score) || 0, scoreDelta)),
+    verdict: "high",
+    verdictLabel: "Высокий риск",
+    summary: isExact
+      ? "Адрес найден в URLAbuse. Переход и ввод данных лучше остановить."
+      : "Для этого хоста есть записи в URLAbuse. Нужна жёсткая перепроверка.",
+    reasons: sortReasons(baseReasons).slice(0, 8),
+    actions: [
+      "Не переходите по ссылке. Не вводите данные.",
+      "Откройте официальный адрес вручную через поисковик или закладки.",
+      "Если ссылка пришла в сообщении, покажите её взрослому или специалисту.",
+      ...baseActions,
+    ]
+      .filter((value, index, array) => array.indexOf(value) === index)
+      .slice(0, 5),
+  };
+}
+
+function applyNetworkSignalsToAnalysis(localAnalysis, networkSignals, normalized) {
+  if (!localAnalysis || !networkSignals || !normalized) {
+    return localAnalysis;
+  }
+
+  const baseReasons = Array.isArray(localAnalysis.reasons)
+    ? [...localAnalysis.reasons]
+    : [];
+  let score = Number.isFinite(Number(localAnalysis.score))
+    ? Number(localAnalysis.score)
+    : 0;
+  let changed = false;
+
+  // DNS не резолвится — серьёзный warning
+  if (networkSignals.dns && !networkSignals.dns.resolved) {
+    baseReasons.push({
+      title: "DNS не отвечает",
+      detail: `Домен ${normalized.host} не резолвится через DNS. Это может означать свежий фишинг, мёртвый домен или блокировку.`,
+      scoreDelta: 14,
+      tone: "warning",
+    });
+    score += 14;
+    changed = true;
+  }
+
+  // HTTP redirect на другой registrable domain — critical
+  if (
+    networkSignals.http &&
+    networkSignals.http.redirected &&
+    networkSignals.http.redirectHost &&
+    networkSignals.http.redirectHost !== normalized.host &&
+    !isBenignSameSiteRedirect(normalized.host, networkSignals.http.redirectHost) &&
+    !normalized.host.endsWith(`.${networkSignals.http.redirectHost}`) &&
+    !networkSignals.http.redirectHost.endsWith(`.${normalized.host}`)
+  ) {
+    baseReasons.push({
+      title: "Redirect на другой домен",
+      detail: `При переходе на ${normalized.host} происходит redirect на ${networkSignals.http.redirectHost}. Это может быть маскировка реального направления.`,
+      scoreDelta: 20,
+      tone: "critical",
+    });
+    score += 20;
+    changed = true;
+  }
+
+  // TLS subject не совпадает с доменом.
+  // Не штрафуем типичный apex -> www / wildcard случай внутри одного registrable domain.
+  if (
+    networkSignals.tls &&
+    networkSignals.tls.available &&
+    networkSignals.tls.subject &&
+    !matchesTlsSubject(normalized.host, networkSignals.tls.subject)
+  ) {
+    baseReasons.push({
+      title: "TLS-несоответствие",
+      detail: `TLS сертификат выдан на ${networkSignals.tls.subject}, а не на ${normalized.host}. Это может быть shared hosting или подмена.`,
+      scoreDelta: 10,
+      tone: "warning",
+    });
+    score += 10;
+    changed = true;
+  }
+
+  // HTTP не отвечает вообще (для не-.test/.example доменов)
+  if (
+    networkSignals.http &&
+    !networkSignals.http.reachable &&
+    !normalized.host.endsWith(".test") &&
+    !normalized.host.endsWith(".example")
+  ) {
+    baseReasons.push({
+      title: "Сайт недоступен",
+      detail: `HTTP-запрос к ${normalized.host} не получил ответа. Сайт может быть нерабочим, заблокированным или временным.`,
+      scoreDelta: 8,
+      tone: "warning",
+    });
+    score += 8;
+    changed = true;
+  }
+
+  if (!changed) {
+    return localAnalysis;
+  }
+
+  const normalizedScore = Math.max(0, Math.min(100, score));
+  let verdict = localAnalysis.verdict || "low";
+  if (normalizedScore >= 42 && verdict !== "high") {
+    verdict = "high";
+  } else if (normalizedScore >= 12 && verdict === "low") {
+    verdict = "medium";
+  }
+
+  return {
+    ...localAnalysis,
+    host: normalized.host,
+    breakdown: buildBreakdown(normalized.host),
+    analyzedAt: new Date().toISOString(),
+    score: normalizedScore,
+    verdict,
+    verdictLabel: verdict === "high" ? "Высокий риск" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+    summary: localAnalysis.summary,
+    reasons: sortReasons(baseReasons).slice(0, 10),
+    actions: localAnalysis.actions,
+  };
+}
+
 // ─── Request logging ──────────────────────────────────────────────────────────
 const logLevel = process.env.LOG_LEVEL || "debug";
 
@@ -421,7 +1506,7 @@ app.use((req, _res, next) => {
 const configuredModels = (
   process.env.GROQ_MODELS ||
   process.env.GROQ_MODEL ||
-  "openai/gpt-oss-120b,llama-3.3-70b-versatile,llama-3.1-8b-instant"
+  "llama-3.3-70b-versatile,llama-3.1-8b-instant"
 )
   .split(",")
   .map((item) => item.trim())
@@ -441,14 +1526,28 @@ const compoundSuffixes = [
 function buildGroqRequest(model, prompt) {
   return {
     model,
-    temperature: 0,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 500,
+    temperature: 0.08,
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
     response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
-        content:
-          "You are a strict phishing/domain risk analyst. Return only valid JSON. All text content must be in Russian.",
+        content: `Ты — строгий аналитик фишинга и доменных угроз. Ты работаешь в системе «Светофор доменов» для белорусских пользователей.
+
+Твоя задача — на основе уже готового локального анализа (ruleset), данных threat feeds (OpenPhish, URLAbuse) и сетевых сигналов (DNS, HTTP, TLS):
+1. Перепроверить вердикт и при необходимости усилить его.
+2. Добавить ТОЛЬКО новые полезные наблюдения, которых нет в локальном анализе.
+3. Не смягчать вердикт, если локальный анализ уже нашёл серьёзные риски (typo-squat, brand-spoof, punycode, OpenPhish hit).
+4. Анализировать корреляции между сигналами (например, новый домен + подозрительные слова + нестандартный TLD = высокий риск).
+
+Принципы:
+- Каждая причина (reason) должна ссылаться на КОНКРЕТНЫЙ сигнал: фрагмент домена, TLD, результат DNS/TLS, запись в OpenPhish, redirect-цепочку.
+- Не пиши общих фраз вроде «домен выглядит подозрительно» или «есть отдельный поддомен».
+- Если DNS не резолвится — это серьёзный warning. Если TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
+- Если данных мало, честно напиши об ограничении, но не выдумывай проверки.
+- Все тексты — на русском. Формат — строго JSON.
+- Заголовок reason: 1–3 слова, без нумерации, без «Сигнал 1».
+- Обращай внимание на комбинации признаков: несколько слабых сигналов вместе могут указывать на высокий риск.`,
       },
       {
         role: "user",
@@ -649,6 +1748,22 @@ function inferReasonScoreDelta(verdict) {
 function inferReasonTitle(text, verdict) {
   const value = String(text || "").toLowerCase();
 
+  if (/openphish/i.test(value)) {
+    return "OpenPhish";
+  }
+
+  if (/urlabuse/i.test(value)) {
+    return "URLAbuse";
+  }
+
+  if (/бренд|spoof|typo|подмен|roblox|vercel|openai|github|google|telegram/i.test(value)) {
+    return "Бренд";
+  }
+
+  if (/redirect|редирект|перенаправ/i.test(value)) {
+    return "Redirect";
+  }
+
   if (/ssl|https|сертификат|шифрован/i.test(value)) {
     return "HTTPS";
   }
@@ -692,6 +1807,66 @@ function isGenericReasonTitle(title) {
   return /^(сигнал|наблюдение)\s*\d*$/i.test(String(title || "").trim());
 }
 
+function inferReasonTopic(reason) {
+  const value = `${String(reason?.title || "")} ${String(reason?.detail || "")}`.toLowerCase();
+
+  if (/openphish/.test(value)) return "openphish";
+  if (/urlabuse/.test(value)) return "urlabuse";
+  if (/бренд|spoof|typo|подмен|roblox|vercel|openai|github|google|telegram/.test(value)) {
+    return "brand";
+  }
+  if (/ssl|https|сертификат|шифрован|tls/.test(value)) return "https";
+  if (/dns|ns\b|регистрац/.test(value)) return "dns";
+  if (/redirect|редирект|перенаправ/.test(value)) return "redirect";
+  if (/поддомен|структур|ядро домена/.test(value)) return "subdomain";
+  if (/зона|tld|доменн/.test(value)) return "tld";
+  if (/query|параметр|порт|@/.test(value)) return "url-structure";
+  if (/репутац|blacklist|базах фишингов|фишинг/.test(value)) return "reputation";
+
+  return sanitizeString(reason?.title || reason?.detail || "", 60).toLowerCase();
+}
+
+function filterNovelAiReasons(aiReasons = [], localReasons = []) {
+  const localTopics = new Set(localReasons.map((reason) => inferReasonTopic(reason)));
+  const seenTopics = new Set();
+
+  return aiReasons.filter((reason) => {
+    const topic = inferReasonTopic(reason);
+    const detail = sanitizeString(reason?.detail || "", 220).toLowerCase();
+    const hasConcretePayload =
+      detail.length >= 38 ||
+      /openphish|urlabuse|xn--|redirect|поддомен|зона|бренд|spoof|typo|dns|https|tls/.test(detail);
+
+    if (seenTopics.has(topic)) {
+      return false;
+    }
+
+    if (localTopics.has(topic) && !hasConcretePayload) {
+      return false;
+    }
+
+    seenTopics.add(topic);
+    return true;
+  });
+}
+
+function reasonMentionsConcreteSignal(reason, normalized) {
+  const text = `${String(reason?.title || "")} ${String(reason?.detail || "")}`.toLowerCase();
+  const hostTokens = normalized.host
+    .split(".")
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length >= 4);
+  const pathTokens = normalized.url.pathname
+    .split(/[\\/._-]+/)
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length >= 4);
+
+  return (
+    [...hostTokens, ...pathTokens].some((token) => text.includes(token)) ||
+    /openphish|urlabuse|xn--|https|dns|tls|redirect|поддомен|зона|бренд|spoof|typo/.test(text)
+  );
+}
+
 function alignScoreWithVerdict(score, verdict) {
   const normalized = Math.max(0, Math.min(100, Number(score) || 0));
 
@@ -704,6 +1879,31 @@ function alignScoreWithVerdict(score, verdict) {
   }
 
   return Math.min(normalized, 29);
+}
+
+function isContradictorySummary(summary, verdict) {
+  const value = sanitizeString(summary || "", 220).toLowerCase();
+
+  if (!value) {
+    return true;
+  }
+
+  const calmPatterns = [
+    "не выявлен",
+    "не обнаружен",
+    "сильных тревожных признаков не найдено",
+    "явных угроз не видно",
+    "выглядит легитим",
+    "выглядит норм",
+    "всё норм",
+    "все норм",
+  ];
+
+  if (verdict === "high" || verdict === "medium") {
+    return calmPatterns.some((pattern) => value.includes(pattern));
+  }
+
+  return false;
 }
 
 function sanitizeAnalysis(aiPayload, input, localAnalysis) {
@@ -765,6 +1965,17 @@ function sanitizeAnalysis(aiPayload, input, localAnalysis) {
         };
       })
     : [];
+  const filteredAiReasons = filterNovelAiReasons(
+    reasons,
+    Array.isArray(localAnalysis?.reasons) ? localAnalysis.reasons : [],
+  ).filter((reason) => reasonMentionsConcreteSignal(reason, normalized));
+
+  const aiReasonsAreOnlyBenignNetworkNotes =
+    filteredAiReasons.length > 0 &&
+    filteredAiReasons.every((reason) => isBenignNetworkReason(reason, normalized));
+
+  const downgradedVerdict =
+    fallbackVerdict === "low" && aiReasonsAreOnlyBenignNetworkNotes ? "low" : verdict;
 
   const actions = Array.isArray(aiPayload?.actions)
     ? aiPayload.actions
@@ -774,7 +1985,7 @@ function sanitizeAnalysis(aiPayload, input, localAnalysis) {
     : defaultActions(verdict);
 
   // Объединяем локальные и AI-причины (без дублей по title)
-  const mergedReasons = [...reasons];
+  const mergedReasons = [...filteredAiReasons];
   if (Array.isArray(localAnalysis?.reasons)) {
     const existingTitles = new Set(mergedReasons.map((r) => r.title.toLowerCase()));
     for (const lr of localAnalysis.reasons) {
@@ -784,15 +1995,24 @@ function sanitizeAnalysis(aiPayload, input, localAnalysis) {
     }
   }
 
+  const safeSummary = sanitizeString(aiPayload?.summary || "", 600);
+  const summary =
+    !safeSummary || isContradictorySummary(safeSummary, verdict)
+      ? sanitizeString(localAnalysis?.summary || safeSummary, 600)
+      : safeSummary;
+
   return {
     host: normalized.host,
-    score,
-    verdict,
-    verdictLabel: verdictLabel(verdict),
-    summary: sanitizeString(
-      aiPayload?.summary || localAnalysis?.summary || "",
-      600,
-    ),
+    score:
+      fallbackVerdict === "low" && aiReasonsAreOnlyBenignNetworkNotes
+        ? Math.min(10, alignScoreWithVerdict(rawScore, "low"))
+        : score,
+    verdict: downgradedVerdict,
+    verdictLabel: verdictLabel(downgradedVerdict),
+    summary:
+      fallbackVerdict === "low" && aiReasonsAreOnlyBenignNetworkNotes
+        ? sanitizeString(localAnalysis?.summary || summary, 600)
+        : summary,
     reasons:
       mergedReasons.length > 0
         ? mergedReasons.slice(0, 8)
@@ -815,42 +2035,286 @@ function sanitizeAnalysis(aiPayload, input, localAnalysis) {
   };
 }
 
+function mergeUniqueReasons(primary = [], secondary = []) {
+  const seen = new Set();
+  return [...primary, ...secondary].filter((reason) => {
+    const key = `${String(reason?.title || "").toLowerCase()}::${String(reason?.detail || "").toLowerCase()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergeUniqueActions(primary = [], secondary = []) {
+  const seen = new Set();
+  return [...primary, ...secondary].filter((action) => {
+    const key = sanitizeString(action, 200).toLowerCase();
+    if (!key || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function applyAiToAnalysis(baseAnalysis, aiAnalysis, normalized) {
+  if (!baseAnalysis || !aiAnalysis) {
+    return baseAnalysis;
+  }
+
+  const verdictPriority = { low: 0, medium: 1, high: 2 };
+  const chosenVerdict =
+    verdictPriority[aiAnalysis.verdict] >= verdictPriority[baseAnalysis.verdict]
+      ? aiAnalysis.verdict
+      : baseAnalysis.verdict;
+  const chosenScore = alignScoreWithVerdict(
+    Math.max(Number(baseAnalysis.score) || 0, Number(aiAnalysis.score) || 0),
+    chosenVerdict,
+  );
+
+  return {
+    ...baseAnalysis,
+    host: normalized.host,
+    analyzedAt: new Date().toISOString(),
+    breakdown: buildBreakdown(normalized.host),
+    verdict: chosenVerdict,
+    verdictLabel: verdictLabel(chosenVerdict),
+    score: chosenScore,
+    summary: sanitizeString(aiAnalysis.summary || baseAnalysis.summary, 600),
+    reasons: mergeUniqueReasons(baseAnalysis.reasons || [], aiAnalysis.reasons || []).slice(0, 8),
+    actions: mergeUniqueActions(baseAnalysis.actions || [], aiAnalysis.actions || []).slice(0, 5),
+  };
+}
+
+function sanitizeAdminReasons(reasons, fallbackVerdict) {
+  if (!Array.isArray(reasons)) return [];
+
+  return reasons
+    .map((reason, index) => {
+      if (typeof reason === "string") {
+        const detail = sanitizeString(reason, 240);
+        if (!detail) return null;
+        return {
+          title: inferReasonTitle(detail, fallbackVerdict) || `Сигнал ${index + 1}`,
+          detail,
+          scoreDelta: inferReasonScoreDelta(fallbackVerdict),
+          tone: inferReasonTone(fallbackVerdict),
+        };
+      }
+
+      const detail = sanitizeString(reason?.detail || "", 240);
+      const title = sanitizeString(reason?.title || "", 100);
+      if (!detail && !title) return null;
+
+      return {
+        title: title || inferReasonTitle(detail, fallbackVerdict) || `Сигнал ${index + 1}`,
+        detail: detail || "Ручная правка без подробностей.",
+        scoreDelta: Number.isFinite(Number(reason?.scoreDelta))
+          ? Math.max(-50, Math.min(60, Number(reason.scoreDelta)))
+          : inferReasonScoreDelta(fallbackVerdict),
+        tone: reason?.tone ? sanitizeTone(reason.tone) : inferReasonTone(fallbackVerdict),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function sanitizeAdminActions(actions, fallbackVerdict) {
+  if (!Array.isArray(actions)) {
+    return defaultActions(fallbackVerdict);
+  }
+
+  const nextActions = actions
+    .map((item) => sanitizeString(typeof item === "string" ? item : String(item || ""), 200))
+    .filter(Boolean)
+    .slice(0, 5);
+
+  return nextActions.length > 0 ? nextActions : defaultActions(fallbackVerdict);
+}
+
+function applyAdminEditsToResponseData(data, edits = {}, host) {
+  const currentFinal = data?.aiAdjustedResult || data?.enrichedLocalResult || data?.analysis || {};
+  const currentAnalysis = data?.analysis || currentFinal || {};
+  const nextVerdict = sanitizeVerdict(edits?.verdict || currentFinal?.verdict || currentAnalysis?.verdict);
+  const rawScore = Number.isFinite(Number(edits?.score))
+    ? Number(edits.score)
+    : Number.isFinite(Number(currentFinal?.score))
+      ? Number(currentFinal.score)
+      : Number.isFinite(Number(currentAnalysis?.score))
+        ? Number(currentAnalysis.score)
+        : 50;
+  const nextScore = alignScoreWithVerdict(rawScore, nextVerdict);
+  const nextSummary = sanitizeString(
+    edits?.summary || currentFinal?.summary || currentAnalysis?.summary || "",
+    600,
+  );
+  const nextReasons = sanitizeAdminReasons(
+    Array.isArray(edits?.reasons) ? edits.reasons : currentFinal?.reasons || currentAnalysis?.reasons || [],
+    nextVerdict,
+  );
+  const nextActions = sanitizeAdminActions(
+    Array.isArray(edits?.actions) ? edits.actions : currentFinal?.actions || currentAnalysis?.actions || [],
+    nextVerdict,
+  );
+  const nextBreakdown = buildBreakdown(host);
+  const moderationNote = sanitizeString(edits?.note || "", 280);
+  const timestamp = new Date().toISOString();
+
+  return {
+    ...data,
+    analysis: {
+      ...currentAnalysis,
+      host,
+      verdict: nextVerdict,
+      verdictLabel: verdictLabel(nextVerdict),
+      score: nextScore,
+      summary: nextSummary,
+      reasons: nextReasons,
+      actions: nextActions,
+      breakdown: nextBreakdown,
+    },
+    aiAdjustedResult: {
+      ...currentFinal,
+      host,
+      verdict: nextVerdict,
+      verdictLabel: verdictLabel(nextVerdict),
+      score: nextScore,
+      summary: nextSummary,
+      reasons: nextReasons,
+      actions: nextActions,
+      analyzedAt: timestamp,
+      breakdown: nextBreakdown,
+    },
+    source: "cache-admin",
+    moderation: {
+      moderated: true,
+      updatedAt: timestamp,
+      note: moderationNote || null,
+    },
+  };
+}
+
+function buildNetworkSignalSummary(networkSignals) {
+  if (!networkSignals) {
+    return "network: unavailable";
+  }
+
+  const dnsLine = `dns_resolved: ${networkSignals.dns?.resolved ? "yes" : "no"}, a=${networkSignals.dns?.ipv4Count || 0}, aaaa=${networkSignals.dns?.ipv6Count || 0}, cname=${Array.isArray(networkSignals.dns?.cnames) ? networkSignals.dns.cnames.join(",") || "none" : "none"}`;
+  const httpLine = `http_status: ${networkSignals.http?.status ?? "n/a"}, redirected: ${networkSignals.http?.redirected ? "yes" : "no"}, redirect_host: ${networkSignals.http?.redirectHost || "none"}`;
+  const tlsLine = `tls_available: ${networkSignals.tls?.available ? "yes" : "no"}, tls_subject: ${networkSignals.tls?.subject || "none"}, tls_issuer: ${networkSignals.tls?.issuer || "none"}`;
+
+  return [dnsLine, httpLine, tlsLine].join("\n");
+}
+
+function buildThreatIntelSummary(threatIntel, urlAbuseIntel) {
+  const openPhishLine = threatIntel
+    ? `openphish: status=${threatIntel.status}, match=${threatIntel.matchType || "none"}, note=${sanitizeString(threatIntel.note || "", 180)}`
+    : "openphish: unavailable";
+  const urlAbuseLine = urlAbuseIntel
+    ? `urlabuse: status=${urlAbuseIntel.status}, match=${urlAbuseIntel.matchType || "none"}, note=${sanitizeString(urlAbuseIntel.note || "", 180)}`
+    : "urlabuse: unavailable";
+
+  return [openPhishLine, urlAbuseLine].join("\n");
+}
+
+function buildLocalSignalSummary(localAnalysis) {
+  if (!Array.isArray(localAnalysis?.reasons) || localAnalysis.reasons.length === 0) {
+    return "none";
+  }
+
+  return localAnalysis.reasons
+    .slice(0, 5)
+    .map((reason) => {
+      const tone = sanitizeTone(reason?.tone);
+      const delta = Number.isFinite(Number(reason?.scoreDelta))
+        ? Number(reason.scoreDelta)
+        : 0;
+      return `${reason.title} [${tone}, ${delta >= 0 ? `+${delta}` : delta}]: ${sanitizeString(reason.detail, 180)}`;
+    })
+    .join("\n");
+}
+
 // ─── Prompt builder ───────────────────────────────────────────────────────────
-function buildPrompt(input, normalized, localAnalysis) {
-  const localReasons = Array.isArray(localAnalysis?.reasons)
-    ? localAnalysis.reasons
-        .slice(0, 3)
-        .map((reason) => `${reason.title}: ${reason.detail}`)
-        .join("; ")
-    : "";
+function buildPrompt(
+  input,
+  normalized,
+  localAnalysis,
+  networkSignals,
+  threatIntel,
+  urlAbuseIntel,
+) {
+  const localReasons = buildLocalSignalSummary(localAnalysis);
+  const networkSummary = buildNetworkSignalSummary(networkSignals);
+  const threatIntelSummary = buildThreatIntelSummary(threatIntel, urlAbuseIntel);
+  const breakdown = buildBreakdown(normalized.host);
 
-  return `Проанализируй домен или ссылку на признаки фишинга.
+  return `## КОНТЕКСТ
+Ты не оцениваешь домен с нуля. У тебя уже есть локальный ruleset, данные phishing-баз и сетевые проверки.
+Твоя задача: перепроверить вывод, добавить ТОЛЬКО новые конкретные наблюдения, и сформировать итог.
 
+## ВХОДНЫЕ ДАННЫЕ
+input: ${sanitizeString(input, 280)}
 host: ${normalized.host}
+registrable_domain: ${breakdown.registrableDomain}
+subdomain: ${breakdown.subdomain || "none"}
+tld: ${breakdown.tld}
 path: ${normalized.url.pathname || "/"}
+query: ${normalized.url.search ? sanitizeString(normalized.url.search, 200) : "none"}
 local_verdict: ${localAnalysis?.verdict || "unknown"}
 local_score: ${Number.isFinite(Number(localAnalysis?.score)) ? Number(localAnalysis.score) : 0}
-local_summary: ${sanitizeString(localAnalysis?.summary || "", 220)}
-local_reasons: ${sanitizeString(localReasons, 360)}
+local_summary: ${sanitizeString(localAnalysis?.summary || "", 280)}
 
-Верни только валидный JSON на русском.
-Причин максимум 3. Действий максимум 3.
-Заголовок каждой причины должен быть коротким: 1-3 слова, без нумерации, без "Сигнал 1", без "Наблюдение 2".
-Не придумывай проверки, которых у тебя нет. Не утверждай факты о DNS, SSL, blacklists или репутации, если они не следуют из локального анализа или из самой структуры URL.
-Если данных мало, честно скажи об ограничении в summary.
+## ЛОКАЛЬНЫЕ СИГНАЛЫ (ruleset)
+${localReasons}
 
-Формат:
-{"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical"}],"actions":["..."]}`;
+## THREAT FEEDS
+${threatIntelSummary}
+
+## СЕТЕВЫЕ СИГНАЛЫ (DNS / HTTP / TLS)
+${networkSummary}
+
+## ИНСТРУКЦИИ ПО АНАЛИЗУ СЕТЕВЫХ СИГНАЛОВ
+- Если dns_resolved=no → домен не резолвится, это серьёзный warning (может быть новый/свежий фишинг или мёртвый домен).
+- Если http redirect ведёт на ДРУГОЙ registrable domain → это critical: redirect-маскировка.
+- Если apex-домен просто ведёт на \`www\` того же registrable domain — это НОРМАЛЬНО и не должно считаться риском.
+- Если tls_subject — wildcard внутри того же registrable domain (\`*.example.com\` для \`www.example.com\` или \`example.com\`) — это не сигнал риска само по себе.
+- Если tls_available=no для https-ссылки → warning: сертификат не получен.
+- Если http_status=4xx или 5xx → warning: сайт может быть недействителен.
+
+## ПРАВИЛА
+1. Причин максимум 4. Действий максимум 3.
+2. Заголовок причины: 1-3 слова. БЕЗ нумерации, БЕЗ "Сигнал 1".
+3. В detail ОБЯЗАТЕЛЬНО упоминай конкретный фрагмент: имя хоста, токен, TLD, или источник (OpenPhish, DNS, TLS).
+4. Не повторяй локальные причины теми же словами.
+5. Если локальный анализ видит typo-squat, brand-spoof, punycode, OpenPhish-hit, URLAbuse-hit — НЕ смягчай итог.
+6. Если данных мало — честно напиши, но не додумывай.
+7. Summary: 1-2 предложения, по существу. Не пиши "выглядит легитимно" если score > 20.
+8. scoreDelta: отрицательный для позитива, положительный для риска.
+9. Если нет новых полезных причин — верни пустой массив reasons.
+10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
+11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
+
+## ПРИМЕРЫ ХОРОШЕГО И ПЛОХОГО СТИЛЯ
+❌ Плохо: "домен выглядит нормально", "есть отдельный поддомен", "используется HTTPS"
+✅ Хорошо: "Токен 'riblox' похож на 'roblox' — вероятный typo-squat"
+✅ Хорошо: "Redirect на другой домен: ${normalized.host} → [redirect_host]"
+✅ Хорошо: "TLS сертификат выдан на *.cloudflare.com, а не на ${normalized.host}"
+✅ Хорошо: "DNS не резолвится — домен может быть свежим или уже заблокирован"
+
+## ФОРМАТ ОТВЕТА (строго JSON)
+{"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }
 
 // ─── Groq request with retry ──────────────────────────────────────────────────
-async function requestGroq({ apiKey, model, prompt, retries = 1 }) {
+async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 30_000;
+      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 8_000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
@@ -960,17 +2424,110 @@ export function healthResponse() {
     openPhishLastRefreshAt: openPhishState.fetchedAt
       ? new Date(openPhishState.fetchedAt).toISOString()
       : null,
+    urlAbuseEnabled: Boolean(urlAbuseEmail && urlAbuseToken),
+    urlAbuseLastRefreshAt: urlAbuseState.fetchedAt
+      ? new Date(urlAbuseState.fetchedAt).toISOString()
+      : null,
     cacheEnabled,
+    cacheStorage,
+    cachePersistent: hasRedisCache || localDiskCacheEnabled,
     uptime: Math.floor(process.uptime()),
   };
 }
 
-export function cacheStatsResponse() {
+export async function cacheStatsResponse() {
+  let size = responseCache.size;
+
+  if (redisCache) {
+    try {
+      size = await redisCache.scard(cacheIndexKey);
+    } catch {
+      size = null;
+    }
+  }
+
   return {
-    size: responseCache.size,
-    maxSize: cacheMaxSize,
-    ttlMs: cacheTtlMs,
+    size,
     enabled: cacheEnabled,
+    storage: cacheStorage,
+    persistent: hasRedisCache || localDiskCacheEnabled,
+  };
+}
+
+export async function adminCacheGetResponse(query = {}, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const host = String(query?.host || "").trim();
+  const limit = Math.max(1, Math.min(50, Number(query?.limit) || 15));
+
+  if (!host) {
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        recent: await listRecentCacheEntries(limit),
+        entry: null,
+      },
+    };
+  }
+
+  const record = await getRawCacheRecordByHost(host);
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      recent: await listRecentCacheEntries(limit),
+      entry: record ? serializeAdminEntry(record) : null,
+    },
+  };
+}
+
+export async function adminCacheUpdateResponse(body = {}, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const hostInput = String(body?.host || "").trim();
+  const normalized = normalizeCacheHostInput(hostInput);
+  if ("error" in normalized) {
+    return { status: 400, body: { error: normalized.error } };
+  }
+
+  const existingRecord = await getRawCacheRecordByHost(normalized.host);
+  if (!existingRecord?.data) {
+    return { status: 404, body: { error: "Запись не найдена в кэше." } };
+  }
+
+  const nextData = applyAdminEditsToResponseData(existingRecord.data, body?.edits || {}, normalized.host);
+  const savedRecord = await saveRawCacheRecord({
+    ...existingRecord,
+    host: normalized.host,
+    data: nextData,
+  });
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      entry: serializeAdminEntry(savedRecord),
+    },
+  };
+}
+
+export async function adminCacheDeleteResponse(query = {}, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const hostInput = String(query?.host || "").trim();
+  const normalized = normalizeCacheHostInput(hostInput);
+  if ("error" in normalized) {
+    return { status: 400, body: { error: normalized.error } };
+  }
+
+  const deleted = await deleteRawCacheRecordByHost(normalized.host);
+  return {
+    status: deleted ? 200 : 404,
+    body: deleted ? { ok: true } : { error: "Запись не найдена в кэше." },
   };
 }
 
@@ -980,6 +2537,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
   const input = String(body?.input || "");
   const localAnalysis = body?.localAnalysis || null;
   const skipCache = body?.skipCache === true;
+  const telemetryConsent = body?.telemetryConsent === true;
   const rateLimitHit = consumeRateLimit(meta.ip || "unknown");
 
   if (rateLimitHit) {
@@ -993,24 +2551,87 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   log("info", "Analyze request", { host: normalized.host });
 
-  const threatIntel = await lookupThreatIntel(normalized).catch((error) => {
-    const message =
-      error instanceof Error ? sanitizeString(error.message, 120) : "Threat intel failed.";
-    log("warn", "Threat intel failed", {
-      host: normalized.host,
-      error: message,
-    });
-    return {
-      source: "openphish",
-      status: "unavailable",
-      note: `OpenPhish недоступен: ${message}`,
-      checkedAt: new Date().toISOString(),
-    };
-  });
+  const [threatIntel, urlAbuseIntel, networkSignals] = await Promise.all([
+    lookupThreatIntel(normalized).catch((error) => {
+      const message =
+        error instanceof Error ? sanitizeString(error.message, 120) : "Threat intel failed.";
+      log("warn", "Threat intel failed", {
+        host: normalized.host,
+        error: message,
+      });
+      return {
+        source: "openphish",
+        status: "unavailable",
+        note: `OpenPhish недоступен: ${message}`,
+        checkedAt: new Date().toISOString(),
+      };
+    }),
+    lookupUrlAbuseIntel(normalized).catch((error) => {
+      const message =
+        error instanceof Error ? sanitizeString(error.message, 120) : "URLAbuse failed.";
+      log("warn", "URLAbuse lookup failed", {
+        host: normalized.host,
+        error: message,
+      });
+      return {
+        source: "urlabuse",
+        status: "unavailable",
+        note: `URLAbuse недоступен: ${message}`,
+        checkedAt: new Date().toISOString(),
+      };
+    }),
+    lookupNetworkSignals(normalized).catch((error) => {
+      const message =
+        error instanceof Error
+          ? sanitizeString(error.message, 120)
+          : "Network signal lookup failed.";
+      log("warn", "Network signal lookup failed", {
+        host: normalized.host,
+        error: message,
+      });
+      return {
+        source: "network",
+        checkedAt: new Date().toISOString(),
+        dns: {
+          resolved: false,
+          ipv4Count: 0,
+          ipv6Count: 0,
+          cnames: [],
+          note: `DNS недоступен: ${message}`,
+        },
+        http: {
+          reachable: false,
+          status: null,
+          redirected: false,
+          redirectHost: null,
+          note: `HTTP недоступен: ${message}`,
+        },
+        tls: {
+          available: false,
+          subject: null,
+          issuer: null,
+          validTo: null,
+          note: `TLS недоступен: ${message}`,
+        },
+      };
+    }),
+  ]);
 
-  const enrichedLocalAnalysis = applyThreatIntelToAnalysis(
+  // Применяем сетевые сигналы как дополнительные reasons
+  const networkEnrichedAnalysis = applyNetworkSignalsToAnalysis(
     localAnalysis,
+    networkSignals,
+    normalized,
+  );
+
+  const threatEnrichedAnalysis = applyThreatIntelToAnalysis(
+    networkEnrichedAnalysis,
     threatIntel,
+    normalized,
+  );
+  const enrichedLocalAnalysis = applyUrlAbuseToAnalysis(
+    threatEnrichedAnalysis,
+    urlAbuseIntel,
     normalized,
   );
 
@@ -1021,22 +2642,31 @@ export async function analyzeResponse(body = {}, meta = {}) {
         error: "GROQ_API_KEY не настроен. Создайте .env.local на основе .env.example.",
         detail: "AI backend поднят, но без ключа Groq.",
         threatIntel,
+        urlAbuseIntel,
+        networkSignals,
         enrichedLocalResult: enrichedLocalAnalysis,
       },
     };
   }
 
-  const cacheKey = getCacheKey(input, enrichedLocalAnalysis);
+  const cacheKey = getCacheKey(input, enrichedLocalAnalysis, normalized);
   if (!skipCache) {
-    const cached = getCachedResponse(cacheKey);
+    const cached = await getCachedResponse(cacheKey);
     if (cached) {
-      log("info", "Cache hit", { host: normalized.host });
+      log("info", "Cache hit", { host: normalized.host, storage: cacheStorage });
       return { status: 200, body: { ...cached, cached: true } };
     }
-    log("debug", "Cache miss", { host: normalized.host, cacheKey });
+    log("debug", "Cache miss", { host: normalized.host, cacheKey, storage: cacheStorage });
   }
 
-  const prompt = buildPrompt(input, normalized, enrichedLocalAnalysis);
+  const prompt = buildPrompt(
+    input,
+    normalized,
+    enrichedLocalAnalysis,
+    networkSignals,
+    threatIntel,
+    urlAbuseIntel,
+  );
   const attempts = [];
 
   for (const model of modelCandidates) {
@@ -1045,19 +2675,27 @@ export async function analyzeResponse(body = {}, meta = {}) {
         apiKey,
         model,
         prompt,
-        retries: 1,
+        retries: 0,
       });
-      const analysis = sanitizeAnalysis(parsed, input, localAnalysis);
+      const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
+      const aiAdjustedResult = applyAiToAnalysis(
+        enrichedLocalAnalysis,
+        analysis,
+        normalized,
+      );
       const responseData = {
         analysis,
+        aiAdjustedResult,
         model,
         source: "groq",
         threatIntel,
+        urlAbuseIntel,
+        networkSignals,
         enrichedLocalResult: enrichedLocalAnalysis,
         latencyMs: Date.now() - startTime,
       };
 
-      setCachedResponse(cacheKey, responseData);
+      await setCachedResponse(cacheKey, responseData, telemetryConsent);
 
       log("info", "Analyze success", {
         host: normalized.host,
@@ -1084,14 +2722,16 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   return {
     status: 502,
-    body: {
-      error: "Groq request failed.",
-      detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
-      attempts: attempts.slice(0, 5),
-      threatIntel,
-      enrichedLocalResult: enrichedLocalAnalysis,
-    },
-  };
+      body: {
+        error: "Groq request failed.",
+        detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
+        attempts: attempts.slice(0, 5),
+        threatIntel,
+        urlAbuseIntel,
+        networkSignals,
+        enrichedLocalResult: enrichedLocalAnalysis,
+      },
+    };
 }
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -1099,13 +2739,91 @@ app.get("/api/health", (_req, res) => {
   res.json(healthResponse());
 });
 
-app.get("/api/cache/stats", (_req, res) => {
-  res.json(cacheStatsResponse());
+app.get("/api/cache/stats", async (_req, res) => {
+  res.json(await cacheStatsResponse());
+});
+
+app.get("/api/admin/cache", async (req, res) => {
+  const response = await adminCacheGetResponse(req.query, req.headers);
+  res.status(response.status).json(response.body);
+});
+
+app.get("/api/admin-cache", async (req, res) => {
+  const response = await adminCacheGetResponse(req.query, req.headers);
+  res.status(response.status).json(response.body);
+});
+
+app.patch("/api/admin/cache", async (req, res) => {
+  const response = await adminCacheUpdateResponse(req.body, req.headers);
+  res.status(response.status).json(response.body);
+});
+
+app.patch("/api/admin-cache", async (req, res) => {
+  const response = await adminCacheUpdateResponse(req.body, req.headers);
+  res.status(response.status).json(response.body);
+});
+
+app.delete("/api/admin/cache", async (req, res) => {
+  const response = await adminCacheDeleteResponse(req.query, req.headers);
+  res.status(response.status).json(response.body);
+});
+
+app.delete("/api/admin-cache", async (req, res) => {
+  const response = await adminCacheDeleteResponse(req.query, req.headers);
+  res.status(response.status).json(response.body);
 });
 
 app.post("/api/analyze", async (req, res) => {
   const response = await analyzeResponse(req.body, { ip: req.ip });
   res.status(response.status).json(response.body);
+});
+
+app.get("/api/lookup", async (req, res) => {
+  const url = String(req.query?.url || req.query?.link || "").trim();
+  
+  if (!url) {
+    res.status(400).json({ error: "Параметр url или link обязателен." });
+    return;
+  }
+
+  const normalized = normalizeInput(url);
+  if ("error" in normalized) {
+    res.status(400).json({ error: normalized.error });
+    return;
+  }
+
+  const record = await getRawCacheRecordByHost(normalized.host);
+  
+  if (!record?.data) {
+    res.status(404).json({ 
+      error: "Данные для этого домена не найдены в кэше.",
+      host: normalized.host,
+      suggestion: "Выполните анализ через /api/analyze для получения данных."
+    });
+    return;
+  }
+
+  const result = record.data.aiAdjustedResult || record.data.enrichedLocalResult || record.data.analysis;
+  
+  res.status(200).json({
+    ok: true,
+    host: normalized.host,
+    cached: true,
+    cachedAt: record.createdAt || null,
+    updatedAt: record.updatedAt || null,
+    result: {
+      verdict: result?.verdict || "unknown",
+      score: result?.score || 0,
+      verdictLabel: result?.verdictLabel || "Неизвестно",
+      summary: result?.summary || "",
+      reasons: result?.reasons || [],
+      actions: result?.actions || [],
+      breakdown: result?.breakdown || null,
+      analyzedAt: result?.analyzedAt || null,
+    },
+    model: record.data.model || null,
+    source: record.data.source || "cache",
+  });
 });
 
 app.use((err, _req, res, _next) => {

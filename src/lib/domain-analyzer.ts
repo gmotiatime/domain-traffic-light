@@ -55,6 +55,44 @@ const officialTokens = [
   "alfabank",
 ];
 
+const protectedBrands = [
+  { name: "Roblox", domains: ["roblox.com"], tokens: ["roblox", "rbx"] },
+  { name: "Vercel", domains: ["vercel.com"], tokens: ["vercel"] },
+  { name: "OpenAI", domains: ["openai.com", "chatgpt.com"], tokens: ["openai", "chatgpt"] },
+  { name: "GitHub", domains: ["github.com"], tokens: ["github"] },
+  { name: "Google", domains: ["google.com"], tokens: ["google", "gmail"] },
+  { name: "Discord", domains: ["discord.com"], tokens: ["discord"] },
+  { name: "Telegram", domains: ["telegram.org", "t.me"], tokens: ["telegram"] },
+  { name: "Steam", domains: ["steampowered.com", "steamcommunity.com"], tokens: ["steam"] },
+  { name: "PayPal", domains: ["paypal.com"], tokens: ["paypal"] },
+  { name: "Apple", domains: ["apple.com"], tokens: ["apple", "icloud"] },
+  { name: "Microsoft", domains: ["microsoft.com", "live.com"], tokens: ["microsoft", "outlook"] },
+  { name: "Instagram", domains: ["instagram.com"], tokens: ["instagram", "insta"] },
+  { name: "Facebook", domains: ["facebook.com"], tokens: ["facebook"] },
+  { name: "TikTok", domains: ["tiktok.com"], tokens: ["tiktok"] },
+  { name: "Amazon", domains: ["amazon.com", "amazon.co.uk", "amazon.de"], tokens: ["amazon"] },
+  { name: "Netflix", domains: ["netflix.com"], tokens: ["netflix"] },
+  { name: "WhatsApp", domains: ["whatsapp.com"], tokens: ["whatsapp"] },
+  { name: "Binance", domains: ["binance.com"], tokens: ["binance"] },
+  { name: "Coinbase", domains: ["coinbase.com"], tokens: ["coinbase"] },
+  { name: "LinkedIn", domains: ["linkedin.com"], tokens: ["linkedin"] },
+  { name: "Twitter", domains: ["twitter.com", "x.com"], tokens: ["twitter"] },
+  { name: "Snapchat", domains: ["snapchat.com"], tokens: ["snapchat"] },
+  { name: "Twitch", domains: ["twitch.tv"], tokens: ["twitch"] },
+  { name: "Spotify", domains: ["spotify.com"], tokens: ["spotify"] },
+  { name: "Dropbox", domains: ["dropbox.com"], tokens: ["dropbox"] },
+  { name: "Zoom", domains: ["zoom.us"], tokens: ["zoom"] },
+  { name: "AliExpress", domains: ["aliexpress.com", "alibaba.com"], tokens: ["aliexpress", "alibaba"] },
+  { name: "Яндекс", domains: ["yandex.by", "yandex.ru", "ya.ru"], tokens: ["yandex", "yandeks"] },
+  { name: "ВКонтакте", domains: ["vk.com"], tokens: ["vkontakte", "vkcom"] },
+  { name: "Сбербанк", domains: ["sberbank.ru", "online.sberbank.ru"], tokens: ["sberbank", "sber"] },
+  { name: "Tinkoff", domains: ["tinkoff.ru"], tokens: ["tinkoff"] },
+  { name: "Беларусбанк", domains: ["belarusbank.by"], tokens: ["belarusbank", "belbank"] },
+  { name: "Приорбанк", domains: ["priorbank.by"], tokens: ["priorbank", "prior"] },
+  { name: "БПС-Сбербанк", domains: ["bps-sberbank.by"], tokens: ["bpssberbank", "bpssber"] },
+  { name: "Альфа-Банк", domains: ["alfabank.by"], tokens: ["alfabank", "alfa"] },
+] as const;
+
 const suspiciousKeywords = [
   "login",
   "verify",
@@ -71,6 +109,70 @@ const suspiciousKeywords = [
   "password",
   "recover",
   "suspend",
+  "gift",
+  "free",
+  "reward",
+  "claim",
+  "prize",
+  "urgent",
+  "reset",
+  "activate",
+  "unlock",
+  "bonus",
+  "promo",
+  "token",
+  "reissue",
+  "restore",
+  "invoice",
+  "refund",
+  "alert",
+  "notification",
+  "security",
+  "verification",
+  "validate",
+  "suspended",
+  "limited",
+  "action",
+  "required",
+  "expire",
+  "billing",
+  "payment",
+  "checkout",
+];
+
+const urlShorteners = new Set([
+  "bit.ly",
+  "t.co",
+  "tinyurl.com",
+  "is.gd",
+  "cutt.ly",
+  "clck.ru",
+  "goo.gl",
+  "ow.ly",
+  "rb.gy",
+  "shorturl.at",
+  "tiny.cc",
+  "v.gd",
+  "bl.ink",
+  "lnkd.in",
+  "buff.ly",
+  "soo.gd",
+  "rebrand.ly",
+  "short.io",
+  "t.ly",
+  "u.to",
+  "s.id",
+  "bitly.com",
+  "tinycc.com",
+  "gg.gg",
+  "qr.ae",
+]);
+
+// Кириллическо-латинские гомоглифы: символы которые выглядят одинаково
+const cyrLatHomoglyphs: Array<[string, string]> = [
+  ["а", "a"], ["е", "e"], ["о", "o"], ["р", "p"], ["с", "c"],
+  ["у", "y"], ["х", "x"], ["і", "i"], ["ё", "e"], ["к", "k"],
+  ["н", "h"], ["т", "t"], ["ь", "b"], ["в", "b"],
 ];
 
 const criticalTlds = new Map<string, number>([
@@ -107,6 +209,26 @@ const elevatedTlds = new Set([
   "win",
   "bid",
   "stream",
+  "life",
+  "link",
+  "space",
+  "website",
+  "today",
+  "download",
+  "world",
+  "trade",
+  "review",
+  "date",
+  "faith",
+  "party",
+  "cricket",
+  "science",
+  "accountant",
+  "gdn",
+  "men",
+  "info",
+  "mobi",
+  "pro",
 ]);
 
 const trustedTlds = new Set([
@@ -123,7 +245,30 @@ const compoundSuffixes = [
   "com.by",
   "net.by",
   "org.by",
+  "com.ru",
+  "net.ru",
+  "org.ru",
+  "pp.ru",
+  "co.uk",
+  "org.uk",
+  "gov.uk",
+  "ac.uk",
 ];
+
+const ignoredDomainTokens = new Set([
+  "www",
+  "com",
+  "net",
+  "org",
+  "gov",
+  "edu",
+  "mil",
+  "by",
+  "ru",
+  "uk",
+  "co",
+  "pp",
+]);
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
@@ -141,6 +286,13 @@ function normalizeToken(value: string): string {
   return value.toLowerCase().replace(/[^a-zа-яёіў0-9]/gi, "");
 }
 
+function extractMeaningfulTokens(host: string): string[] {
+  return host
+    .split(/[.-]/)
+    .map((part) => normalizeToken(part))
+    .filter((token) => token.length >= 4 && !ignoredDomainTokens.has(token));
+}
+
 function hasHomoglyphPatterns(host: string): boolean {
   // Типичные подмены: 0↔o, 1↔l, rn↔m, vv↔w
   const patterns = [
@@ -149,8 +301,35 @@ function hasHomoglyphPatterns(host: string): boolean {
     /rn/, // rn вместо m
     /vv/, // vv вместо w
     /cl(?=[a-z])/i, // cl вместо d
+    /ii/, // ii вместо u
+    /lI|Il/i, // lI вместо U, Il вместо d
   ];
   return patterns.some((p) => p.test(host));
+}
+
+function hasCyrLatHomoglyphs(host: string): boolean {
+  // Проверяем только хост без TLD
+  const labels = host.split(".");
+  if (labels.length < 2) return false;
+  const withoutTld = labels.slice(0, -1).join(".");
+  for (const [cyr, lat] of cyrLatHomoglyphs) {
+    if (withoutTld.includes(cyr) && withoutTld.includes(lat)) {
+      return true;
+    }
+  }
+  // Проверяем наличие отдельных кириллических символов среди латиницы
+  const hasCyr = /[а-яёіў]/i.test(withoutTld);
+  const hasLat = /[a-z]/i.test(withoutTld);
+  if (hasCyr && hasLat) {
+    // Если есть и кириллица и латиница — это уже ловится hasMixedScripts,
+    // но проверим конкретные гомоглифные подмены
+    for (const [cyr] of cyrLatHomoglyphs) {
+      if (withoutTld.includes(cyr)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function entropyOf(value: string): number {
@@ -303,10 +482,7 @@ function actionsForVerdict(verdict: AnalyzerVerdict): string[] {
 }
 
 function findNearOfficialMatch(host: string): string | null {
-  const tokens = host
-    .split(".")
-    .map((part) => normalizeToken(part))
-    .filter((t) => t.length >= 4);
+  const tokens = extractMeaningfulTokens(host);
 
   for (const token of tokens) {
     for (const officialToken of officialTokens) {
@@ -323,6 +499,64 @@ function findNearOfficialMatch(host: string): string | null {
         distance <= threshold
       ) {
         return officialToken;
+      }
+    }
+  }
+
+  return null;
+}
+
+type ProtectedBrandMatch = {
+  brand: string;
+  officialDomain: string;
+  observedToken: string;
+  matchedToken: string;
+  exact: boolean;
+};
+
+function findProtectedBrandMatch(
+  host: string,
+  canonicalHost: string,
+): ProtectedBrandMatch | null {
+  const tokens = extractMeaningfulTokens(host);
+
+  for (const brand of protectedBrands) {
+    const isOfficialBrandDomain = brand.domains.some(
+      (domain) => canonicalHost === domain || canonicalHost.endsWith(`.${domain}`),
+    );
+
+    if (isOfficialBrandDomain) {
+      continue;
+    }
+
+    for (const token of tokens) {
+      for (const protectedToken of brand.tokens) {
+        if (token === protectedToken) {
+          return {
+            brand: brand.name,
+            officialDomain: brand.domains[0],
+            observedToken: token,
+            matchedToken: protectedToken,
+            exact: true,
+          };
+        }
+
+        const distance = levenshtein(token, protectedToken);
+        const threshold = protectedToken.length >= 6 ? 2 : 1;
+
+        if (
+          Math.abs(token.length - protectedToken.length) <= 2 &&
+          distance > 0 &&
+          distance <= threshold
+        ) {
+          return {
+            brand: brand.name,
+            officialDomain: brand.domains[0],
+            observedToken: token,
+            matchedToken: protectedToken,
+            exact: false,
+          };
+        }
       }
     }
   }
@@ -450,9 +684,9 @@ export function analyzeDomainInput(input: string): AnalysisResult {
 
   if (host.includes("xn--")) {
     pushReason(
-      "Punycode / IDN",
-      "Адрес содержит xn--. Такие домены могут использоваться для визуальной подмены известных адресов.",
-      38,
+      "Обнаружена Punycode-маскировка (Омоглиф)",
+      "Адрес содержит замаскированные символы (шрифт xn--). Это критически опасный метод подделки визуального адреса известных сайтов.",
+      85,
       "critical",
     );
   }
@@ -464,6 +698,17 @@ export function analyzeDomainInput(input: string): AnalysisResult {
       "Смешение письменностей",
       "В домене одновременно используются латиница и кириллица. Это частый признак визуальной подмены.",
       34,
+      "critical",
+    );
+  }
+
+  // ── 5b. Кириллическо-латинские гомоглифы ──────────────────────────────────
+
+  if (!hasMixedScripts(host) && hasCyrLatHomoglyphs(host)) {
+    pushReason(
+      "Кириллическо-латинские гомоглифы",
+      "Домен содержит символы, визуально идентичные между кириллицей и латиницей (а↔a, е↔e, о↔o и т.п.). Это техника маскировки.",
+      32,
       "critical",
     );
   }
@@ -492,13 +737,38 @@ export function analyzeDomainInput(input: string): AnalysisResult {
 
   // ── 8. Typo-squatting ─────────────────────────────────────────────────────
 
+  const protectedBrandMatch = findProtectedBrandMatch(host, canonicalHost);
+  if (protectedBrandMatch) {
+    pushReason(
+      protectedBrandMatch.exact
+        ? `Имя бренда вне официального домена`
+        : `Похоже на подмену бренда ${protectedBrandMatch.brand}`,
+      protectedBrandMatch.exact
+        ? `В адресе используется бренд '${protectedBrandMatch.brand}', но официальный домен сервиса — ${protectedBrandMatch.officialDomain}. Это типичный сценарий маскировки.`
+        : `Фрагмент '${protectedBrandMatch.observedToken}' слишком похож на бренд '${protectedBrandMatch.matchedToken}', но официальный домен сервиса — ${protectedBrandMatch.officialDomain}. Это сильный признак brand-spoofing.`,
+      protectedBrandMatch.exact ? 52 : 56,
+      "critical",
+    );
+  }
+
   const typoMatch = findNearOfficialMatch(host);
-  if (typoMatch) {
+  if (typoMatch && !protectedBrandMatch) {
     pushReason(
       "Похоже на typo-squat",
       `Один из фрагментов адреса слишком похож на '${typoMatch}', но не совпадает точно. Это может быть попытка имитации.`,
       24,
       "critical",
+    );
+  }
+
+  // ── 8b. Обнаружение URL shortener ──────────────────────────────────────────
+
+  if (urlShorteners.has(canonicalHost)) {
+    pushReason(
+      "Сокращённая ссылка",
+      `Домен ${canonicalHost} — это сервис сокращения ссылок. За короткой ссылкой может скрываться любой адрес, включая фишинговый.`,
+      18,
+      "warning",
     );
   }
 
@@ -535,7 +805,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
   const mimicsOfficial = officialTokens.some(
     (token) => normalizedHost.includes(token) && !officialDomains.has(canonicalHost),
   );
-  if (mimicsOfficial && !typoMatch) {
+  if (mimicsOfficial && !typoMatch && !protectedBrandMatch) {
     // Не дублируем с typo-squat
     pushReason(
       "Имитация знакомого сервиса",
@@ -676,8 +946,8 @@ export function analyzeDomainInput(input: string): AnalysisResult {
   if (url.username || url.password) {
     pushReason(
       "Скрытые данные перед @",
-      "В URL есть служебная часть перед символом @. Это классический приём маскировки реального домена.",
-      22,
+      "В URL есть служебная часть перед символом @. Это классический приём маскировки реального домена — пользователь видит адрес до @, но браузер откроет домен после @.",
+      30,
       "critical",
     );
   }
@@ -701,6 +971,17 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     );
   }
 
+  // Процентное кодирование подозрительных символов
+  const suspiciousEncoding = /%[0-9a-f]{2}/i.test(url.pathname) && url.pathname.length > 20;
+  if (suspiciousEncoding) {
+    pushReason(
+      "Процентное кодирование в пути",
+      "Путь URL содержит закодированные символы (%XX). Это может скрывать настоящее содержимое ссылки.",
+      6,
+      "warning",
+    );
+  }
+
   // Двойные расширения в пути (file.pdf.exe)
   const pathParts = url.pathname.split("/").filter(Boolean);
   const doubleExtension = pathParts.some((part) =>
@@ -715,16 +996,51 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     );
   }
 
-  // ── 19. Читаемость ──────────────────────────────────────────────────────
+  // ── 19. Длина хоста ─────────────────────────────────────────────────────
+
+  if (host.length > 50) {
+    pushReason(
+      "Очень длинный домен",
+      `Длина доменного имени — ${host.length} символов. Такие адреса крайне трудно проверить глазами и часто генерируются автоматически.`,
+      14,
+      "warning",
+    );
+  } else if (host.length > 40) {
+    pushReason(
+      "Длинный домен",
+      `Длина доменного имени — ${host.length} символов. Длинные адреса сложнее проверить визуально.`,
+      8,
+      "warning",
+    );
+  }
+
+  // ── 20. Слова-ловушки в поддомене ───────────────────────────────────────
+
+  if (breakdown.subdomain && breakdown.subdomain !== "www") {
+    const subdomainLower = breakdown.subdomain.toLowerCase();
+    const subdomainKeywordHits = suspiciousKeywords.filter((kw) => subdomainLower.includes(kw));
+    if (subdomainKeywordHits.length > 0) {
+      pushReason(
+        "Ловушка в поддомене",
+        `Поддомен содержит слова: ${subdomainKeywordHits.join(", ")}. Это попытка создать иллюзию официальности (secure.bank.evil.com использует "secure" для обмана).`,
+        Math.min(22, 8 * subdomainKeywordHits.length),
+        "critical",
+      );
+    }
+  }
+
+  // ── 21. Читаемость ──────────────────────────────────────────────────────
 
   const looksReadable =
     (!breakdown.subdomain || breakdown.subdomain === "www") &&
     hyphenCount < 2 &&
     digitCount < 4 &&
     longestLabel < 18 &&
+    host.length <= 40 &&
     !host.includes("xn--") &&
     !hasMixedScripts(host) &&
     !typoMatch &&
+    !protectedBrandMatch &&
     !mimicsOfficial &&
     keywordHits.length === 0 &&
     pathKeywordHits.length === 0 &&
@@ -739,7 +1055,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     );
   }
 
-  // ── 20. Пустой случай ───────────────────────────────────────────────────
+  // ── 22. Пустой случай ───────────────────────────────────────────────────
 
   if (reasons.length === 0) {
     pushReason(
@@ -765,21 +1081,43 @@ export function analyzeDomainInput(input: string): AnalysisResult {
 
   const normalizedScore = Math.max(0, Math.min(100, score));
 
+  // Подсчёт critical-сигналов для guard
+  const criticalCount = reasons.filter((r) => r.tone === "critical").length;
+
   let verdict: AnalyzerVerdict = "low";
   let verdictLabel = "Низкий риск";
-  let summary =
-    "Сильных тревожных признаков не найдено. Всё равно сверяйте адрес вручную перед вводом данных.";
 
-  if (normalizedScore >= 45) {
+  if (normalizedScore >= 42) {
     verdict = "high";
     verdictLabel = "Высокий риск";
-    summary =
-      "Есть сильные признаки подмены, маскировки или рискованной структуры. Переход и ввод данных лучше остановить.";
-  } else if (normalizedScore >= 14) {
+  } else if (normalizedScore >= 12 || criticalCount >= 2) {
     verdict = "medium";
     verdictLabel = "Нужна перепроверка";
-    summary =
-      "Есть настораживающие признаки. Сначала сравните адрес с официальным доменом вручную.";
+  }
+
+  // Если два+ critical-сигнала, вердикт не может быть low
+  if (criticalCount >= 2 && verdict === "low") {
+    verdict = "medium";
+    verdictLabel = "Нужна перепроверка";
+  }
+
+  // Динамический summary на основе обнаруженных проблем
+  const topIssues = sortedReasons
+    .filter((r) => r.tone === "critical" || r.tone === "warning")
+    .slice(0, 3)
+    .map((r) => r.title);
+
+  let summary: string;
+  if (verdict === "high") {
+    summary = topIssues.length > 0
+      ? `Обнаружены серьёзные признаки риска: ${topIssues.join(", ").toLowerCase()}. Переход и ввод данных лучше остановить.`
+      : "Есть сильные признаки подмены, маскировки или рискованной структуры. Переход и ввод данных лучше остановить.";
+  } else if (verdict === "medium") {
+    summary = topIssues.length > 0
+      ? `Есть настораживающие признаки: ${topIssues.join(", ").toLowerCase()}. Сначала сравните адрес с официальным доменом вручную.`
+      : "Есть настораживающие признаки. Сначала сравните адрес с официальным доменом вручную.";
+  } else {
+    summary = "Сильных тревожных признаков не найдено. Всё равно сверяйте адрес вручную перед вводом данных.";
   }
 
   return {
