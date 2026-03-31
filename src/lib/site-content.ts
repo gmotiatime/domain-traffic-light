@@ -1,7 +1,6 @@
 import type { SitePath } from "@/lib/site-router";
 
-export const heroVideo =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4";
+export const heroVideo = "/hero-home.mp4";
 
 export const navItems: Array<{ label: string; path: SitePath }> = [
   { label: "Главная", path: "/" },
