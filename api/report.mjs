@@ -43,8 +43,16 @@ export default async function handler(req, res) {
 
     console.log("[API] Method check passed");
     
-    // На Vercel req.body уже распарсен
-    const body = req.body || {};
+    // На Vercel req.body может быть getter, который парсит JSON
+    let body;
+    try {
+      body = req.body || {};
+    } catch (parseError) {
+      console.error("[API] Body parse error:", parseError.message);
+      res.status(400).json({ error: "Неверный формат JSON в теле запроса." });
+      return;
+    }
+    
     console.log("[API] Body parsed:", Object.keys(body));
 
     const { host, verdict, score, reportText } = body;
