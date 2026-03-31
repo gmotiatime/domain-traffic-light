@@ -309,14 +309,17 @@ export default async function handler(req, res) {
         reportsCount: reportsCount,
       });
     } catch (evalError) {
-      console.error("[API] Lua script error:", evalError);
+      console.error("[API] Lua script error:", evalError.message);
       // Fallback к старому методу если Lua не поддерживается
       console.log("[API] Falling back to non-atomic method");
       
       let record = await redis.get(hostKey);
       
-      if (!record) {
-        console.log("[API] No record found");
+      console.log("[API] Record type:", typeof record);
+      console.log("[API] Record value:", JSON.stringify(record).substring(0, 100));
+      
+      if (!record || typeof record === 'string') {
+        console.log("[API] No valid record found, got:", typeof record);
         res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
         return;
       }
