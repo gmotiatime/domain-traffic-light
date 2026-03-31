@@ -138,7 +138,61 @@ const suspiciousKeywords = [
   "billing",
   "payment",
   "checkout",
+  "airdrop",
+  "nitro",
+  "giveaway",
+  "distribution",
+  "promotion",
 ];
+
+// Подозрительные фразы из реальных фишинговых сообщений
+const maliciousTerms = [
+  "accidentally reported",
+  "mistakingly reported",
+  "free nitro",
+  "nitro for free",
+  "discord is giving",
+  "steam is giving",
+  "steam gave nitro",
+  "steam give nitro",
+  "catch the gift",
+  "catch the nitro",
+  "who is first",
+  "hurry up and get",
+  "before the promotion end",
+  "take nitro fast",
+  "working nitro gen",
+  "nitro code gen",
+  "you won free",
+  "i accidentally report",
+  "free gift discord",
+  "click to get",
+];
+
+// Подозрительные пути URL из фишинговых ссылок
+const suspiciousPaths = new Set([
+  "/airdrop",
+  "/airdrop-nitro",
+  "/claim",
+  "/claim-nitro",
+  "/free-nitro",
+  "/freenitro",
+  "/gift",
+  "/gift-nitro",
+  "/giveaway",
+  "/giveaway-nitro",
+  "/nitro",
+  "/nitro-gift",
+  "/nitrogift",
+  "/promo",
+  "/redeem",
+  "/steam-gift",
+  "/steamnitro",
+  "/trade",
+  "/tradeoffer",
+  "/drop",
+  "/nitrodrop",
+]);
 
 const urlShorteners = new Set([
   "bit.ly",
@@ -564,6 +618,22 @@ function hasPhishingPrefix(host: string): string | null {
 
 function matchesKnownPhishingPattern(host: string): boolean {
   return knownPhishingPatterns.some(pattern => pattern.test(host));
+}
+
+function containsMaliciousTerm(text: string): string | null {
+  const lowerText = text.toLowerCase();
+  for (const term of maliciousTerms) {
+    if (lowerText.includes(term)) {
+      return term;
+    }
+  }
+  return null;
+}
+
+function hasSuspiciousPath(pathname: string): boolean {
+  const normalizedPath = pathname.toLowerCase().replace(/\/$/, "");
+  return suspiciousPaths.has(normalizedPath) || 
+         Array.from(suspiciousPaths).some(path => normalizedPath.startsWith(path + "/"));
 }
 
 type ProtectedBrandMatch = {

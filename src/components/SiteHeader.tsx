@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { motion } from "framer-motion";
 import { Menu, Shield, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,8 @@ type SiteHeaderProps = {
 
 function navLinkClass(active: boolean) {
   return [
-    "whitespace-nowrap text-sm transition-colors",
-    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+    "relative px-3 py-1.5 whitespace-nowrap text-sm font-medium transition-colors",
+    active ? "text-white" : "text-white/50 hover:text-white",
   ].join(" ");
 }
 
@@ -45,7 +46,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
               </span>
             </a>
 
-            <nav className="hidden items-center gap-5 lg:flex">
+            <nav className="hidden items-center gap-2 lg:flex">
               {navItems.map((item) => {
                 const active = item.path === activePath;
                 return (
@@ -55,6 +56,13 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                     href={routeHref(item.path)}
                   >
                     {item.label}
+                    {active && (
+                      <motion.div
+                        layoutId="active-nav-indicator"
+                        className="absolute inset-x-2 -bottom-1 h-0.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                        transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                      />
+                    )}
                   </a>
                 );
               })}

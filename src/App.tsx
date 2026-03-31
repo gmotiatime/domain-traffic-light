@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { normalizeHashRoute, routeHref, type SitePath } from "@/lib/site-router";
+import { AdminPage } from "@/pages/AdminPage";
 import { AnalyzerPage } from "@/pages/AnalyzerPage";
 import { HomePage } from "@/pages/HomePage";
 import { MethodPage } from "@/pages/MethodPage";
@@ -18,6 +19,14 @@ function readRoute() {
   return normalizeHashRoute(window.location.hash);
 }
 
+const routeTitles: Record<SitePath, string> = {
+  "/": "Доменный светофор.AI",
+  "/analyzer": "Анализ риска | Доменный светофор",
+  "/method": "Методика | Доменный светофор",
+  "/safety": "Безопасность | Доменный светофор",
+  "/admin": "Админка кэша | Доменный светофор",
+};
+
 function renderPage(path: SitePath) {
   switch (path) {
     case "/analyzer":
@@ -26,6 +35,8 @@ function renderPage(path: SitePath) {
       return <MethodPage />;
     case "/safety":
       return <SafetyPage />;
+    case "/admin":
+      return <AdminPage />;
     case "/":
     default:
       return <HomePage />;
@@ -38,17 +49,35 @@ export default function App() {
   useEffect(() => {
     if (!window.location.hash) {
       window.location.hash = routeHref("/");
+    } else {
+      document.title = routeTitles[readRoute()] || "Доменный светофор.AI";
     }
 
     const handleHashChange = () => {
-      setPath(readRoute());
+      const newPath = readRoute();
+      setPath(newPath);
+      document.title = routeTitles[newPath] || "Доменный светофор.AI";
       window.scrollTo({ top: 0, behavior: "auto" });
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        // Redirect to analyzer if we aren't there
+        if (window.location.hash !== routeHref("/analyzer")) {
+          window.location.hash = routeHref("/analyzer");
+        }
+        // Force the input to focus inside AnalyzerPage across tick
+        setTimeout(() => window.dispatchEvent(new CustomEvent("focus-analyzer-input")), 50);
+      }
+    };
+
     window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 

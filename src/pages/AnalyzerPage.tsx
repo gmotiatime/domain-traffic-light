@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
-  Bot,
   ChevronDown,
   ExternalLink,
   Search,
@@ -12,6 +11,12 @@ import {
   ShieldQuestion,
   Sparkles,
   TriangleAlert,
+  Globe,
+  Lock,
+  Activity,
+  Zap,
+  Flag,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,52 +27,89 @@ import {
   type AnalyzerReason,
   type AnalysisResult,
 } from "@/lib/domain-analyzer";
+import { useHistory } from "@/lib/history-store";
 import { officialDomains, ruleReference } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
 
-const reveal = {
-  initial: { opacity: 0, y: 14 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.15 },
-  transition: { duration: 0.45, ease: "easeOut" as const },
+/* ─── animation presets ─── */
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
 };
 
-const verdictStyles = {
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
+
+/* ─── verdict color system ─── */
+const verdictConfig = {
   low: {
-    text: "text-success",
-    surface:
-      "border-success/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.18),rgba(8,44,58,0.92))]",
-    progress: "bg-success",
+    label: "Безопасно",
+    color: "#34d399",
+    textClass: "text-emerald-400",
+    bgGlow: "radial-gradient(ellipse at 50% 0%, rgba(52,211,153,0.08) 0%, transparent 60%)",
+    borderClass: "border-emerald-500/15",
+    progressClass: "bg-gradient-to-r from-emerald-500 to-emerald-400",
+    dotClass: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]",
+    pillBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   },
   medium: {
-    text: "text-warning",
-    surface:
-      "border-warning/20 bg-[linear-gradient(180deg,rgba(245,158,11,0.16),rgba(8,44,58,0.92))]",
-    progress: "bg-warning",
+    label: "Подозрительно",
+    color: "#fbbf24",
+    textClass: "text-amber-400",
+    bgGlow: "radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.08) 0%, transparent 60%)",
+    borderClass: "border-amber-500/15",
+    progressClass: "bg-gradient-to-r from-amber-500 to-amber-400",
+    dotClass: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]",
+    pillBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   },
   high: {
-    text: "text-danger",
-    surface:
-      "border-danger/24 bg-[linear-gradient(180deg,rgba(239,68,68,0.2),rgba(8,44,58,0.94))]",
-    progress: "bg-danger",
+    label: "Опасно",
+    color: "#f43f5e",
+    textClass: "text-rose-400",
+    bgGlow: "radial-gradient(ellipse at 50% 0%, rgba(244,63,94,0.1) 0%, transparent 60%)",
+    borderClass: "border-rose-500/15",
+    progressClass: "bg-gradient-to-r from-rose-500 to-rose-400",
+    dotClass: "bg-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.6)]",
+    pillBg: "bg-rose-500/10 text-rose-400 border-rose-500/20",
   },
 } as const;
 
-const signalStyles = {
-  positive: "bg-success/12 text-success",
-  warning: "bg-warning/12 text-warning",
-  critical: "bg-danger/12 text-danger",
+const toneStyles = {
+  positive: { pill: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", label: "Плюс" },
+  warning: { pill: "bg-amber-500/10 text-amber-400 border-amber-500/20", label: "Внимание" },
+  critical: { pill: "bg-rose-500/10 text-rose-400 border-rose-500/20", label: "Риск" },
 } as const;
 
 const actionIcons = [ShieldAlert, Search, ShieldQuestion, ExternalLink];
 
+/* ─── glass card wrapper ─── */
+function GlassCard({
+  children,
+  className = "",
+  glow,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  glow?: string;
+}) {
+  return (
+    <motion.div
+      className={`relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
+      variants={fadeUp}
+      style={glow ? { background: glow } : undefined}
+    >
+      {/* top edge highlight */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {children}
+    </motion.div>
+  );
+}
+
+/* ─── types ─── */
 type AiHealthStatus = "checking" | "ready" | "missing-key" | "offline";
-
-type AiHealth = {
-  status: AiHealthStatus;
-  note: string;
-};
-
+type AiHealth = { status: AiHealthStatus; note: string };
 type AiExplanation = {
   model: string;
   summary: string;
@@ -76,7 +118,6 @@ type AiExplanation = {
   reasons: AnalyzerReason[];
   actions: string[];
 };
-
 type ThreatIntel = {
   source: string;
   status: "hit" | "clear" | "unavailable";
@@ -87,16 +128,38 @@ type ThreatIntel = {
   hostMatches?: number;
 };
 
+/* ─── helpers ─── */
 function primaryAction(verdict: "low" | "medium" | "high") {
+  if (verdict === "high") return "Не переходите по ссылке. Не вводите данные.";
+  if (verdict === "medium") return "Сначала сравните домен с официальным адресом.";
+  return "Сверьте адрес вручную. Продолжайте только при полном совпадении.";
+}
+
+function recommendedActions(verdict: "low" | "medium" | "high") {
   if (verdict === "high") {
-    return "Не переходите по ссылке. Не вводите данные.";
+    return [
+      "Не переходите по ссылке и не вводите данные.",
+      "Откройте официальный сайт вручную, а не через эту ссылку.",
+      "Если ссылка пришла в сообщении, покажите её взрослому или специалисту.",
+      "При необходимости отправьте адрес через официальный канал сообщения об инцидентах.",
+    ];
   }
 
   if (verdict === "medium") {
-    return "Сначала сравните домен с официальным адресом.";
+    return [
+      "Сначала сравните домен с официальным адресом символ в символ.",
+      "Проверьте, не маскируется ли поддомен под основной сайт.",
+      "Не вводите данные, пока не подтвердите адрес вручную.",
+      "Если остаются сомнения, откройте официальный сайт через поисковик.",
+    ];
   }
 
-  return "Сверьте адрес вручную. Продолжайте только при полном совпадении.";
+  return [
+    "Сверьте адрес вручную перед вводом данных.",
+    "Проверьте, что домен совпадает с ожидаемым сайтом.",
+    "Продолжайте только при полном совпадении адреса.",
+    "При желании проверьте сертификат и владельца домена вручную.",
+  ];
 }
 
 function formatErrorMessage(message: string) {
@@ -109,86 +172,20 @@ function isGenericAiTitle(title: string) {
 
 function inferShortAiTitleFromText(text: string, tone: AnalyzerReason["tone"]) {
   const value = String(text || "").toLowerCase();
-
-  if (/ssl|https|сертификат|шифрован/i.test(value)) {
-    return "HTTPS";
-  }
-
-  if (/dns|ns\b|регистрац/i.test(value)) {
-    return "DNS";
-  }
-
-  if (/фишинг.*баз|базах фишингов|blacklist|репутац/i.test(value)) {
-    return "Репутация";
-  }
-
-  if (/бренд|компан|openai|google|bank|a1|beltelecom|cert/i.test(value)) {
-    return "Бренд";
-  }
-
-  if (/зона|tld|доменн/i.test(value)) {
-    return "Зона";
-  }
-
-  if (/поддомен|структур|url|адрес/i.test(value)) {
-    return "Структура URL";
-  }
-
-  if (/возраст|давно|долг/i.test(value)) {
-    return "Возраст домена";
-  }
-
-  return tone === "positive"
-    ? "Позитивный сигнал"
-    : tone === "critical"
-      ? "Сигнал риска"
-      : "Нужна проверка";
+  if (/ssl|https|сертификат|шифрован/i.test(value)) return "HTTPS";
+  if (/dns|ns\b|регистрац/i.test(value)) return "DNS";
+  if (/фишинг.*баз|базах фишингов|blacklist|репутац/i.test(value)) return "Репутация";
+  if (/бренд|компан|openai|google|bank|a1|beltelecom|cert/i.test(value)) return "Бренд";
+  if (/зона|tld|доменн/i.test(value)) return "Зона";
+  if (/поддомен|структур|url|адрес/i.test(value)) return "Структура URL";
+  if (/возраст|давно|долг/i.test(value)) return "Возраст домена";
+  return tone === "positive" ? "Позитивный сигнал" : tone === "critical" ? "Сигнал риска" : "Нужна проверка";
 }
 
-function aiToneLabel(tone: AnalyzerReason["tone"]) {
-  if (tone === "positive") return "AI: позитивно";
-  if (tone === "critical") return "AI: риск";
-  return "AI: проверка";
-}
-
-function aiReasonTitle(reason: AnalyzerReason, index: number) {
+function aiReasonTitle(reason: AnalyzerReason, _index: number) {
   const title = reason.title.trim();
-
-  if (!title || isGenericAiTitle(title)) {
-    return inferShortAiTitleFromText(reason.detail, reason.tone);
-  }
-
+  if (!title || isGenericAiTitle(title)) return inferShortAiTitleFromText(reason.detail, reason.tone);
   return title.length > 36 ? `${title.slice(0, 35).trimEnd()}…` : title;
-}
-
-function mergeReasons(primary: AnalyzerReason[], secondary: AnalyzerReason[]) {
-  const seen = new Set<string>();
-
-  return [...primary, ...secondary]
-    .filter((reason) => {
-      const key = `${reason.title}::${reason.detail}`;
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    })
-    .slice(0, 4);
-}
-
-function mergeActions(primary: string[], secondary: string[]) {
-  const seen = new Set<string>();
-
-  return [...primary, ...secondary]
-    .filter((action) => {
-      const key = action.trim();
-      if (!key || seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    })
-    .slice(0, 4);
 }
 
 function sameReason(left: AnalyzerReason, right: AnalyzerReason) {
@@ -198,621 +195,704 @@ function sameReason(left: AnalyzerReason, right: AnalyzerReason) {
   );
 }
 
+/* ════════════════════════════════════════════════ */
+/*  MAIN ANALYZER PAGE                             */
+/* ════════════════════════════════════════════════ */
 export function AnalyzerPage() {
+  const initialResult = analyzeDomainInput("");
   const activeRequestRef = useRef(0);
-  const [draft, setDraft] = useState("xn--epasluga-verify.test");
-  const [result, setResult] = useState<AnalysisResult>(() =>
-    analyzeDomainInput("xn--epasluga-verify.test"),
-  );
+  const [draft, setDraft] = useState("");
+  const [result, setResult] = useState<AnalysisResult>(initialResult);
+  const [baselineResult, setBaselineResult] = useState<AnalysisResult>(initialResult);
   const [statusNote, setStatusNote] = useState("");
   const [isAiEnriching, setIsAiEnriching] = useState(false);
+  const [isCachedResult, setIsCachedResult] = useState(false);
+  const [telemetryConsent, setTelemetryConsent] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("domain-traffic-light:telemetry") !== "false";
+    }
+    return true;
+  });
   const [aiExplanation, setAiExplanation] = useState<AiExplanation | null>(null);
   const [threatIntel, setThreatIntel] = useState<ThreatIntel | null>(null);
+  const [urlAbuseIntel, setUrlAbuseIntel] = useState<ThreatIntel | null>(null);
+  const [isModerated, setIsModerated] = useState(false);
   const [aiHealth, setAiHealth] = useState<AiHealth>({
     status: "checking",
     note: "Проверяем AI backend.",
   });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [reportStatus, setReportStatus] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { history, addHistory } = useHistory();
 
-  const topReasons = result.reasons.slice(0, 4);
-  const quickActions = result.actions.slice(0, 4);
-  const summaryHighlights = (
-    aiExplanation?.reasons.length
-      ? aiExplanation.reasons.map((reason, index) => aiReasonTitle(reason, index))
-      : topReasons.map((reason) => reason.title)
-  ).slice(0, 3);
-  const summaryText = aiExplanation?.summary || result.summary;
-  const aiUniqueReasons = aiExplanation
-    ? aiExplanation.reasons
-        .filter(
-          (reason) => !topReasons.some((baseReason) => sameReason(reason, baseReason)),
-        )
-        .slice(0, 2)
-    : [];
+  const cfg = verdictConfig[result.verdict];
+  const leadReason = result.reasons[0] ?? null;
+  const visibleReasons = result.reasons.slice(1, 4);
+  const quickActions = recommendedActions(result.verdict);
+  const aiSignals = (aiExplanation?.reasons || [])
+    .filter((r) => !baselineResult.reasons.some((br) => sameReason(br, r)))
+    .slice(0, 3);
+  const aiScoreShift = aiExplanation ? result.score - baselineResult.score : 0;
+  
+  let aiShiftLabel = aiExplanation && aiScoreShift !== 0
+      ? `AI ${aiScoreShift > 0 ? `+${aiScoreShift}` : aiScoreShift}`
+      : "AI подтвердил";
+      
+  if (isCachedResult) {
+    aiShiftLabel = "⚡ Данные из базы";
+  }
 
+  /* ─── health check ─── */
   useEffect(() => {
     let cancelled = false;
-
     async function readHealth() {
       try {
         const response = await fetch(getApiUrl("/api/health"));
-        if (!response.ok) {
-          throw new Error("AI proxy health request failed.");
-        }
-
+        if (!response.ok) throw new Error("fail");
         const payload = await response.json();
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         if (payload?.aiConfigured) {
-          setAiHealth({
-            status: "ready",
-            note: "AI доступен.",
-          });
+          setAiHealth({ status: "ready", note: "AI доступен." });
           return;
         }
-
-        setAiHealth({
-          status: "missing-key",
-          note: payload?.hasLocalEnvFile ? "Нет рабочего AI-ключа." : "AI не настроен.",
-        });
+        setAiHealth({ status: "missing-key", note: payload?.hasLocalEnvFile ? "Нет рабочего AI-ключа." : "AI не настроен." });
       } catch {
-        if (cancelled) {
-          return;
-        }
-
-        setAiHealth({
-          status: "offline",
-          note: "AI backend недоступен.",
-        });
+        if (cancelled) return;
+        setAiHealth({ status: "offline", note: "AI backend недоступен." });
       }
     }
-
     void readHealth();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     const pendingInput = consumeAnalyzerPrefill();
-
-    if (pendingInput) {
-      setDraft(pendingInput);
-      runAnalysis(pendingInput);
-    }
+    if (pendingInput) { setDraft(pendingInput); runAnalysis(pendingInput); }
   }, []);
 
+  useEffect(() => {
+    // Make sure we focus whenever the shortcut is activated
+    const handleFocus = () => inputRef.current?.focus();
+    window.addEventListener("focus-analyzer-input", handleFocus as EventListener);
+    // Autofocus if mounting fresh without prefill
+    if (!draft) handleFocus();
+    
+    return () => window.removeEventListener("focus-analyzer-input", handleFocus as EventListener);
+  }, []);
+
+  /* ─── analysis ─── */
   function applyLocalFallback(nextInput: string, note: string) {
-    setAiExplanation(null);
-    setThreatIntel(null);
-    setResult(analyzeDomainInput(nextInput));
-    setStatusNote(note);
+    setAiExplanation(null); setThreatIntel(null); setUrlAbuseIntel(null);
+    const localResult = analyzeDomainInput(nextInput);
+    setBaselineResult(localResult); setResult(localResult); setStatusNote(note);
+  }
+
+  async function handleReportSubmit() {
+    if (!reportText.trim() || !result.host || result.host === "—") {
+      setReportStatus("Введите текст жалобы.");
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportStatus("Отправляем жалобу...");
+
+    try {
+      const response = await fetch(getApiUrl("/api/report"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: result.host,
+          verdict: result.verdict,
+          score: result.score,
+          reportText: reportText.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Не удалось отправить жалобу.");
+      }
+
+      setReportStatus("Жалоба отправлена! Спасибо за обратную связь.");
+      setTimeout(() => {
+        setShowReportModal(false);
+        setReportText("");
+        setReportStatus("");
+      }, 2000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ошибка отправки.";
+      setReportStatus(message);
+    } finally {
+      setIsSubmittingReport(false);
+    }
   }
 
   function runAnalysis(nextInput: string) {
     const normalizedInput = nextInput.trim();
-    setDraft(normalizedInput);
-    setStatusNote("");
-
-    if (!normalizedInput) {
-      applyLocalFallback(normalizedInput, "Введите домен или URL.");
-      return;
-    }
-
+    setDraft(normalizedInput); setStatusNote(""); setIsCachedResult(false); setIsModerated(false);
+    if (!normalizedInput) { applyLocalFallback(normalizedInput, "Введите домен или URL."); return; }
     const preview = analyzeDomainInput(normalizedInput);
-    setAiExplanation(null);
-    setThreatIntel(null);
-    console.info("[analyzer] local-analysis", {
-      input: normalizedInput,
-      host: preview.host,
-      verdict: preview.verdict,
-      score: preview.score,
-    });
-    setResult(preview);
-
-    if (aiHealth.status !== "offline") {
-      void enrichWithAi(normalizedInput, preview);
-    }
+    if (preview.host !== "—") { addHistory(preview.host, preview.verdict); }
+    setAiExplanation(null); setThreatIntel(null); setUrlAbuseIntel(null);
+    setBaselineResult(preview); setResult(preview);
+    if (aiHealth.status !== "offline") void enrichWithAi(normalizedInput, preview);
   }
 
   async function enrichWithAi(nextInput: string, baseResult: AnalysisResult) {
-    if (aiHealth.status === "offline") {
-      setStatusNote("Backend недоступен. Показан быстрый локальный разбор.");
-      return;
-    }
-
+    if (aiHealth.status === "offline") { setStatusNote("Backend недоступен."); return; }
     const requestId = activeRequestRef.current + 1;
     activeRequestRef.current = requestId;
-    setStatusNote("AI уточняет объяснение...");
-    setIsAiEnriching(true);
-    console.info("[analyzer] ai-start", {
-      input: nextInput,
-      host: baseResult.host,
-      verdict: baseResult.verdict,
-      score: baseResult.score,
-    });
+    setStatusNote("AI уточняет…"); setIsAiEnriching(true);
 
     try {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 18000);
-
       const response = await fetch(getApiUrl("/api/analyze"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         signal: controller.signal,
-        body: JSON.stringify({ input: nextInput, localAnalysis: baseResult }),
-      }).finally(() => {
-        window.clearTimeout(timeoutId);
-      });
+        body: JSON.stringify({ input: nextInput, localAnalysis: baseResult, telemetryConsent }),
+      }).finally(() => window.clearTimeout(timeoutId));
 
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        if (errorPayload?.enrichedLocalResult) {
-          setResult(errorPayload.enrichedLocalResult);
-        }
-        if (errorPayload?.threatIntel) {
-          setThreatIntel(errorPayload.threatIntel);
-        }
-        const errorMessage = [
-          String(errorPayload?.error || "").trim(),
-          String(errorPayload?.detail || "").trim(),
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        throw new Error(errorMessage || "AI analysis request failed.");
+        const ep = await response.json().catch(() => ({}));
+        if (ep?.enrichedLocalResult) { setBaselineResult(ep.enrichedLocalResult); setResult(ep.enrichedLocalResult); }
+        if (ep?.threatIntel) setThreatIntel(ep.threatIntel);
+        if (ep?.urlAbuseIntel) setUrlAbuseIntel(ep.urlAbuseIntel);
+        throw new Error([String(ep?.error||"").trim(), String(ep?.detail||"").trim()].filter(Boolean).join(" ") || "AI request failed.");
       }
 
       const payload = await response.json();
-      if (activeRequestRef.current !== requestId) {
-        return;
-      }
-
-      if (payload.enrichedLocalResult) {
-        setResult(payload.enrichedLocalResult);
-      }
-
+      if (activeRequestRef.current !== requestId) return;
+      const nextBaseline = payload.enrichedLocalResult ?? baseResult;
+      setBaselineResult(nextBaseline);
+      setIsCachedResult(payload.cached === true);
+      setIsModerated(payload.moderated === true);
+      setResult(payload.aiAdjustedResult ?? nextBaseline);
       setThreatIntel(payload.threatIntel ?? null);
+      setUrlAbuseIntel(payload.urlAbuseIntel ?? null);
 
-      const nextAiExplanation = payload.analysis
-        ? {
-            model: payload.model ?? "AI",
-            summary: payload.analysis.summary || "",
-            score:
-              typeof payload.analysis.score === "number"
-                ? payload.analysis.score
-                : baseResult.score,
-            verdictLabel: payload.analysis.verdictLabel ?? baseResult.verdictLabel,
-            reasons: Array.isArray(payload.analysis.reasons)
-              ? payload.analysis.reasons.slice(0, 3)
-              : [],
-            actions: Array.isArray(payload.analysis.actions)
-              ? payload.analysis.actions.slice(0, 3)
-              : [],
-          }
-        : null;
+      const nextAi = payload.analysis ? {
+        model: payload.model ?? "AI",
+        summary: payload.analysis.summary || "",
+        score: typeof payload.analysis.score === "number" ? payload.analysis.score : baseResult.score,
+        verdictLabel: payload.analysis.verdictLabel ?? baseResult.verdictLabel,
+        reasons: Array.isArray(payload.analysis.reasons) ? payload.analysis.reasons.slice(0, 3) : [],
+        actions: Array.isArray(payload.analysis.actions) ? payload.analysis.actions.slice(0, 3) : [],
+      } : null;
+      setAiExplanation(nextAi);
 
-      setAiExplanation(nextAiExplanation);
-      console.info("[analyzer] ai-success", {
-        input: nextInput,
-        host: baseResult.host,
-        model: payload.model ?? null,
-        threatIntel: payload.threatIntel?.status ?? null,
-        reasons: Array.isArray(payload.analysis?.reasons)
-          ? payload.analysis.reasons.length
-          : 0,
-      });
-      const statusParts = [];
-      if (payload.threatIntel?.status === "hit") {
-        statusParts.push("OpenPhish нашёл совпадение");
-      } else if (payload.threatIntel?.status === "clear") {
-        statusParts.push("OpenPhish: совпадений нет");
-      }
-      if (payload.model) {
-        statusParts.push(`AI добавил пояснение · ${payload.model}`);
-      } else if (payload.threatIntel) {
-        statusParts.push("Обновлён результат по phishing-базе");
-      }
-      setStatusNote(statusParts.join(" · ") || "Анализ обновлён.");
+      const parts: string[] = [];
+      if (payload.threatIntel?.status === "hit") parts.push("OpenPhish: совпадение");
+      else if (payload.threatIntel?.status === "clear") parts.push("OpenPhish: чисто");
+      if (payload.urlAbuseIntel?.status === "hit") parts.push("URLAbuse: совпадение");
+      else if (payload.urlAbuseIntel?.status === "clear") parts.push("URLAbuse: чисто");
+      if (payload.model) parts.push(`AI · ${payload.model}`);
+      setStatusNote(parts.join(" · ") || "Анализ обновлён.");
     } catch (error) {
-      if (activeRequestRef.current !== requestId) {
-        return;
-      }
-
-      const errorMessage =
-        error instanceof Error
-          ? formatErrorMessage(
-              error.name === "AbortError"
-                ? "AI ответил слишком медленно."
-                : error.message,
-            )
-          : "AI analysis request failed.";
-
-      console.warn("[analyzer] ai-fail", {
-        input: nextInput,
-        host: baseResult.host,
-        error: errorMessage,
-      });
-      setStatusNote(`AI не успел: ${errorMessage}`);
+      if (activeRequestRef.current !== requestId) return;
+      const msg = error instanceof Error
+        ? formatErrorMessage(error.name === "AbortError" ? "AI ответил слишком медленно." : error.message)
+        : "AI request failed.";
+      setStatusNote(`AI: ${msg}`);
     } finally {
-      if (activeRequestRef.current === requestId) {
-        setIsAiEnriching(false);
-      }
+      if (activeRequestRef.current === requestId) setIsAiEnriching(false);
     }
   }
 
+  /* ════════════════════════════════════════════════ */
+  /*  RENDER                                         */
+  /* ════════════════════════════════════════════════ */
   return (
-    <section className="min-h-[calc(100vh-6rem)] bg-background text-foreground">
-      <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-14 sm:px-6 sm:pt-16 lg:px-8">
+    <section className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden text-white bg-black">
+      {/* ── Background layers ── */}
+      <video
+        autoPlay loop muted playsInline
+        className="fixed inset-0 z-0 h-full w-full object-cover scale-105"
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260319_015952_e1deeb12-8fb7-4071-a42a-60779fc64ab6.mp4"
+      />
+      <div className="fixed inset-0 z-[1] bg-black/60" />
+      <div className="fixed inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/80" />
+
+      {/* Animated mesh orbs */}
+      <div className="pointer-events-none fixed inset-0 z-[3] overflow-hidden">
         <motion.div
-          className="rounded-[1.8rem] border border-white/10 bg-card/75 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)] sm:p-6 md:p-7"
-          {...reveal}
-        >
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px] xl:items-end">
-            <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-5 md:p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {aiExplanation ? "Краткая сводка AI" : "Краткая сводка"}
+          animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-20 left-1/4 h-[600px] w-[600px] rounded-full opacity-30 blur-[150px]"
+          style={{ background: `radial-gradient(circle, ${cfg.color}40, transparent 70%)` }}
+        />
+        <motion.div
+          animate={{ x: [0, -30, 20, 0], y: [0, 30, -30, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-0 right-1/4 h-[500px] w-[500px] rounded-full opacity-20 blur-[120px]"
+          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.4), transparent 70%)" }}
+        />
+      </div>
+
+      {/* ── Content ── */}
+      <div className="relative z-10 mx-auto w-full max-w-[1400px] px-5 pb-20 pt-8 sm:px-8 md:px-10">
+
+        {/* ══════════ HERO / SEARCH ══════════ */}
+        <motion.div initial="initial" animate="animate" variants={stagger}>
+          <motion.div variants={fadeUp} className="text-center">
+            <div className="mx-auto flex items-center justify-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white/60 backdrop-blur-md">
+                <Activity className="h-3 w-3" />
+                AI-анализатор
+              </span>
+              {aiHealth.status === "ready" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Ready
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {result.verdictLabel} · {result.score}/100
-                </span>
-                {aiExplanation ? (
-                  <span className="rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-accent">
-                    {aiExplanation.model}
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-4 max-w-2xl text-lg leading-snug text-foreground sm:text-xl">
-                {summaryText}
-              </p>
-              {summaryHighlights.length > 0 ? (
-                <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                  {summaryHighlights.map((item, index) => (
-                    <div
-                      key={`${item}-${index}-summary`}
-                      className="rounded-[1rem] border border-white/8 bg-background/28 px-3 py-3"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[11px] text-foreground/82">
-                          {index + 1}
-                        </span>
-                        <p className="text-sm leading-relaxed text-foreground/84">{item}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              )}
             </div>
 
-            <form
-              className="rounded-[1.55rem] border border-white/10 bg-background/45 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                runAnalysis(draft);
-              }}
-            >
-              <label
-                className="flex h-12 items-center gap-3 rounded-[1rem] border border-white/10 bg-background/70 px-4 sm:h-[52px]"
-                htmlFor="domain-input"
-              >
-                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h1 className="mx-auto mt-8 max-w-3xl text-5xl font-bold leading-[1.1] tracking-[-0.04em] sm:text-6xl md:text-7xl">
+              Проверьте домен
+              <br />
+              <span className="bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent">
+                за секунды.
+              </span>
+            </h1>
+
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/50 sm:text-lg">
+              AI + ruleset + фиды фишинга + сетевые сигналы.
+              <br className="hidden sm:block" />
+              Мгновенный анализ вместо слепого доверия.
+            </p>
+          </motion.div>
+
+          {/* Search bar */}
+          <motion.form
+            variants={fadeUp}
+            className="mx-auto mt-10 max-w-2xl"
+            onSubmit={(e) => { e.preventDefault(); runAnalysis(draft); }}
+          >
+            <div className="relative flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-white/20 focus-within:bg-white/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.04)]">
+              <div className="flex flex-1 items-center gap-3 px-4">
+                <Globe className="h-5 w-5 shrink-0 text-white/30" />
                 <input
-                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  ref={inputRef}
+                  className="w-full bg-transparent py-3.5 text-lg text-white outline-none placeholder:text-white/30"
                   id="domain-input"
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Введите домен или ссылку"
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Домен или ссылка..."
                   value={draft}
+                  autoComplete="off"
                 />
+              </div>
+              <Button
+                className="h-12 shrink-0 rounded-xl px-6 text-sm font-medium shadow-lg transition-transform hover:scale-[1.03] active:scale-95"
+                type="submit"
+              >
+                Анализ
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Status line */}
+            <div className="mt-3 flex items-center justify-between text-xs text-white/40">
+              <label className="flex cursor-pointer items-center gap-2 transition-colors hover:text-white/70">
+                <input
+                  type="checkbox"
+                  checked={telemetryConsent}
+                  onChange={(e) => {
+                    setTelemetryConsent(e.target.checked);
+                    window.localStorage.setItem("domain-traffic-light:telemetry", String(e.target.checked));
+                  }}
+                  className="rounded border-white/20 bg-white/5 accent-emerald-500"
+                />
+                Анонимно сохранять результат в общую базу
               </label>
 
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button className="h-11 w-full px-5 text-sm sm:flex-1" type="submit">
-                  Проверить домен
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <a
-                  className="inline-flex h-11 items-center justify-center rounded-full px-4 text-sm text-muted-foreground transition-colors hover:text-foreground sm:justify-start"
-                  href={routeHref("/method")}
-                >
-                  Методика
-                </a>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  {isAiEnriching
-                    ? "AI уточняет"
-                    : aiHealth.status === "ready"
-                      ? "AI включён"
-                      : "Быстрый разбор"}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  {result.breakdown.registrableDomain}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  .{result.breakdown.tld}
-                </span>
-                {threatIntel ? (
-                  <span
-                    className={[
-                      "rounded-full border px-3 py-1.5",
-                      threatIntel.status === "hit"
-                        ? "border-danger/30 bg-danger/10 text-danger"
-                        : threatIntel.status === "clear"
-                          ? "border-white/10 bg-white/5"
-                          : "border-warning/30 bg-warning/10 text-warning",
-                    ].join(" ")}
-                    title={threatIntel.note}
-                  >
-                    {threatIntel.status === "hit"
-                      ? "OpenPhish: найдено"
-                      : threatIntel.status === "clear"
-                        ? "OpenPhish: нет совпадений"
-                        : "OpenPhish: недоступен"}
+              <div className="flex items-center gap-3">
+                {isCachedResult && (
+                  <span className="inline-flex items-center gap-1.5 text-amber-300/80">
+                    <Zap className="h-3 w-3" />
+                    Ответ загружен из общей базы
                   </span>
-                ) : null}
-              </div>
-
-              <div className="mt-4 rounded-[1rem] border border-white/8 bg-background/34 px-3.5 py-3">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-foreground/88">
-                    <Bot className="h-4 w-4" />
+                )}
+                {isAiEnriching && (
+                  <span className="inline-flex items-center gap-1.5 text-white/60">
+                    <Zap className="h-3 w-3 animate-pulse" />
+                    AI обрабатывает…
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Статус анализа
-                    </p>
-                    <p className="mt-1 text-sm leading-relaxed text-foreground/82">
-                      {statusNote || "Введите адрес и запустите проверку. AI дополнит объяснение после локального анализа."}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
-            </form>
-          </div>
-        </motion.div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px]">
-          <motion.section
-            className={[
-              "rounded-[1.8rem] border p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)] sm:p-6",
-              verdictStyles[result.verdict].surface,
-            ].join(" ")}
-            {...reveal}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/10 bg-background/55 px-3 py-1 text-xs text-muted-foreground">
-                Вердикт
-              </span>
-              <span className="rounded-full border border-white/10 bg-background/55 px-3 py-1 text-xs text-muted-foreground">
-                Балл {result.score}/100
-              </span>
             </div>
 
-            <div className="mt-5">
-              <div>
-                <h2
-                  className={`text-4xl leading-none sm:text-5xl ${verdictStyles[result.verdict].text}`}
-                >
-                  {result.verdictLabel}
-                </h2>
-                <p className="mt-4 max-w-2xl text-base leading-relaxed text-foreground/88">
-                  {result.summary}
-                </p>
+            {/* Local History Chips */}
+            {history.length > 0 && (
+              <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
+                {history.map((item) => {
+                  const pColor = item.verdict === "high" ? "bg-rose-400" : item.verdict === "medium" ? "bg-amber-400" : "bg-emerald-400";
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setDraft(item.domain);
+                        runAnalysis(item.domain);
+                      }}
+                      className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium transition-colors hover:bg-white/10"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
+                      <span className="text-white/60">{item.domain}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.form>
+        </motion.div>
 
-                <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-background/48 px-4 py-4">
-                  <p className="text-sm text-muted-foreground">Главный совет</p>
-                  <p className="mt-2 text-xl leading-snug text-foreground">
-                    {primaryAction(result.verdict)}
-                  </p>
-                </div>
+        {/* ══════════ RESULTS BENTO GRID ══════════ */}
+        <motion.div
+          className="mt-14 grid gap-4 lg:grid-cols-12"
+          initial="initial"
+          animate="animate"
+          variants={stagger}
+        >
+          {/* ── Verdict card (main, large) ── */}
+          <GlassCard className="lg:col-span-7 p-8" glow={cfg.bgGlow}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.15em] ${cfg.pillBg}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} />
+                Вердикт
+              </span>
+              <span className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-[11px] text-white/50">
+                {result.score}/100
+              </span>
+              {aiExplanation && (
+                <>
+                  <span className={`rounded-full border px-3 py-1 text-[11px] ${
+                    isCachedResult 
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400" 
+                      : "border-violet-500/20 bg-violet-500/10 text-violet-400"
+                  }`}>
+                    <Sparkles className="mr-1 inline h-3 w-3" />
+                    {aiShiftLabel}
+                  </span>
+                  <span className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-[11px] text-white/50">
+                    {aiExplanation.model}
+                  </span>
+                </>
+              )}
+            </div>
 
-                <div className="mt-6">
-                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    <span>Низкий риск</span>
-                    <span>Высокий риск</span>
-                  </div>
-                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-background/55">
-                    <div
-                      className={`h-full rounded-full ${verdictStyles[result.verdict].progress}`}
-                      style={{ width: `${Math.max(result.score, 5)}%` }}
-                    />
-                  </div>
-                </div>
+            <h2 className={`mt-8 text-5xl font-bold tracking-[-0.04em] sm:text-6xl md:text-7xl ${cfg.textClass}`}>
+              {result.verdictLabel}
+            </h2>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-[1.1rem] border border-white/10 bg-background/40 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Домен
-                    </p>
-                    <p className="mt-2 break-all text-foreground">{result.host}</p>
-                  </div>
-                  <div className="rounded-[1.1rem] border border-white/10 bg-background/40 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Ядро
-                    </p>
-                    <p className="mt-2 break-all text-foreground">
-                      {result.breakdown.registrableDomain}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.1rem] border border-white/10 bg-background/40 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Поддомен / зона
-                    </p>
-                    <p className="mt-2 break-all text-foreground">
-                      {result.breakdown.subdomain || "—"} / {result.breakdown.tld}
-                    </p>
-                  </div>
-                </div>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+              {result.summary}
+            </p>
 
-                <div className="mt-6 rounded-[1.3rem] border border-white/10 bg-background/34 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <TriangleAlert className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
-                        Почему такой вердикт
-                      </p>
+            {isModerated && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-400">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Изменено администратором
+              </div>
+            )}
+
+            {/* Progress bar */}
+            <div className="mt-8">
+              <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-white/30">
+                <span>Безопасно</span>
+                <span>Опасно</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
+                <motion.div
+                  className={`h-full rounded-full ${cfg.progressClass}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.max(result.score, 4)}%` }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+            </div>
+
+            {/* Domain breakdown pills */}
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "Домен", value: result.host },
+                  { label: "Ядро", value: result.breakdown.registrableDomain },
+                  { label: "Зона", value: result.breakdown.tld },
+                  { label: "Поддомен", value: result.breakdown.subdomain || "—" },
+                ].map((item) => (
+                  <span key={item.label} className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-1.5 text-xs text-white/50">
+                    {item.label}: <span className="text-white/80">{item.value}</span>
+                  </span>
+                ))}
+              </div>
+              
+              {result.host !== "—" && (
+                <div className="relative group">
+                  <button
+                    onClick={() => telemetryConsent ? setShowReportModal(true) : null}
+                    disabled={!telemetryConsent}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                      telemetryConsent
+                        ? "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
+                        : "border-white/5 bg-white/[0.01] text-white/30 cursor-not-allowed"
+                    }`}
+                  >
+                    <Flag className="h-3 w-3" />
+                    Пожаловаться
+                  </button>
+                  {!telemetryConsent && (
+                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm">
+                      Включите "Анонимно сохранять результат в общую базу" и повторите попытку
                     </div>
-                    <p className="text-sm text-muted-foreground">{topReasons.length} сигнала</p>
-                  </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </GlassCard>
 
-                  <div className="mt-4 space-y-3">
-                    {topReasons.map((reason, index) => (
-                      <div
-                        key={`${reason.title}-${index}`}
-                        className="grid gap-3 rounded-[1.1rem] border border-white/10 bg-background/36 p-4 md:grid-cols-[1fr_auto]"
-                      >
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-base text-foreground">{reason.title}</p>
-                            <span
-                              className={[
-                                "rounded-full px-2.5 py-1 text-[11px]",
-                                signalStyles[reason.tone],
-                              ].join(" ")}
-                            >
-                              {reason.tone === "positive"
-                                ? "Позитивный"
-                                : reason.tone === "warning"
-                                  ? "Предупреждение"
-                                  : "Критично"}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                            {reason.detail}
-                          </p>
+          {/* ── Side column ── */}
+          <div className="flex flex-col gap-4 lg:col-span-5">
+            {/* Primary action */}
+            <GlassCard className="p-6">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Действие
+              </div>
+              <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
+                {primaryAction(result.verdict)}
+              </p>
+            </GlassCard>
+
+            {/* Quick actions */}
+            <GlassCard className="flex-1 p-5">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Рекомендации</p>
+              <div className="mt-4 space-y-1">
+                {quickActions.map((action, i) => {
+                  const Icon = actionIcons[i] ?? ShieldQuestion;
+                  return (
+                    <div key={`${action}-${i}`} className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-white/[0.03]">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-white/60">
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <p className="text-sm leading-relaxed text-white/60">{action}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* ── Signals row ── */}
+          <GlassCard className="lg:col-span-8 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TriangleAlert className="h-4 w-4 text-white/40" />
+                <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">
+                  Сигналы · {result.reasons.length}
+                </p>
+              </div>
+            </div>
+
+            {leadReason && (
+              <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">Главный сигнал</span>
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-sm font-medium text-white/90">{leadReason.title}</p>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[leadReason.tone].pill}`}>
+                        {toneStyles[leadReason.tone].label}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-white/50">{leadReason.detail}</p>
+                  </div>
+                  <span className="shrink-0 text-sm font-medium text-white/70">
+                    {leadReason.scoreDelta > 0 ? `+${leadReason.scoreDelta}` : leadReason.scoreDelta}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {visibleReasons.length > 0 && (
+              <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                {visibleReasons.map((reason, i) => (
+                  <div key={`${reason.title}-${i}`} className="flex items-start justify-between gap-4 px-5 py-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-white/80">{reason.title}</p>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone].pill}`}>
+                          {toneStyles[reason.tone].label}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm leading-relaxed text-white/40">{reason.detail}</p>
+                    </div>
+                    <span className="shrink-0 text-sm text-white/60">
+                      {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+
+          {/* ── AI insights ── */}
+          <GlassCard className="lg:col-span-4 p-6">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+              AI-слой
+            </div>
+
+            {aiExplanation ? (
+              <div className="mt-4">
+                <p className="text-sm leading-relaxed text-white/60">{aiExplanation.summary}</p>
+                {aiSignals.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {aiSignals.map((reason, i) => (
+                      <div key={`ai-${i}`} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-white/70">{aiReasonTitle(reason, i)}</p>
+                          <span className="text-xs text-white/40">
+                            {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
+                          </span>
                         </div>
-                        <p className="text-sm text-foreground">
-                          {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
-                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/40">{reason.detail}</p>
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {aiExplanation ? (
-                  <div className="mt-4 rounded-[1.2rem] border border-accent/22 bg-accent/8 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-accent">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        AI подтвердил вывод
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                        {aiExplanation.model}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm leading-relaxed text-foreground/88">
-                      {aiExplanation.summary}
-                    </p>
-
-                    {aiUniqueReasons.length > 0 ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {aiUniqueReasons.map((reason, index) => (
-                          <span
-                            key={`${reason.title}-${index}-ai-inline`}
-                            className="rounded-full border border-white/10 bg-background/45 px-3 py-1.5 text-xs text-foreground/84"
-                            title={reason.detail}
-                          >
-                            {aiReasonTitle(reason, index)}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
+                )}
               </div>
-            </div>
-          </motion.section>
+            ) : (
+              <div className="mt-4 flex flex-col items-center justify-center py-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
+                  <Sparkles className="h-5 w-5 text-white/20" />
+                </div>
+                <p className="mt-3 text-sm text-white/30">
+                  {isAiEnriching ? "AI анализирует домен…" : "AI уточнит результат автоматически"}
+                </p>
+              </div>
+            )}
+          </GlassCard>
 
-          <motion.section
-            className="rounded-[1.8rem] border border-white/10 bg-card/72 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)] sm:p-6"
-            {...reveal}
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-foreground" />
-              <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
-                Следующее действие
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-background/48 p-4">
-              <p className="text-sm text-muted-foreground">Сейчас</p>
-              <p className="mt-2 text-2xl leading-snug text-foreground">
-                {primaryAction(result.verdict)}
-              </p>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {quickActions.map((action, index) => {
-                const Icon = actionIcons[index] ?? ShieldQuestion;
-
-                return (
-                  <div
-                    key={`${action}-${index}`}
-                    className="flex gap-3 rounded-[1.2rem] border border-white/10 bg-background/42 p-4"
-                  >
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-foreground">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {action}
-                    </p>
+          {/* ── Reference sections ── */}
+          <GlassCard className="lg:col-span-6 p-6">
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-white/70">
+                <span>Что учитывает модель</span>
+                <ChevronDown className="h-4 w-4 text-white/30 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-4 space-y-3">
+                {ruleReference.map((rule, i) => (
+                  <div key={`${rule.title}-${i}`} className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                    <p className="text-sm text-white/70">{rule.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/40">{rule.detail}</p>
                   </div>
-                );
-              })}
-            </div>
-          </motion.section>
-        </div>
+                ))}
+              </div>
+            </details>
+          </GlassCard>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <motion.details
-            className="group rounded-[1.5rem] border border-white/10 bg-card/72 p-5"
-            {...reveal}
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-base text-foreground">
-              <span>Что учитывает модель</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="mt-4 space-y-4">
-              {ruleReference.map((rule, index) => (
-                <div key={`${rule.title}-${index}`}>
-                  <p className="text-sm text-foreground">{rule.title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {rule.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </motion.details>
-
-          <motion.details
-            className="group rounded-[1.5rem] border border-white/10 bg-card/72 p-5"
-            {...reveal}
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-base text-foreground">
-              <span>Справочные домены</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="mt-4 space-y-4">
-              {officialDomains.map((item, index) => (
-                <div key={`${item.domain}-${index}`}>
-                  <p className="text-sm text-foreground">{item.domain}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </motion.details>
-        </div>
+          <GlassCard className="lg:col-span-6 p-6">
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-white/70">
+                <span>Справочные домены</span>
+                <ChevronDown className="h-4 w-4 text-white/30 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-4 space-y-3">
+                {officialDomains.map((item, i) => (
+                  <div key={`${item.domain}-${i}`} className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                    <p className="text-sm text-white/70">{item.domain}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/40">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          </GlassCard>
+        </motion.div>
       </div>
+
+      {/* ══════════ REPORT MODAL ══════════ */}
+      <AnimatePresence>
+        {showReportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
+            onClick={() => setShowReportModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="absolute right-4 top-4 rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10">
+                  <Flag className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Пожаловаться на результат</h3>
+                  <p className="text-sm text-white/50">Домен: {result.host}</p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="mb-2 block text-sm text-white/60">
+                  Опишите проблему с результатом анализа:
+                </label>
+                <textarea
+                  value={reportText}
+                  onChange={(e) => setReportText(e.target.value)}
+                  placeholder="Например: результат неверный, домен безопасный..."
+                  className="min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/20"
+                  disabled={isSubmittingReport}
+                />
+              </div>
+
+              {reportStatus && (
+                <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+                  reportStatus.includes("отправлена")
+                    ? "border-green-500/20 bg-green-500/10 text-green-400"
+                    : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                }`}>
+                  {reportStatus}
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-3">
+                <Button
+                  onClick={handleReportSubmit}
+                  disabled={isSubmittingReport || !reportText.trim()}
+                  className="flex-1"
+                >
+                  {isSubmittingReport ? "Отправка..." : "Отправить"}
+                </Button>
+                <Button
+                  onClick={() => setShowReportModal(false)}
+                  variant="secondary"
+                  disabled={isSubmittingReport}
+                >
+                  Отмена
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
