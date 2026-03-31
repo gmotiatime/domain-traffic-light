@@ -29,6 +29,21 @@ export default async function handler(req, res) {
   const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
   const cacheHostPrefix = `${cachePrefix}:host`;
   
+  // Подключение к Redis (вынесено из try для доступа в catch)
+  const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
+  const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
+  
+  if (!redisRestUrl || !redisRestToken) {
+    console.error("[API] Redis not configured");
+    res.status(503).json({ error: "База данных недоступна." });
+    return;
+  }
+  
+  const redis = new Redis({
+    url: redisRestUrl,
+    token: redisRestToken,
+  });
+  
   try {
     const headers = standardHeaders();
     console.log("[API] Headers created");
@@ -48,24 +63,6 @@ export default async function handler(req, res) {
     }
 
     console.log("[API] Method check passed");
-    
-    // Подключение к Redis
-    const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
-    const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
-    
-    console.log("[API] Redis config check:", { hasUrl: !!redisRestUrl, hasToken: !!redisRestToken });
-    
-    if (!redisRestUrl || !redisRestToken) {
-      console.error("[API] Redis not configured");
-      res.status(503).json({ error: "База данных недоступна." });
-      return;
-    }
-
-    console.log("[API] Creating Redis client");
-    const redis = new Redis({
-      url: redisRestUrl,
-      token: redisRestToken,
-    });
 
     // ═══════════════════════════════════════════════════════════════════════════
     // DELETE METHOD - Удаление жалобы
