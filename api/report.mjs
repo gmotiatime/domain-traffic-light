@@ -109,6 +109,11 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("[API] Report error:", error);
-    res.status(500).json({ error: "Ошибка при сохранении жалобы." });
+    console.error("[API] Error stack:", error.stack);
+    console.error("[API] Error message:", error.message);
+    res.status(500).json({ 
+      error: "Ошибка при сохранении жалобы.",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
