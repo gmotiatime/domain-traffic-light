@@ -38,10 +38,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body || "{}")
-        : req.body || {};
+    // На Vercel req.body уже распарсен
+    const body = req.body || {};
 
     const { host, verdict, score, reportText } = body;
 
