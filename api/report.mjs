@@ -352,9 +352,16 @@ export default async function handler(req, res) {
     console.error("[API] Error name:", error.name);
     console.error("[API] Error message:", error.message);
     console.error("[API] Error stack:", error.stack);
+    
+    // Добавляем детали запроса для отладки
+    console.error("[API] Request method:", req.method);
+    console.error("[API] Request body:", JSON.stringify(req.body));
+    console.error("[API] Request query:", JSON.stringify(req.query));
+    
     res.status(500).json({ 
-      error: "Ошибка при сохранении жалобы.",
-      message: error.message
+      error: "Ошибка при обработке жалобы.",
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
