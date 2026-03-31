@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Доменный светофор</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 420px;
+      min-height: 520px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Animated background gradient mesh */
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%);
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.25;
+      animation: float 25s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%);
+      top: -80px;
+      left: -60px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent 70%);
+      bottom: -70px;
+      right: -60px;
+      animation-delay: 7s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(40px, -40px) scale(1.15); }
+      66% { transform: translate(-30px, 30px) scale(0.85); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 24px 20px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .logo {
+      font-size: 40px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.3));
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+    }
+
+    /* Glass card */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(24px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    }
+
+    .current-site-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .current-site-label::before {
+      content: '🌐';
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    .current-site-url {
+      font-size: 15px;
+      font-weight: 600;
+      word-break: break-all;
+      color: rgba(255, 255, 255, 0.95);
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+    }
+
+    .check-button {
+      width: 100%;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+      color: #000;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.12), 
+                  0 2px 4px rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+      letter-spacing: -0.01em;
+    }
+
+    .check-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .check-button:hover::before {
+      left: 100%;
+    }
+
+    .check-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2), 
+                  0 4px 8px rgba(255, 255, 255, 0.12);
+    }
+
+    .check-button:active {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+    }
+
+    .check-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+    }
+
+    .result {
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .result-icon {
+      font-size: 48px;
+      line-height: 1;
+      filter: drop-shadow(0 0 12px currentColor);
+    }
+
+    .result-text h3 {
+      font-size: 20px;
+      margin-bottom: 5px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .result-text p {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .result-score {
+      text-align: center;
+      padding: 20px 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      font-size: 32px;
+      font-weight: 800;
+      border: 1px solid;
+      letter-spacing: -0.02em;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .result-score.low {
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.12) 0%, rgba(52, 211, 153, 0.08) 100%);
+      border-color: rgba(52, 211, 153, 0.25);
+      color: #34d399;
+      text-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+    }
+
+    .result-score.medium {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%);
+      border-color: rgba(251, 191, 36, 0.25);
+      color: #fbbf24;
+      text-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+    }
+
+    .result-score.high {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0.08) 100%);
+      border-color: rgba(244, 63, 94, 0.25);
+      color: #f43f5e;
+      text-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+    }
+
+    .result-summary {
+      font-size: 13px;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .view-details {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      letter-spacing: -0.01em;
+    }
+
+    .view-details:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.08);
+    }
+
+    .view-details:active {
+      transform: translateY(0);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      display: none;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 20px;
+      border: 3px solid rgba(255, 255, 255, 0.08);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .error {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0.08) 100%);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #f87171;
+      display: none;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .error.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">🚦</div>
+      <div class="title">Доменный светофор</div>
+      <div class="subtitle">Проверка на фишинг</div>
+    </div>
+
+    <div class="glass-card">
+      <div class="current-site-label">Текущий сайт</div>
+      <div class="current-site-url" id="currentUrl">Загрузка...</div>
+    </div>
+
+    <button class="check-button" id="checkButton">
+      🔍 Проверить безопасность
+    </button>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Анализируем домен...</div>
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <div class="result glass-card" id="result">
+      <div class="result-header">
+        <div class="result-icon" id="resultIcon">✅</div>
+        <div class="result-text">
+          <h3 id="resultTitle">Низкий риск</h3>
+          <p id="resultLabel">Сайт безопасен</p>
+        </div>
+      </div>
+      <div class="result-score" id="resultScore">Score: 5</div>
+      <div class="result-summary" id="resultSummary"></div>
+      <button class="view-details" id="viewDetails">
+        Открыть на сайте →
+      </button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

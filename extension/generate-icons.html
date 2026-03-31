@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Icon Generator</title>
+</head>
+<body>
+  <h2>Генератор иконок для расширения</h2>
+  <p>Откройте эту страницу в браузере и нажмите правой кнопкой на каждую иконку → "Сохранить изображение как..."</p>
+  
+  <div style="display: flex; gap: 20px; margin: 20px 0;">
+    <div>
+      <p>16x16</p>
+      <canvas id="icon16" width="16" height="16"></canvas>
+    </div>
+    <div>
+      <p>48x48</p>
+      <canvas id="icon48" width="48" height="48"></canvas>
+    </div>
+    <div>
+      <p>128x128</p>
+      <canvas id="icon128" width="128" height="128"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function drawIcon(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      
+      // Черный фон
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Белая рамка
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = Math.max(1, size / 32);
+      ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, size - ctx.lineWidth, size - ctx.lineWidth);
+      
+      // Светофор (упрощенный)
+      const centerX = size / 2;
+      const centerY = size / 2;
+      const radius = size / 6;
+      
+      // Красный
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY - radius * 1.2, radius * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Желтый
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Зеленый
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY + radius * 1.2, radius * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawIcon('icon16', 16);
+    drawIcon('icon48', 48);
+    drawIcon('icon128', 128);
+
+    // Автоматически скачать иконки
+    setTimeout(() => {
+      ['icon16', 'icon48', 'icon128'].forEach(id => {
+        const canvas = document.getElementById(id);
+        const link = document.createElement('a');
+        link.download = `${id}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }, 1000);
+  </script>
+</body>
+</html>
