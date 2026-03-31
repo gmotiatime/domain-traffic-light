@@ -1,0 +1,48 @@
+<svg width="960" height="960" viewBox="0 0 960 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="960" rx="72" fill="#071827"/>
+  <g opacity="0.45" filter="url(#blurA)">
+    <circle cx="480" cy="480" r="260" fill="#103555"/>
+  </g>
+  <g opacity="0.3">
+    <path d="M170 260H790" stroke="#5CB5FF" stroke-opacity="0.25" stroke-width="2"/>
+    <path d="M130 520H320" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="2"/>
+    <path d="M640 520H830" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="2"/>
+    <path d="M180 700H780" stroke="#5CB5FF" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="342" y="140" width="276" height="560" rx="78" fill="#13273A" stroke="#9ED1FF" stroke-opacity="0.4" stroke-width="4"/>
+    <rect x="380" y="184" width="200" height="472" rx="54" fill="#0A1B2B"/>
+    <circle cx="480" cy="286" r="78" fill="#23D28A"/>
+    <circle cx="480" cy="286" r="118" fill="url(#greenGlow)" fill-opacity="0.42"/>
+    <circle cx="480" cy="420" r="78" fill="#F1B432"/>
+    <circle cx="480" cy="420" r="118" fill="url(#yellowGlow)" fill-opacity="0.36"/>
+    <circle cx="480" cy="554" r="78" fill="#F2495C"/>
+    <circle cx="480" cy="554" r="118" fill="url(#redGlow)" fill-opacity="0.36"/>
+  </g>
+  <g opacity="0.7">
+    <path d="M298 340L214 392" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
+    <path d="M662 340L746 392" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
+    <path d="M298 500L194 542" stroke="#5CB5FF" stroke-opacity="0.14" stroke-width="8" stroke-linecap="round"/>
+    <path d="M662 500L766 542" stroke="#5CB5FF" stroke-opacity="0.14" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <filter id="blurA" x="100" y="100" width="760" height="760" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="shadow" x="286" y="104" width="388" height="652" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <radialGradient id="greenGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 286) rotate(90) scale(118)">
+      <stop stop-color="#81FFC4"/>
+      <stop offset="1" stop-color="#23D28A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="yellowGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 420) rotate(90) scale(118)">
+      <stop stop-color="#FFE49A"/>
+      <stop offset="1" stop-color="#F1B432" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="redGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 554) rotate(90) scale(118)">
+      <stop stop-color="#FF9CAA"/>
+      <stop offset="1" stop-color="#F2495C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

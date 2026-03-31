@@ -1,0 +1,43 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="72" fill="#061523"/>
+  <g opacity="0.42" filter="url(#glow)">
+    <ellipse cx="598" cy="460" rx="330" ry="220" fill="#113D63"/>
+  </g>
+  <path d="M96 676C238 620 360 612 470 640C578 668 686 668 806 628C902 596 1018 594 1104 624" stroke="#7BC7FF" stroke-opacity="0.18" stroke-width="2"/>
+  <path d="M180 256H1020" stroke="#7BC7FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M600 148V752" stroke="#7BC7FF" stroke-opacity="0.12" stroke-width="2"/>
+  <g filter="url(#soft)">
+    <path d="M514 214H646V366H798V498H646V650H514V498H362V366H514V214Z" fill="#6FD1FF" fill-opacity="0.18" stroke="#B6E6FF" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M366 190L252 304V520L366 634H518" stroke="#92DAFF" stroke-opacity="0.55" stroke-width="8" stroke-linecap="round"/>
+    <path d="M834 190L948 304V520L834 634H682" stroke="#92DAFF" stroke-opacity="0.55" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#card)">
+    <rect x="158" y="262" width="204" height="242" rx="34" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.38" stroke-width="3"/>
+    <path d="M260 304L308 326V382C308 426 281 458 260 470C239 458 212 426 212 382V326L260 304Z" fill="#6FD1FF" fill-opacity="0.15" stroke="#BEEBFF" stroke-width="3"/>
+    <path d="M236 384L252 402L286 366" stroke="#8EE3BE" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g filter="url(#card)">
+    <rect x="836" y="246" width="210" height="262" rx="34" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.38" stroke-width="3"/>
+    <path d="M892 308H990" stroke="#9BD8FF" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
+    <path d="M940 308V412" stroke="#9BD8FF" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
+    <path d="M896 348L868 392H924L896 348Z" fill="#6FD1FF" fill-opacity="0.2" stroke="#BEEBFF" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M984 348L956 392H1012L984 348Z" fill="#6FD1FF" fill-opacity="0.2" stroke="#BEEBFF" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M884 430C899 449 921 458 940 458C959 458 981 449 996 430" stroke="#BEEBFF" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#card)">
+    <rect x="828" y="564" width="148" height="156" rx="28" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.28" stroke-width="3"/>
+    <rect x="868" y="622" width="68" height="52" rx="14" fill="#6FD1FF" fill-opacity="0.12" stroke="#BEEBFF" stroke-width="3"/>
+    <path d="M886 620C886 596 899 582 918 582C937 582 950 596 950 620" stroke="#BEEBFF" stroke-width="6"/>
+  </g>
+  <defs>
+    <filter id="glow" x="128" y="100" width="940" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="70"/>
+    </filter>
+    <filter id="soft" x="288" y="140" width="624" height="584" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#58BFFF" flood-opacity="0.28"/>
+    </filter>
+    <filter id="card" x="128" y="220" width="948" height="530" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+</svg>
