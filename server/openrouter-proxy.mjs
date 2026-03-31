@@ -107,8 +107,8 @@ const redisCache = hasRedisCache
     })
   : null;
 
-// Новая база данных
-const localDb = localDiskCacheEnabled ? getDatabase({
+// Новая база данных (только для локальной разработки, не для Vercel)
+const localDb = localDiskCacheEnabled && !isVercelRuntime ? getDatabase({
   ttlMs: 7 * 24 * 60 * 60 * 1000,
   autoSave: true,
   saveDebounceMs: 2000
@@ -126,10 +126,12 @@ if (localDb && !isVercelRuntime) {
 }
 
 // База данных уже загружена через getDatabase()
-if (localDb) {
-  console.log("[threat-db] Using local DB v2.");
-} else if (hasRedisCache) {
+if (hasRedisCache) {
   console.log("[threat-db] Using Vercel Redis cache.");
+} else if (localDb) {
+  console.log("[threat-db] Using local DB v2.");
+} else {
+  console.log("[threat-db] Using memory cache only.");
 }
 
 function saveDbAsync() {
