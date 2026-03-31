@@ -73,10 +73,10 @@ export default async function handler(req, res) {
     const hostKey = `${cacheHostPrefix}:${normalized}`;
 
     // Получаем существующую запись
-    const record = await redis.get(hostKey);
+    let record = await redis.get(hostKey);
     
-    if (!record?.data) {
-      res.status(404).json({ error: "Запись для этого домена не найдена." });
+    if (!record) {
+      res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
       return;
     }
 
@@ -89,8 +89,8 @@ export default async function handler(req, res) {
     const report = {
       id: generateId(`report-${normalized}-${now}`),
       text: String(reportText || "").trim().slice(0, 500),
-      verdict: verdict || record.data?.aiAdjustedResult?.verdict || "unknown",
-      score: score || record.data?.aiAdjustedResult?.score || 0,
+      verdict: verdict || record.data?.aiAdjustedResult?.verdict || record.data?.enrichedLocalResult?.verdict || "unknown",
+      score: score || record.data?.aiAdjustedResult?.score || record.data?.enrichedLocalResult?.score || 0,
       createdAt: now,
       resolved: false
     };
