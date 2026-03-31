@@ -2862,14 +2862,15 @@ export async function cacheStatsResponse() {
         return {
           size: validRecords.length,
           total: validRecords.length,
+          active: validRecords.length,
           expired: 0,
           verdicts,
           enabled: cacheEnabled,
           storage: cacheStorage,
           persistent: true,
           dbSize: JSON.stringify(validRecords).length,
-          oldestRecord: timestamps.length > 0 ? new Date(Math.min(...timestamps)).toISOString() : null,
-          newestRecord: timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : null,
+          oldestRecord: timestamps.length > 0 ? Math.min(...timestamps) : null,
+          newestRecord: timestamps.length > 0 ? Math.max(...timestamps) : null,
         };
       }
     } catch (error) {
@@ -2881,14 +2882,15 @@ export async function cacheStatsResponse() {
     return {
       size: stats.active,
       total: stats.total,
+      active: stats.active,
       expired: stats.expired,
       verdicts: stats.verdicts,
       enabled: cacheEnabled,
       storage: cacheStorage,
       persistent: true,
       dbSize: stats.dbSize,
-      oldestRecord: stats.oldestRecord ? new Date(stats.oldestRecord).toISOString() : null,
-      newestRecord: stats.newestRecord ? new Date(stats.newestRecord).toISOString() : null,
+      oldestRecord: stats.oldestRecord,
+      newestRecord: stats.newestRecord,
     };
   }
 

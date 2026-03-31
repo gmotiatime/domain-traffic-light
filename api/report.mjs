@@ -36,35 +36,12 @@ export default async function handler(req, res) {
       return;
     }
 
-    if (req.method !== "POST") {
+    if (req.method !== "POST" && req.method !== "DELETE") {
       res.status(405).json({ error: "Method Not Allowed" });
       return;
     }
 
     console.log("[API] Method check passed");
-    
-    // На Vercel req.body может быть getter, который парсит JSON
-    let body;
-    try {
-      body = req.body || {};
-    } catch (parseError) {
-      console.error("[API] Body parse error:", parseError.message);
-      res.status(400).json({ error: "Неверный формат JSON в теле запроса." });
-      return;
-    }
-    
-    console.log("[API] Body parsed:", Object.keys(body));
-
-    const { host, verdict, score, reportText } = body;
-
-    if (!host || !reportText) {
-      console.log("[API] Missing required fields");
-      res.status(400).json({ error: "Поля host и reportText обязательны." });
-      return;
-    }
-
-    const normalized = normalizeHost(host);
-    console.log("[API] Host normalized:", normalized);
     
     // Подключение к Redis
     const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
@@ -88,8 +65,159 @@ export default async function handler(req, res) {
     const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
     const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
     const cacheHostPrefix = `${cachePrefix}:host`;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DELETE METHOD - Удаление жалобы
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (req.method === "DELETE") {
+      const host = String(req.query?.host || "").trim();
+      const reportId = String(req.query?.reportId || "").trim();
+
+      if (!host || !reportId) {
+        console.log("[API] Missing required query params");
+        res.status(400).json({ error: "Параметры host и reportId обязательны." });
+        return;
+      }
+
+      const normalized = normalizeHost(host);
+      const hostKey = `${cacheHostPrefix}:${normalized}`;
+      
+      console.log("[API] Deleting report:", { host: normalized, reportId });
+
+      // Lua скрипт для атомарного удаления жалобы
+      const luaDeleteScript = `
+        local hostKey = KEYS[1]
+        local reportId = ARGV[1]
+        local now = ARGV[2]
+        
+        local record = redis.call('GET', hostKey)
+        if not record then
+          return nil
+        end
+        
+        local recordData = cjson.decode(record)
+        if not recordData.reports or #recordData.reports == 0 then
+          return 0
+        end
+        
+        local newReports = {}
+        local deleted = false
+        for i, report in ipairs(recordData.reports) do
+          if report.id ~= reportId then
+            table.insert(newReports, report)
+          else
+            deleted = true
+          end
+        end
+        
+        if not deleted then
+          return -1
+        end
+        
+        recordData.reports = newReports
+        recordData.updatedAt = tonumber(now)
+        
+        redis.call('SET', hostKey, cjson.encode(recordData))
+        return #newReports
+      `;
+
+      try {
+        const now = Date.now();
+        const result = await redis.eval(
+          luaDeleteScript,
+          [hostKey],
+          [reportId, now.toString()]
+        );
+        
+        if (result === null) {
+          console.log("[API] No record found");
+          res.status(404).json({ error: "Запись для этого домена не найдена." });
+          return;
+        }
+        
+        if (result === -1) {
+          console.log("[API] Report not found");
+          res.status(404).json({ error: "Жалоба не найдена." });
+          return;
+        }
+        
+        console.log("[API] Report deleted, remaining reports:", result);
+
+        res.status(200).json({
+          ok: true,
+          message: "Жалоба успешно удалена.",
+          host: normalized,
+          reportsCount: result,
+        });
+      } catch (evalError) {
+        console.error("[API] Lua script error:", evalError);
+        // Fallback к старому методу
+        console.log("[API] Falling back to non-atomic method");
+        
+        let record = await redis.get(hostKey);
+        
+        if (!record) {
+          console.log("[API] No record found");
+          res.status(404).json({ error: "Запись для этого домена не найдена." });
+          return;
+        }
+
+        if (!Array.isArray(record.reports)) {
+          record.reports = [];
+        }
+
+        const reportIndex = record.reports.findIndex(r => r.id === reportId);
+        if (reportIndex === -1) {
+          console.log("[API] Report not found");
+          res.status(404).json({ error: "Жалоба не найдена." });
+          return;
+        }
+
+        record.reports.splice(reportIndex, 1);
+        record.updatedAt = Date.now();
+        
+        console.log("[API] Saving to Redis, reports count:", record.reports.length);
+        await redis.set(hostKey, record);
+        console.log("[API] Deleted successfully");
+
+        res.status(200).json({
+          ok: true,
+          message: "Жалоба успешно удалена.",
+          host: normalized,
+          reportsCount: record.reports.length,
+        });
+      }
+      return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // POST METHOD - Добавление жалобы
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // На Vercel req.body может быть getter, который парсит JSON
+    let body;
+    try {
+      body = req.body || {};
+    } catch (parseError) {
+      console.error("[API] Body parse error:", parseError.message);
+      res.status(400).json({ error: "Неверный формат JSON в теле запроса." });
+      return;
+    }
+    
+    console.log("[API] Body parsed:", Object.keys(body));
+
+    const { host, verdict, score, reportText } = body;
+
+    if (!host || !reportText) {
+      console.log("[API] Missing required fields");
+      res.status(400).json({ error: "Поля host и reportText обязательны." });
+      return;
+    }
+
+    const normalized = normalizeHost(host);
     const hostKey = `${cacheHostPrefix}:${normalized}`;
     
+    console.log("[API] Host normalized:", normalized);
     console.log("[API] Cache key:", hostKey);
 
     const now = Date.now();
