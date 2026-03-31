@@ -23,6 +23,16 @@ function generateId(host) {
 export default async function handler(req, res) {
   console.log("[API] Report handler started");
   
+  // Устанавливаем заголовки в самом начале
+  try {
+    const headers = standardHeaders();
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+  } catch (headerError) {
+    console.error("[API] Error setting headers:", headerError);
+  }
+  
   // Определяем переменные в начале для доступа во всех блоках
   const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
   const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
@@ -45,13 +55,6 @@ export default async function handler(req, res) {
   });
   
   try {
-    const headers = standardHeaders();
-    console.log("[API] Headers created");
-
-    Object.entries(headers).forEach(([key, value]) => {
-      res.setHeader(key, value);
-    });
-
     if (req.method === "OPTIONS") {
       res.status(204).end();
       return;
