@@ -2840,7 +2840,40 @@ export async function cacheStatsResponse() {
   if (redisCache) {
     try {
       size = await redisCache.scard(cacheIndexKey);
-    } catch {
+      
+      // Получаем детальную статистику из Redis
+      const keys = await redisCache.smembers(cacheIndexKey);
+      const keyList = (Array.isArray(keys) ? keys : []).slice(0, 200);
+      
+      if (keyList.length > 0) {
+        const records = await redisCache.mget(...keyList);
+        const validRecords = records.filter(r => r && r.data);
+        
+        const verdicts = validRecords.reduce((acc, r) => {
+          const verdict = r.data?.aiAdjustedResult?.verdict || r.data?.enrichedLocalResult?.verdict || r.data?.analysis?.verdict || 'low';
+          acc[verdict] = (acc[verdict] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const timestamps = validRecords
+          .map(r => r.createdAt || r.updatedAt)
+          .filter(t => t && typeof t === 'number');
+        
+        return {
+          size: validRecords.length,
+          total: validRecords.length,
+          expired: 0,
+          verdicts,
+          enabled: cacheEnabled,
+          storage: cacheStorage,
+          persistent: true,
+          dbSize: JSON.stringify(validRecords).length,
+          oldestRecord: timestamps.length > 0 ? new Date(Math.min(...timestamps)).toISOString() : null,
+          newestRecord: timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : null,
+        };
+      }
+    } catch (error) {
+      console.error('[Cache] Error getting Redis stats:', error.message);
       size = null;
     }
   } else if (localDb) {

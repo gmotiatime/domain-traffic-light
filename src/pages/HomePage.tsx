@@ -73,7 +73,7 @@ export function HomePage() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const response = await fetch("/api/cache/stats");
+        const response = await fetch("/api/cache-stats");
         const data = await response.json().catch(() => ({}));
         if (response.ok) {
           setStats(data);
