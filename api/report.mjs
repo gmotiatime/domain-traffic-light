@@ -24,17 +24,13 @@ export default async function handler(req, res) {
   try {
     console.log("[API] Report handler started, method:", req.method);
     
-    // Устанавливаем заголовки в самом начале
-    try {
-      const headers = standardHeaders();
-      Object.entries(headers).forEach(([key, value]) => {
-        res.setHeader(key, value);
-      });
-    } catch (headerError) {
-      console.error("[API] Header error:", headerError.message);
-      res.status(500).json({ error: "Failed to set headers" });
-      return;
-    }
+    // Устанавливаем заголовки напрямую
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
+    res.setHeader("Content-Type", "application/json");
+    
+    console.log("[API] Headers set");
     
     // Определяем переменные в начале для доступа во всех блоках
     const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
