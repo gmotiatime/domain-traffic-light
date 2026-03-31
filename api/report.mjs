@@ -84,9 +84,10 @@ export default async function handler(req, res) {
       
       console.log("[API] Deleting report:", { host: normalized, reportId });
 
-      // Lua скрипт для атомарного удаления жалобы
+      // Lua скрипт для атомарного удаления жалобы из обоих ключей
       const luaDeleteScript = `
         local hostKey = KEYS[1]
+        local recordKey = KEYS[2]
         local reportId = ARGV[1]
         local now = ARGV[2]
         
@@ -117,15 +118,25 @@ export default async function handler(req, res) {
         recordData.reports = newReports
         recordData.updatedAt = tonumber(now)
         
+        -- Обновляем оба ключа
         redis.call('SET', hostKey, cjson.encode(recordData))
+        if recordKey ~= "" then
+          redis.call('SET', recordKey, cjson.encode(recordData))
+        end
+        
         return #newReports
       `;
 
       try {
         const now = Date.now();
+        
+        // Получаем record key из host записи
+        const hostRecord = await redis.get(hostKey);
+        const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
+        
         const result = await redis.eval(
           luaDeleteScript,
-          [hostKey],
+          [hostKey, recordKey],
           [reportId, now.toString()]
         );
         
@@ -177,7 +188,15 @@ export default async function handler(req, res) {
         record.updatedAt = Date.now();
         
         console.log("[API] Saving to Redis, reports count:", record.reports.length);
+        
+        // Обновляем оба ключа
         await redis.set(hostKey, record);
+        
+        if (record.key) {
+          const recordKey = `${cachePrefix}:record:${record.key}`;
+          await redis.set(recordKey, record);
+        }
+        
         console.log("[API] Deleted successfully");
 
         res.status(200).json({
@@ -222,11 +241,12 @@ export default async function handler(req, res) {
 
     const now = Date.now();
 
-    // Используем Lua скрипт для атомарного добавления жалобы (предотвращает race condition)
+    // Используем Lua скрипт для атомарного добавления жалобы в оба ключа
     console.log("[API] Adding report atomically with Lua script");
     
     const luaScript = `
       local hostKey = KEYS[1]
+      local recordKey = KEYS[2]
       local reportJson = ARGV[1]
       local now = ARGV[2]
       
@@ -244,7 +264,12 @@ export default async function handler(req, res) {
       table.insert(recordData.reports, newReport)
       recordData.updatedAt = tonumber(now)
       
+      -- Обновляем оба ключа
       redis.call('SET', hostKey, cjson.encode(recordData))
+      if recordKey ~= "" then
+        redis.call('SET', recordKey, cjson.encode(recordData))
+      end
+      
       return #recordData.reports
     `;
 
@@ -258,9 +283,13 @@ export default async function handler(req, res) {
     };
 
     try {
+      // Получаем record key из host записи
+      const hostRecord = await redis.get(hostKey);
+      const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
+      
       const reportsCount = await redis.eval(
         luaScript,
-        [hostKey],
+        [hostKey, recordKey],
         [JSON.stringify(report), now.toString()]
       );
       
@@ -299,7 +328,15 @@ export default async function handler(req, res) {
       record.updatedAt = now;
       
       console.log("[API] Saving to Redis, reports count:", record.reports.length);
+      
+      // Обновляем оба ключа
       await redis.set(hostKey, record);
+      
+      if (record.key) {
+        const recordKey = `${cachePrefix}:record:${record.key}`;
+        await redis.set(recordKey, record);
+      }
+      
       console.log("[API] Saved successfully");
 
       res.status(200).json({
