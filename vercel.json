@@ -9,6 +9,18 @@
     },
     "api/cache-stats.mjs": {
       "maxDuration": 10
+    },
+    "api/lookup.mjs": {
+      "maxDuration": 10
+    },
+    "api/report.mjs": {
+      "maxDuration": 10
+    },
+    "api/admin-cache.mjs": {
+      "maxDuration": 30
+    },
+    "api/admin-cache-deduplicate.mjs": {
+      "maxDuration": 30
     }
   }
 }
