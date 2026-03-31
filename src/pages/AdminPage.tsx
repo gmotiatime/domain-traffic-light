@@ -183,7 +183,7 @@ export function AdminPage() {
 
   async function loadStats() {
     try {
-      const response = await fetch(getApiUrl("/api/cache/stats"));
+      const response = await fetch(getApiUrl("/api/cache-stats"));
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
         setStats(data);

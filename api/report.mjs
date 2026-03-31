@@ -23,6 +23,12 @@ function generateId(host) {
 export default async function handler(req, res) {
   console.log("[API] Report handler started");
   
+  // Определяем переменные в начале для доступа во всех блоках
+  const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
+  const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
+  const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
+  const cacheHostPrefix = `${cachePrefix}:host`;
+  
   try {
     const headers = standardHeaders();
     console.log("[API] Headers created");
@@ -60,11 +66,6 @@ export default async function handler(req, res) {
       url: redisRestUrl,
       token: redisRestToken,
     });
-
-    const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
-    const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
-    const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
-    const cacheHostPrefix = `${cachePrefix}:host`;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // DELETE METHOD - Удаление жалобы
