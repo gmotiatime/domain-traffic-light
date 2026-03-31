@@ -92,47 +92,93 @@ export default async function handler(req, res) {
     
     console.log("[API] Cache key:", hostKey);
 
-    // Получаем существующую запись
-    console.log("[API] Fetching record from Redis");
-    let record = await redis.get(hostKey);
-    console.log("[API] Record fetched:", !!record);
+    // Используем Lua скрипт для атомарного добавления жалобы (предотвращает race condition)
+    console.log("[API] Adding report atomically with Lua script");
     
-    if (!record) {
-      console.log("[API] No record found");
-      res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
-      return;
-    }
-
-    // Добавляем жалобу
-    const now = Date.now();
-    if (!Array.isArray(record.reports)) {
-      record.reports = [];
-    }
+    const luaScript = `
+      local hostKey = KEYS[1]
+      local reportJson = ARGV[1]
+      local now = ARGV[2]
+      
+      local record = redis.call('GET', hostKey)
+      if not record then
+        return nil
+      end
+      
+      local recordData = cjson.decode(record)
+      if not recordData.reports then
+        recordData.reports = {}
+      end
+      
+      local newReport = cjson.decode(reportJson)
+      table.insert(recordData.reports, newReport)
+      recordData.updatedAt = tonumber(now)
+      
+      redis.call('SET', hostKey, cjson.encode(recordData))
+      return #recordData.reports
+    `;
 
     const report = {
       id: generateId(`report-${normalized}-${now}`),
       text: String(reportText || "").trim().slice(0, 500),
-      verdict: verdict || record.data?.aiAdjustedResult?.verdict || record.data?.enrichedLocalResult?.verdict || "unknown",
-      score: score || record.data?.aiAdjustedResult?.score || record.data?.enrichedLocalResult?.score || 0,
+      verdict: verdict || "unknown",
+      score: score || 0,
       createdAt: now,
       resolved: false
     };
 
-    record.reports.push(report);
-    record.updatedAt = now;
-    
-    console.log("[API] Saving to Redis, reports count:", record.reports.length);
+    try {
+      const reportsCount = await redis.eval(
+        luaScript,
+        [hostKey],
+        [JSON.stringify(report), now.toString()]
+      );
+      
+      if (reportsCount === null) {
+        console.log("[API] No record found");
+        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
+        return;
+      }
+      
+      console.log("[API] Report saved atomically, total reports:", reportsCount);
 
-    // Сохраняем обратно в Redis
-    await redis.set(hostKey, record);
-    console.log("[API] Saved successfully");
+      res.status(200).json({
+        ok: true,
+        message: "Жалоба успешно отправлена.",
+        host: normalized,
+        reportsCount: reportsCount,
+      });
+    } catch (evalError) {
+      console.error("[API] Lua script error:", evalError);
+      // Fallback к старому методу если Lua не поддерживается
+      console.log("[API] Falling back to non-atomic method");
+      
+      let record = await redis.get(hostKey);
+      
+      if (!record) {
+        console.log("[API] No record found");
+        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
+        return;
+      }
 
-    res.status(200).json({
-      ok: true,
-      message: "Жалоба успешно отправлена.",
-      host: normalized,
-      reportsCount: record.reports.length,
-    });
+      if (!Array.isArray(record.reports)) {
+        record.reports = [];
+      }
+
+      record.reports.push(report);
+      record.updatedAt = now;
+      
+      console.log("[API] Saving to Redis, reports count:", record.reports.length);
+      await redis.set(hostKey, record);
+      console.log("[API] Saved successfully");
+
+      res.status(200).json({
+        ok: true,
+        message: "Жалоба успешно отправлена.",
+        host: normalized,
+        reportsCount: record.reports.length,
+      });
+    }
   } catch (error) {
     console.error("[API] Report error:", error);
     console.error("[API] Error name:", error.name);

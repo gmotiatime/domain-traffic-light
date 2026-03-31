@@ -454,29 +454,27 @@ async function setCachedResponse(key, data, telemetryConsent = false) {
   if (redisCache) {
     try {
       await retryWrite(async () => {
-        // Удалить старую запись для этого хоста, если она есть
-        if (record.host) {
-          const oldRecord = await redisCache.get(getCacheHostKey(record.host));
-          if (oldRecord?.key && oldRecord.key !== record.key) {
-            await Promise.all([
-              redisCache.del(getCacheRecordKey(oldRecord.key)),
-              redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
-            ]);
-          }
-        }
-
+        const ttlSeconds = 7 * 24 * 60 * 60; // 7 дней
+        
+        // Используем оптимизированную структуру:
+        // 1. Полная запись по key с TTL
+        // 2. Индекс host -> key (вместо дублирования полной записи)
+        
         const writes = [
-          redisCache.set(getCacheRecordKey(key), record),
+          // Сохраняем полную запись с TTL
+          redisCache.set(getCacheRecordKey(key), record, { ex: ttlSeconds }),
+          // Добавляем в индекс
           redisCache.sadd(cacheIndexKey, getCacheRecordKey(key)),
         ];
 
         if (record.host) {
-          writes.push(redisCache.set(getCacheHostKey(record.host), record));
+          // Сохраняем только ссылку на key, а не полную запись (экономим память)
+          writes.push(redisCache.set(getCacheHostKey(record.host), key, { ex: ttlSeconds }));
         }
 
         await Promise.all(writes);
       });
-      console.log(`[Cache] Saved to Redis: ${host}`);
+      console.log(`[Cache] Saved to Redis: ${host} (with TTL)`);
       return;
     } catch (error) {
       console.error(`[Cache] Redis save failed, falling back to local:`, error.message);
@@ -627,7 +625,7 @@ async function getRawCacheRecordByHost(hostInput) {
   }
 
   // Retry helper для надежности
-  async function retryOperation(operation, maxRetries = 3, delayMs = 100) {
+  async function retryOperation(operation, maxRetries = 2, delayMs = 100) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
@@ -642,23 +640,32 @@ async function getRawCacheRecordByHost(hostInput) {
   // Попытка загрузки из Redis
   if (redisCache) {
     try {
-      const record = await retryOperation(async () => {
-        let result = await redisCache.get(getCacheHostKey(normalized.host));
-        if (!result?.data) {
+      // Теперь host -> key (ссылка), а не host -> record (полная запись)
+      const recordKey = await retryOperation(async () => {
+        let key = await redisCache.get(getCacheHostKey(normalized.host));
+        if (!key) {
+          // Проверяем legacy префиксы
           for (const prefix of legacyCachePrefixes) {
-            result = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
-            if (result?.data) {
+            key = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
+            if (key) {
               console.log(`[Cache] Found host in legacy prefix: ${prefix}`);
               break;
             }
           }
         }
-        return result;
+        return key;
       });
       
-      if (record?.data) {
-        console.log(`[Cache] Redis hit for host: ${normalized.host}`);
-        return record;
+      if (recordKey) {
+        // Получаем полную запись по ключу
+        const record = await retryOperation(() => 
+          redisCache.get(typeof recordKey === 'string' ? getCacheRecordKey(recordKey) : getCacheHostKey(normalized.host))
+        );
+        
+        if (record?.data) {
+          console.log(`[Cache] Redis hit for host: ${normalized.host}`);
+          return record;
+        }
       }
       console.log(`[Cache] Redis miss for host: ${normalized.host}`);
     } catch (error) {
@@ -880,12 +887,20 @@ async function listRecentCacheEntries(limit = 20) {
   let records = [];
 
   if (redisCache) {
-    const keys = await redisCache.smembers(cacheIndexKey);
-    records = await Promise.all(
-      (Array.isArray(keys) ? keys : [])
-        .slice(0, 200)
-        .map((key) => redisCache.get(key).catch(() => null)),
-    );
+    try {
+      const keys = await redisCache.smembers(cacheIndexKey);
+      const keyList = (Array.isArray(keys) ? keys : []).slice(0, 200);
+      
+      if (keyList.length > 0) {
+        // Используем MGET для массового получения (намного быстрее чем Promise.all с GET)
+        console.log(`[Cache] Fetching ${keyList.length} records with MGET`);
+        const values = await redisCache.mget(...keyList);
+        records = values.filter(v => v !== null && v?.data);
+      }
+    } catch (error) {
+      console.error('[Cache] Error in listRecentCacheEntries:', error.message);
+      records = [];
+    }
   } else if (localDb) {
     // Используем новую БД
     const dbRecords = localDb.getRecent(limit);
