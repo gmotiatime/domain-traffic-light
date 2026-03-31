@@ -92,6 +92,8 @@ export default async function handler(req, res) {
     
     console.log("[API] Cache key:", hostKey);
 
+    const now = Date.now();
+
     // Используем Lua скрипт для атомарного добавления жалобы (предотвращает race condition)
     console.log("[API] Adding report atomically with Lua script");
     
