@@ -21,20 +21,19 @@ function generateId(host) {
 }
 
 export default async function handler(req, res) {
-  console.log("[API] Report handler started");
-  console.log("[API] Request method:", req.method);
-  console.log("[API] Request URL:", req.url);
-  
   try {
+    console.log("[API] Report handler started, method:", req.method);
+    
     // Устанавливаем заголовки в самом начале
     try {
       const headers = standardHeaders();
       Object.entries(headers).forEach(([key, value]) => {
         res.setHeader(key, value);
       });
-      console.log("[API] Headers set successfully");
     } catch (headerError) {
-      console.error("[API] Error setting headers:", headerError.message);
+      console.error("[API] Header error:", headerError.message);
+      res.status(500).json({ error: "Failed to set headers" });
+      return;
     }
     
     // Определяем переменные в начале для доступа во всех блоках
@@ -43,13 +42,9 @@ export default async function handler(req, res) {
     const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
     const cacheHostPrefix = `${cachePrefix}:host`;
     
-    console.log("[API] Cache prefix:", cachePrefix);
-    
-    // Подключение к Redis (вынесено из try для доступа в catch)
+    // Подключение к Redis
     const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
     const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
-    
-    console.log("[API] Redis configured:", { hasUrl: !!redisRestUrl, hasToken: !!redisRestToken });
     
     if (!redisRestUrl || !redisRestToken) {
       console.error("[API] Redis not configured");
@@ -62,7 +57,7 @@ export default async function handler(req, res) {
       token: redisRestToken,
     });
     
-    console.log("[API] Redis client created");
+    console.log("[API] Redis ready");
   
     if (req.method === "OPTIONS") {
       res.status(204).end();
@@ -357,20 +352,19 @@ export default async function handler(req, res) {
       });
     }
   } catch (error) {
-    console.error("[API] Report error:", error);
-    console.error("[API] Error name:", error.name);
-    console.error("[API] Error message:", error.message);
+    console.error("[API] Top-level error:", error.message);
     console.error("[API] Error stack:", error.stack);
     
-    // Добавляем детали запроса для отладки
-    console.error("[API] Request method:", req.method);
-    console.error("[API] Request body:", JSON.stringify(req.body));
-    console.error("[API] Request query:", JSON.stringify(req.query));
-    
-    res.status(500).json({ 
-      error: "Ошибка при обработке жалобы.",
-      message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    // Пытаемся отправить ответ, если еще не отправлен
+    if (!res.headersSent) {
+      try {
+        res.status(500).json({ 
+          error: "Ошибка при обработке жалобы.",
+          message: error.message
+        });
+      } catch (resError) {
+        console.error("[API] Failed to send error response:", resError.message);
+      }
+    }
   }
 }
