@@ -22,39 +22,48 @@ function generateId(host) {
 
 export default async function handler(req, res) {
   console.log("[API] Report handler started");
+  console.log("[API] Request method:", req.method);
+  console.log("[API] Request URL:", req.url);
   
-  // Устанавливаем заголовки в самом начале
   try {
-    const headers = standardHeaders();
-    Object.entries(headers).forEach(([key, value]) => {
-      res.setHeader(key, value);
+    // Устанавливаем заголовки в самом начале
+    try {
+      const headers = standardHeaders();
+      Object.entries(headers).forEach(([key, value]) => {
+        res.setHeader(key, value);
+      });
+      console.log("[API] Headers set successfully");
+    } catch (headerError) {
+      console.error("[API] Error setting headers:", headerError.message);
+    }
+    
+    // Определяем переменные в начале для доступа во всех блоках
+    const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
+    const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
+    const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
+    const cacheHostPrefix = `${cachePrefix}:host`;
+    
+    console.log("[API] Cache prefix:", cachePrefix);
+    
+    // Подключение к Redis (вынесено из try для доступа в catch)
+    const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
+    const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
+    
+    console.log("[API] Redis configured:", { hasUrl: !!redisRestUrl, hasToken: !!redisRestToken });
+    
+    if (!redisRestUrl || !redisRestToken) {
+      console.error("[API] Redis not configured");
+      res.status(503).json({ error: "База данных недоступна." });
+      return;
+    }
+    
+    const redis = new Redis({
+      url: redisRestUrl,
+      token: redisRestToken,
     });
-  } catch (headerError) {
-    console.error("[API] Error setting headers:", headerError);
-  }
+    
+    console.log("[API] Redis client created");
   
-  // Определяем переменные в начале для доступа во всех блоках
-  const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
-  const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
-  const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
-  const cacheHostPrefix = `${cachePrefix}:host`;
-  
-  // Подключение к Redis (вынесено из try для доступа в catch)
-  const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
-  const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
-  
-  if (!redisRestUrl || !redisRestToken) {
-    console.error("[API] Redis not configured");
-    res.status(503).json({ error: "База данных недоступна." });
-    return;
-  }
-  
-  const redis = new Redis({
-    url: redisRestUrl,
-    token: redisRestToken,
-  });
-  
-  try {
     if (req.method === "OPTIONS") {
       res.status(204).end();
       return;
