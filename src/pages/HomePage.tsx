@@ -138,7 +138,7 @@ export function HomePage() {
               Проверяй домен
               <br />
               <span className="bg-gradient-to-r from-white via-white/80 to-white/30 bg-clip-text text-transparent">
-                до ввода данных.
+                до ввода данных
               </span>
             </motion.h1>
             
@@ -200,7 +200,7 @@ export function HomePage() {
           <div className="max-w-3xl">
             <p className="text-xs uppercase tracking-[0.26em] text-white/40">Подкапотная магия</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-              Множественный <span className="text-white/50">анализ в реальном времени.</span>
+              Множественный <span className="text-white/50">анализ в реальном времени</span>
             </h2>
           </div>
 
@@ -245,7 +245,7 @@ export function HomePage() {
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.24em] text-white/40">Логика сервиса</p>
               <h2 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                Пауза, проверка и действие <span className="text-white/50">— в одном сценарии.</span>
+                Пауза, проверка и действие <span className="text-white/50">— в одном сценарии</span>
               </h2>
             </div>
 
@@ -276,7 +276,7 @@ export function HomePage() {
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-white/40">Что даёт сервис</p>
               <h2 className="mt-5 max-w-md text-4xl font-bold tracking-tight sm:text-5xl">
-                Понятный вход в реальный инструмент.
+                Понятный вход в реальный инструмент
               </h2>
             </div>
             <div className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
