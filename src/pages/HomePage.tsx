@@ -5,7 +5,6 @@ import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } fro
 
 import { Button } from "@/components/ui/button";
 import { ParticleBackground } from "@/components/ParticleBackground";
-import { CustomCursor } from "@/components/CustomCursor";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   behaviorSteps,
@@ -42,18 +41,15 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`group relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(139,92,246,0.15)] ${className}`}
+      className={`relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
       style={glow ? { background: glow } : undefined}
-      whileHover={{ y: -5 }}
     >
       {/* top edge highlight */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      {/* hover glow effect */}
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5" />
       {children}
     </motion.div>
   );
@@ -74,10 +70,12 @@ type CacheStats = {
 export function HomePage() {
   const [heroInput, setHeroInput] = useState("");
   const [stats, setStats] = useState<CacheStats | null>(null);
+  const [currentVerb, setCurrentVerb] = useState(0);
   const [currentWord, setCurrentWord] = useState(0);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [scrollY, setScrollY] = useState(0);
 
+  const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
   const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
   const placeholders = [
     "Вставьте домен или ссылку...",
@@ -112,6 +110,14 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
+    const verbInterval = setInterval(() => {
+      setCurrentVerb((prev) => (prev + 1) % verbs.length);
+    }, 3000);
+
+    return () => clearInterval(verbInterval);
+  }, []);
+
+  useEffect(() => {
     const wordInterval = setInterval(() => {
       setCurrentWord((prev) => (prev + 1) % words.length);
     }, 3000);
@@ -134,7 +140,6 @@ export function HomePage() {
 
   return (
     <div className="bg-background text-white selection:bg-white/20">
-      <CustomCursor />
       {/* ══════════ HERO SECTION ══════════ */}
       <section className="relative isolate min-h-[90svh] overflow-hidden">
         {/* Background Video & Overlays */}
@@ -183,7 +188,18 @@ export function HomePage() {
               variants={fadeUp}
               className="mt-6 text-5xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[84px]"
             >
-              Проверяй{" "}
+              <span className="relative inline-block">
+                <motion.span
+                  key={currentVerb}
+                  initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  className="inline-block"
+                >
+                  {verbs[currentVerb]}
+                </motion.span>
+              </span>{" "}
               <span className="relative inline-block">
                 <motion.span
                   key={currentWord}
