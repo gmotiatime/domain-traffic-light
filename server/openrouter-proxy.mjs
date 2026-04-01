@@ -378,6 +378,14 @@ async function setCachedResponse(key, data, telemetryConsent = false) {
           writes.push(redisCache.set(getCacheHostKey(record.host), key, { ex: ttlSeconds }));
         }
 
+        // Update stats hash atomically
+        const verdict = record.verdict || data?.aiAdjustedResult?.verdict || data?.analysis?.verdict || 'low';
+        writes.push(
+          redisCache.hincrby(cacheStatsKey, 'total', 1),
+          redisCache.hincrby(cacheStatsKey, `verdict:${verdict}`, 1),
+          redisCache.hset(cacheStatsKey, { newestRecord: String(record.updatedAt || Date.now()) }),
+        );
+
         await Promise.all(writes);
       });
       console.log(`[Cache] Saved to Redis: ${host} (with TTL)`);
@@ -2610,6 +2618,15 @@ export async function cacheStatsResponse() {
       size = cardSize || 0;
       const stats = statsHash || {};
 
+      // Check if stats hash has verdict data
+      const hasVerdictData = Object.keys(stats).some(k => k.startsWith('verdict:'));
+
+      if (!hasVerdictData && size > 0) {
+        // Lazy migration: stats hash is empty but we have records — rebuild once
+        console.log(`[Cache] Stats hash empty, rebuilding from ${size} records...`);
+        return await rebuildStatsFromScan();
+      }
+
       const verdicts = {};
       for (const [k, v] of Object.entries(stats)) {
         if (k.startsWith('verdict:')) {
@@ -2641,6 +2658,92 @@ export async function cacheStatsResponse() {
     storage: cacheStorage,
     persistent: hasRedisCache,
   };
+}
+
+/**
+ * One-time scan to rebuild the stats hash from existing Redis records.
+ * Called lazily on the first cacheStatsResponse() when the hash is empty.
+ */
+async function rebuildStatsFromScan() {
+  try {
+    const keys = await redisCache.smembers(cacheIndexKey);
+    const keyList = (Array.isArray(keys) ? keys : []).slice(0, 500);
+
+    if (keyList.length === 0) {
+      return {
+        size: 0, total: 0, active: 0, expired: 0,
+        verdicts: {},
+        enabled: cacheEnabled,
+        storage: cacheStorage,
+        persistent: true,
+        oldestRecord: null,
+        newestRecord: null,
+      };
+    }
+
+    // Fetch records in batches of 50 to avoid giant mget
+    const batchSize = 50;
+    const allRecords = [];
+    for (let i = 0; i < keyList.length; i += batchSize) {
+      const batch = keyList.slice(i, i + batchSize);
+      const results = await redisCache.mget(...batch);
+      allRecords.push(...results);
+    }
+
+    const validRecords = allRecords.filter(r => r && r.data);
+    const verdicts = {};
+    const timestamps = [];
+
+    for (const r of validRecords) {
+      const verdict = r.data?.aiAdjustedResult?.verdict || r.data?.enrichedLocalResult?.verdict || r.data?.analysis?.verdict || 'low';
+      verdicts[verdict] = (verdicts[verdict] || 0) + 1;
+
+      const ts = r.createdAt || r.updatedAt;
+      if (ts && typeof ts === 'number') {
+        timestamps.push(ts);
+      }
+    }
+
+    const oldest = timestamps.length > 0 ? Math.min(...timestamps) : null;
+    const newest = timestamps.length > 0 ? Math.max(...timestamps) : null;
+
+    // Persist into the stats hash so future calls are O(1)
+    const hashData = {};
+    for (const [v, count] of Object.entries(verdicts)) {
+      hashData[`verdict:${v}`] = String(count);
+    }
+    hashData.total = String(validRecords.length);
+    if (oldest) hashData.oldestRecord = String(oldest);
+    if (newest) hashData.newestRecord = String(newest);
+    hashData.rebuiltAt = String(Date.now());
+
+    await redisCache.hset(cacheStatsKey, hashData);
+    console.log(`[Cache] Stats hash rebuilt: ${validRecords.length} records, verdicts:`, verdicts);
+
+    return {
+      size: validRecords.length,
+      total: validRecords.length,
+      active: validRecords.length,
+      expired: 0,
+      verdicts,
+      enabled: cacheEnabled,
+      storage: cacheStorage,
+      persistent: true,
+      oldestRecord: oldest,
+      newestRecord: newest,
+    };
+  } catch (error) {
+    console.error('[Cache] Error rebuilding stats:', error.message);
+    return {
+      size: 0, total: 0, active: 0, expired: 0,
+      verdicts: {},
+      enabled: cacheEnabled,
+      storage: cacheStorage,
+      persistent: true,
+      oldestRecord: null,
+      newestRecord: null,
+    };
+  }
 }
 
 export async function adminCacheGetResponse(query = {}, headers = {}) {
