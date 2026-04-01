@@ -5,8 +5,6 @@ import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } fro
 
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { useTypewriter } from "@/hooks/useTypewriter";
-import { useCountUp } from "@/hooks/useCountUp";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   behaviorSteps,
@@ -76,7 +74,6 @@ export function HomePage() {
   const [currentWord, setCurrentWord] = useState(0);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const [showTypewriter, setShowTypewriter] = useState(false);
 
   const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
   const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
@@ -87,9 +84,6 @@ export function HomePage() {
     "https://suspicious-site.com",
     "Введите адрес для анализа"
   ];
-
-  const typewriterText = "Сервис помогает быстро оценить риск ссылки, понять причину сигнала и перейти к безопасному действию до того, как пользователь введёт данные.";
-  const { displayedText } = useTypewriter(typewriterText, 30, 500);
 
   useEffect(() => {
     async function loadStats() {
@@ -222,8 +216,9 @@ export function HomePage() {
             </motion.h1>
             
             <motion.p variants={fadeUp} className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
-              {displayedText}
-              <span className="inline-block w-0.5 h-5 bg-white/60 ml-1 animate-pulse" />
+              Сервис помогает быстро оценить риск ссылки, понять причину сигнала и
+              перейти к безопасному действию до того, как пользователь введёт
+              данные.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
