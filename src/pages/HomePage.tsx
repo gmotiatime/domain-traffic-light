@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ParticleBackground } from "@/components/ParticleBackground";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   behaviorSteps,
@@ -154,9 +153,6 @@ export function HomePage() {
         <div className="absolute inset-0 z-[1] bg-black/70" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/40 via-transparent to-black" />
 
-        {/* Particle Background */}
-        <ParticleBackground />
-
         {/* Animated Mesh Orbs (Hero Only) */}
         <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
           <motion.div
@@ -232,16 +228,28 @@ export function HomePage() {
                   openAnalyzerWithInput(heroInput);
                 }}
               >
-                <div className="flex flex-1 items-center gap-3 px-4 w-full h-14">
+                <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative">
                   <Globe className="h-6 w-6 shrink-0 text-white/30" />
-                  <input
-                    id="domain-input"
-                    className="w-full bg-transparent text-lg text-white outline-none placeholder:text-white/30 placeholder:transition-opacity placeholder:duration-500"
-                    onChange={(event) => setHeroInput(event.target.value)}
-                    placeholder={placeholders[currentPlaceholder]}
-                    value={heroInput}
-                    key={currentPlaceholder}
-                  />
+                  <div className="relative w-full">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentPlaceholder}
+                        initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(10px)" }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        className="pointer-events-none absolute inset-0 flex items-center text-lg text-white/30"
+                      >
+                        {!heroInput && placeholders[currentPlaceholder]}
+                      </motion.div>
+                    </AnimatePresence>
+                    <input
+                      id="domain-input"
+                      className="w-full bg-transparent text-lg text-white outline-none relative z-10"
+                      onChange={(event) => setHeroInput(event.target.value)}
+                      value={heroInput}
+                    />
+                  </div>
                 </div>
                 <Button className="h-14 w-full sm:w-auto rounded-xl px-8 text-base font-medium shadow-lg transition-transform hover:scale-[1.03] active:scale-95" type="submit">
                   Анализ
