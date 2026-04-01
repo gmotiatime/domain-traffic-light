@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { motion } from "framer-motion";
 import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ParticleBackground } from "@/components/ParticleBackground";
+import { CustomCursor } from "@/components/CustomCursor";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   behaviorSteps,
@@ -40,15 +42,18 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
+      className={`group relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(139,92,246,0.15)] ${className}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
       style={glow ? { background: glow } : undefined}
+      whileHover={{ y: -5 }}
     >
       {/* top edge highlight */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {/* hover glow effect */}
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5" />
       {children}
     </motion.div>
   );
@@ -69,6 +74,18 @@ type CacheStats = {
 export function HomePage() {
   const [heroInput, setHeroInput] = useState("");
   const [stats, setStats] = useState<CacheStats | null>(null);
+  const [currentWord, setCurrentWord] = useState(0);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
+
+  const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
+  const placeholders = [
+    "Вставьте домен или ссылку...",
+    "Например: example.com",
+    "Проверьте подозрительный URL",
+    "https://suspicious-site.com",
+    "Введите адрес для анализа"
+  ];
 
   useEffect(() => {
     async function loadStats() {
@@ -85,6 +102,31 @@ export function HomePage() {
     loadStats();
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const wordInterval = setInterval(() => {
+      setCurrentWord((prev) => (prev + 1) % words.length);
+    }, 3000);
+
+    return () => clearInterval(wordInterval);
+  }, []);
+
+  useEffect(() => {
+    const placeholderInterval = setInterval(() => {
+      setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
+    }, 4000);
+
+    return () => clearInterval(placeholderInterval);
+  }, []);
+
   function openAnalyzerWithInput(input: string) {
     writeAnalyzerPrefill(input);
     window.location.hash = routeHref("/analyzer");
@@ -92,6 +134,7 @@ export function HomePage() {
 
   return (
     <div className="bg-background text-white selection:bg-white/20">
+      <CustomCursor />
       {/* ══════════ HERO SECTION ══════════ */}
       <section className="relative isolate min-h-[90svh] overflow-hidden">
         {/* Background Video & Overlays */}
@@ -106,17 +149,22 @@ export function HomePage() {
         <div className="absolute inset-0 z-[1] bg-black/70" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/40 via-transparent to-black" />
 
+        {/* Particle Background */}
+        <ParticleBackground />
+
         {/* Animated Mesh Orbs (Hero Only) */}
         <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
           <motion.div
             animate={{ x: [0, 40, -30, 0], y: [0, -50, 30, 0] }}
             transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
             className="absolute -top-[10%] left-[10%] h-[700px] w-[700px] rounded-full bg-blue-500/10 opacity-40 blur-[150px]"
+            style={{ transform: `translateY(${scrollY * 0.3}px)` }}
           />
           <motion.div
             animate={{ x: [0, -40, 30, 0], y: [0, 50, -30, 0] }}
             transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-0 right-[5%] h-[600px] w-[600px] rounded-full bg-violet-500/10 opacity-30 blur-[120px]"
+            style={{ transform: `translateY(${scrollY * 0.2}px)` }}
           />
         </div>
 
@@ -135,7 +183,19 @@ export function HomePage() {
               variants={fadeUp}
               className="mt-6 text-5xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[84px]"
             >
-              Проверяй домен
+              Проверяй{" "}
+              <span className="relative inline-block">
+                <motion.span
+                  key={currentWord}
+                  initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  className="inline-block bg-gradient-to-r from-white via-white/80 to-white/30 bg-clip-text text-transparent"
+                >
+                  {words[currentWord]}
+                </motion.span>
+              </span>
               <br />
               <span className="bg-gradient-to-r from-white via-white/80 to-white/30 bg-clip-text text-transparent">
                 до ввода данных
@@ -160,10 +220,11 @@ export function HomePage() {
                   <Globe className="h-6 w-6 shrink-0 text-white/30" />
                   <input
                     id="domain-input"
-                    className="w-full bg-transparent text-lg text-white outline-none placeholder:text-white/30"
+                    className="w-full bg-transparent text-lg text-white outline-none placeholder:text-white/30 placeholder:transition-opacity placeholder:duration-500"
                     onChange={(event) => setHeroInput(event.target.value)}
-                    placeholder="Вставьте домен или ссылку..."
+                    placeholder={placeholders[currentPlaceholder]}
                     value={heroInput}
+                    key={currentPlaceholder}
                   />
                 </div>
                 <Button className="h-14 w-full sm:w-auto rounded-xl px-8 text-base font-medium shadow-lg transition-transform hover:scale-[1.03] active:scale-95" type="submit">
