@@ -1,43 +1,114 @@
-<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="900" rx="72" fill="#061523"/>
-  <g opacity="0.42" filter="url(#glow)">
-    <ellipse cx="598" cy="460" rx="330" ry="220" fill="#113D63"/>
-  </g>
-  <path d="M96 676C238 620 360 612 470 640C578 668 686 668 806 628C902 596 1018 594 1104 624" stroke="#7BC7FF" stroke-opacity="0.18" stroke-width="2"/>
-  <path d="M180 256H1020" stroke="#7BC7FF" stroke-opacity="0.12" stroke-width="2"/>
-  <path d="M600 148V752" stroke="#7BC7FF" stroke-opacity="0.12" stroke-width="2"/>
-  <g filter="url(#soft)">
-    <path d="M514 214H646V366H798V498H646V650H514V498H362V366H514V214Z" fill="#6FD1FF" fill-opacity="0.18" stroke="#B6E6FF" stroke-width="12" stroke-linejoin="round"/>
-    <path d="M366 190L252 304V520L366 634H518" stroke="#92DAFF" stroke-opacity="0.55" stroke-width="8" stroke-linecap="round"/>
-    <path d="M834 190L948 304V520L834 634H682" stroke="#92DAFF" stroke-opacity="0.55" stroke-width="8" stroke-linecap="round"/>
-  </g>
-  <g filter="url(#card)">
-    <rect x="158" y="262" width="204" height="242" rx="34" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.38" stroke-width="3"/>
-    <path d="M260 304L308 326V382C308 426 281 458 260 470C239 458 212 426 212 382V326L260 304Z" fill="#6FD1FF" fill-opacity="0.15" stroke="#BEEBFF" stroke-width="3"/>
-    <path d="M236 384L252 402L286 366" stroke="#8EE3BE" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <g filter="url(#card)">
-    <rect x="836" y="246" width="210" height="262" rx="34" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.38" stroke-width="3"/>
-    <path d="M892 308H990" stroke="#9BD8FF" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
-    <path d="M940 308V412" stroke="#9BD8FF" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
-    <path d="M896 348L868 392H924L896 348Z" fill="#6FD1FF" fill-opacity="0.2" stroke="#BEEBFF" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M984 348L956 392H1012L984 348Z" fill="#6FD1FF" fill-opacity="0.2" stroke="#BEEBFF" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M884 430C899 449 921 458 940 458C959 458 981 449 996 430" stroke="#BEEBFF" stroke-width="6" stroke-linecap="round"/>
-  </g>
-  <g filter="url(#card)">
-    <rect x="828" y="564" width="148" height="156" rx="28" fill="#0D2133" stroke="#A9DEFF" stroke-opacity="0.28" stroke-width="3"/>
-    <rect x="868" y="622" width="68" height="52" rx="14" fill="#6FD1FF" fill-opacity="0.12" stroke="#BEEBFF" stroke-width="3"/>
-    <path d="M886 620C886 596 899 582 918 582C937 582 950 596 950 620" stroke="#BEEBFF" stroke-width="6"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes scaleGlow {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.1); opacity: 0.9; }
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    .bg-glow { animation: pulse 3s ease-in-out infinite; }
+    .book { 
+      transform-origin: 200px 120px;
+      animation: float 3s ease-in-out infinite;
+    }
+    .shield { 
+      transform-origin: center;
+      animation: scaleGlow 2s ease-in-out infinite;
+    }
+    .orbit { 
+      stroke-dasharray: 5,5; 
+      animation: dash 1s linear infinite;
+    }
+    .star { animation: sparkle 2s ease-in-out infinite; }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
   <defs>
-    <filter id="glow" x="128" y="100" width="940" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="70"/>
-    </filter>
-    <filter id="soft" x="288" y="140" width="624" height="584" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#58BFFF" flood-opacity="0.28"/>
-    </filter>
-    <filter id="card" x="128" y="220" width="948" height="530" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000000" flood-opacity="0.28"/>
-    </filter>
+    <radialGradient id="cyberGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#7cc7ff;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#7cc7ff;stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="bookGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.4"/>
+    </linearGradient>
   </defs>
+  
+  <circle cx="200" cy="150" r="120" fill="url(#cyberGlow)" class="bg-glow"/>
+  
+  <g class="book">
+    <!-- Book -->
+    <rect x="140" y="80" width="120" height="80" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
+    <rect x="145" y="85" width="110" height="70" rx="4" fill="#0f172a" opacity="0.5"/>
+    
+    <!-- Book spine -->
+    <line x1="200" y1="80" x2="200" y2="160" stroke="#3b82f6" stroke-width="2.5"/>
+    
+    <!-- Book pages -->
+    <g opacity="0.6">
+      <line x1="160" y1="100" x2="190" y2="100" stroke="#60a5fa" stroke-width="2"/>
+      <line x1="160" y1="110" x2="185" y2="110" stroke="#60a5fa" stroke-width="1.5"/>
+      <line x1="160" y1="118" x2="188" y2="118" stroke="#60a5fa" stroke-width="1.5"/>
+      <line x1="160" y1="130" x2="190" y2="130" stroke="#60a5fa" stroke-width="2"/>
+      <line x1="160" y1="140" x2="185" y2="140" stroke="#60a5fa" stroke-width="1.5"/>
+      
+      <line x1="210" y1="100" x2="240" y2="100" stroke="#60a5fa" stroke-width="2"/>
+      <line x1="215" y1="110" x2="240" y2="110" stroke="#60a5fa" stroke-width="1.5"/>
+      <line x1="212" y1="118" x2="240" y2="118" stroke="#60a5fa" stroke-width="1.5"/>
+      <line x1="210" y1="130" x2="240" y2="130" stroke="#60a5fa" stroke-width="2"/>
+      <line x1="215" y1="140" x2="240" y2="140" stroke="#60a5fa" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Shield overlay -->
+    <g class="shield">
+      <path d="M200,100 L230,115 L230,145 Q230,165 200,180 Q170,165 170,145 L170,115 Z" 
+            fill="url(#bookGrad)" stroke="#60a5fa" stroke-width="2"/>
+      <path d="M200,110 L220,122 L220,142 Q220,158 200,170 Q180,158 180,142 L180,122 Z" 
+            fill="none" stroke="#93c5fd" stroke-width="1.5" opacity="0.4"/>
+      
+      <!-- Checkmark in shield -->
+      <path d="M190,140 L197,148 L215,125" 
+            fill="none" stroke="#93c5fd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+  
+  <!-- Cyber law text effect -->
+  <g transform="translate(200, 220)">
+    <text x="0" y="0" text-anchor="middle" fill="#3b82f6" font-size="24" font-weight="bold" opacity="0.8">#КиберПраво</text>
+    <text x="0" y="0" text-anchor="middle" fill="#60a5fa" font-size="24" font-weight="bold" opacity="0.3" transform="translate(2, 2)">#КиберПраво</text>
+  </g>
+  
+  <!-- Orbiting elements -->
+  <circle cx="200" cy="140" r="100" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2" class="orbit"/>
+  <circle cx="200" cy="140" r="120" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.15" class="orbit"/>
+  
+  <!-- Corner accents -->
+  <g opacity="0.4" stroke="#3b82f6" stroke-width="2">
+    <path d="M60,60 L60,90 M60,60 L90,60"/>
+    <path d="M340,60 L340,90 M340,60 L310,60"/>
+    <path d="M60,240 L60,210 M60,240 L90,240"/>
+    <path d="M340,240 L340,210 M340,240 L310,240"/>
+  </g>
+  
+  <!-- Decorative stars -->
+  <g opacity="0.6">
+    <circle cx="120" cy="120" r="3" fill="#60a5fa" class="star" style="animation-delay: 0s"/>
+    <circle cx="280" cy="120" r="3" fill="#60a5fa" class="star" style="animation-delay: 0.4s"/>
+    <circle cx="120" cy="180" r="3" fill="#60a5fa" class="star" style="animation-delay: 0.8s"/>
+    <circle cx="280" cy="180" r="3" fill="#60a5fa" class="star" style="animation-delay: 1.2s"/>
+  </g>
 </svg>

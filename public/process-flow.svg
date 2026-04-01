@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes stepGlow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    @keyframes arrowFlow {
+      0% { stroke-dashoffset: 20; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes dataFlow {
+      0% { transform: translateX(0); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateX(30px); opacity: 0; }
+    }
+    .glow { animation: pulse 3s ease-in-out infinite; }
+    .step { animation: stepGlow 2s ease-in-out infinite; }
+    .arrow { 
+      stroke-dasharray: 20; 
+      animation: arrowFlow 1.5s linear infinite;
+    }
+    .data { animation: dataFlow 2s ease-in-out infinite; }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
+  <defs>
+    <radialGradient id="stepGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <circle cx="200" cy="150" r="100" fill="url(#stepGlow)" class="glow"/>
+  
+  <g transform="translate(80, 100)">
+    <circle cx="0" cy="0" r="30" fill="#1e293b" stroke="#06b6d4" stroke-width="2" class="step" style="animation-delay: 0s"/>
+    <text x="0" y="8" text-anchor="middle" fill="#06b6d4" font-size="24" font-weight="bold">1</text>
+    <rect x="-25" y="40" width="50" height="4" rx="2" fill="#06b6d4" opacity="0.6"/>
+    <rect x="-20" y="50" width="40" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
+    <rect x="-25" y="58" width="50" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
+  </g>
+  
+  <g opacity="0.5">
+    <line x1="120" y1="100" x2="170" y2="100" stroke="#06b6d4" stroke-width="2" class="arrow"/>
+    <polygon points="170,100 162,96 162,104" fill="#06b6d4"/>
+  </g>
+  
+  <g transform="translate(200, 100)">
+    <circle cx="0" cy="0" r="30" fill="#1e293b" stroke="#06b6d4" stroke-width="2" class="step" style="animation-delay: 0.7s"/>
+    <text x="0" y="8" text-anchor="middle" fill="#06b6d4" font-size="24" font-weight="bold">2</text>
+    <rect x="-25" y="40" width="50" height="4" rx="2" fill="#06b6d4" opacity="0.6"/>
+    <rect x="-20" y="50" width="40" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
+    <rect x="-25" y="58" width="50" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
+  </g>
+  
+  <g opacity="0.5">
+    <line x1="240" y1="100" x2="290" y2="100" stroke="#06b6d4" stroke-width="2" class="arrow"/>
+    <polygon points="290,100 282,96 282,104" fill="#06b6d4"/>
+  </g>
+  
+  <g transform="translate(320, 100)">
+    <circle cx="0" cy="0" r="30" fill="#1e293b" stroke="#10b981" stroke-width="2" class="step" style="animation-delay: 1.4s"/>
+    <text x="0" y="8" text-anchor="middle" fill="#10b981" font-size="24" font-weight="bold">3</text>
+    <path d="M-10,0 L-3,8 L12,-8" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  </g>
+  
+  <g transform="translate(200, 200)">
+    <rect x="-150" y="0" width="80" height="40" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5" opacity="0.6"/>
+    <text x="-110" y="25" text-anchor="middle" fill="#06b6d4" font-size="12" opacity="0.8">INPUT</text>
+    
+    <rect x="-35" y="0" width="70" height="40" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5" opacity="0.6"/>
+    <circle cx="0" cy="20" r="8" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.6" class="glow"/>
+    <circle cx="0" cy="20" r="4" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.6"/>
+    
+    <rect x="70" y="0" width="80" height="40" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" opacity="0.6"/>
+    <text x="110" y="25" text-anchor="middle" fill="#10b981" font-size="12" opacity="0.8">OUTPUT</text>
+    
+    <line x1="-65" y1="20" x2="-40" y2="20" stroke="#06b6d4" stroke-width="1.5" opacity="0.4" class="arrow"/>
+    <line x1="40" y1="20" x2="65" y2="20" stroke="#8b5cf6" stroke-width="1.5" opacity="0.4" class="arrow"/>
+    
+    <circle cx="-75" cy="20" r="3" fill="#06b6d4" class="data" style="animation-delay: 0s"/>
+    <circle cx="50" cy="20" r="3" fill="#8b5cf6" class="data" style="animation-delay: 1s"/>
+  </g>
+</svg>

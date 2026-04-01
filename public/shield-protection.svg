@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes checkDraw {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .glow { animation: pulse 3s ease-in-out infinite; }
+    .ring { animation: pulse 4s ease-in-out infinite; transform-origin: center; }
+    .check { 
+      stroke-dasharray: 100; 
+      stroke-dashoffset: 100;
+      animation: checkDraw 2s ease-out forwards;
+    }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
+  <defs>
+    <radialGradient id="shieldGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.4"/>
+    </linearGradient>
+  </defs>
+  
+  <circle cx="200" cy="150" r="120" fill="url(#shieldGlow)" class="glow"/>
+  
+  <g transform="translate(200, 150)">
+    <path d="M0,-80 L60,-50 L60,20 Q60,60 0,90 Q-60,60 -60,20 L-60,-50 Z" 
+          fill="url(#shieldGrad)" stroke="#10b981" stroke-width="2"/>
+    
+    <path d="M0,-65 L50,-40 L50,15 Q50,50 0,75 Q-50,50 -50,15 L-50,-40 Z" 
+          fill="none" stroke="#34d399" stroke-width="1.5" opacity="0.4"/>
+    
+    <path d="M-25,0 L-10,20 L30,-25" 
+          fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="check"/>
+  </g>
+  
+  <circle cx="200" cy="150" r="110" fill="none" stroke="#10b981" stroke-width="1" opacity="0.2" class="ring" style="animation-delay: 0s"/>
+  <circle cx="200" cy="150" r="130" fill="none" stroke="#10b981" stroke-width="1" opacity="0.15" class="ring" style="animation-delay: 0.5s"/>
+  <circle cx="200" cy="150" r="150" fill="none" stroke="#10b981" stroke-width="1" opacity="0.1" class="ring" style="animation-delay: 1s"/>
+  
+  <g opacity="0.3">
+    <line x1="50" y1="50" x2="80" y2="50" stroke="#10b981" stroke-width="2"/>
+    <line x1="50" y1="50" x2="50" y2="80" stroke="#10b981" stroke-width="2"/>
+    <line x1="350" y1="50" x2="320" y2="50" stroke="#10b981" stroke-width="2"/>
+    <line x1="350" y1="50" x2="350" y2="80" stroke="#10b981" stroke-width="2"/>
+    <line x1="50" y1="250" x2="80" y2="250" stroke="#10b981" stroke-width="2"/>
+    <line x1="50" y1="250" x2="50" y2="220" stroke="#10b981" stroke-width="2"/>
+    <line x1="350" y1="250" x2="320" y2="250" stroke="#10b981" stroke-width="2"/>
+    <line x1="350" y1="250" x2="350" y2="220" stroke="#10b981" stroke-width="2"/>
+  </g>
+</svg>

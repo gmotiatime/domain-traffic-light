@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes lockShake {
+      0%, 100% { transform: translate(200px, 150px) rotate(0deg); }
+      25% { transform: translate(198px, 150px) rotate(-2deg); }
+      75% { transform: translate(202px, 150px) rotate(2deg); }
+    }
+    @keyframes lineGrow {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes ringPulse {
+      0%, 100% { r: 90; opacity: 0.3; }
+      50% { r: 95; opacity: 0.1; }
+    }
+    .glow { animation: pulse 3s ease-in-out infinite; }
+    .lock { animation: lockShake 3s ease-in-out infinite; }
+    .line { 
+      stroke-dasharray: 100; 
+      animation: lineGrow 2s ease-out infinite;
+    }
+    .ring { animation: ringPulse 2s ease-in-out infinite; }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
+  <defs>
+    <radialGradient id="lockGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <circle cx="200" cy="150" r="100" fill="url(#lockGlow)" class="glow"/>
+  
+  <g class="lock">
+    <rect x="-35" y="0" width="70" height="60" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="2.5"/>
+    <rect x="-30" y="5" width="60" height="50" rx="6" fill="#0f172a" opacity="0.5"/>
+    
+    <path d="M-25,-30 L-25,-5 L25,-5 L25,-30" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M-20,-30 L-20,-10 L20,-10 L20,-30" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.4"/>
+    
+    <circle cx="0" cy="25" r="8" fill="#8b5cf6" opacity="0.6" class="glow"/>
+    <rect x="-3" y="25" width="6" height="15" rx="1" fill="#8b5cf6" opacity="0.6"/>
+  </g>
+  
+  <g opacity="0.4">
+    <line x1="60" y1="60" x2="100" y2="60" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 0s"/>
+    <line x1="60" y1="75" x2="110" y2="75" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 0.2s"/>
+    <line x1="60" y1="90" x2="95" y2="90" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 0.4s"/>
+    
+    <line x1="300" y1="60" x2="340" y2="60" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 0.6s"/>
+    <line x1="290" y1="75" x2="340" y2="75" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 0.8s"/>
+    <line x1="305" y1="90" x2="340" y2="90" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 1s"/>
+    
+    <line x1="60" y1="210" x2="100" y2="210" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 1.2s"/>
+    <line x1="60" y1="225" x2="110" y2="225" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 1.4s"/>
+    
+    <line x1="300" y1="210" x2="340" y2="210" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 1.6s"/>
+    <line x1="290" y1="225" x2="340" y2="225" stroke="#8b5cf6" stroke-width="2" class="line" style="animation-delay: 1.8s"/>
+  </g>
+  
+  <g opacity="0.3">
+    <circle cx="200" cy="150" r="90" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" class="ring" style="animation-delay: 0s"/>
+    <circle cx="200" cy="150" r="110" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" class="ring" style="animation-delay: 0.5s"/>
+  </g>
+  
+  <g opacity="0.5" stroke="#8b5cf6" stroke-width="2">
+    <path d="M50,50 L50,80 M50,50 L80,50"/>
+    <path d="M350,50 L350,80 M350,50 L320,50"/>
+    <path d="M50,250 L50,220 M50,250 L80,250"/>
+    <path d="M350,250 L350,220 M350,250 L320,250"/>
+  </g>
+</svg>

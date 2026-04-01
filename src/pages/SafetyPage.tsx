@@ -76,11 +76,49 @@ export function SafetyPage() {
         {/* Safety Principles */}
         <section className="mt-16 sm:mt-24 grid gap-5 sm:gap-6 lg:grid-cols-2">
           {safetyPrinciples.map((item, index) => (
-            <GlassCard key={item.title} delay={index * 0.1} className="p-7 sm:p-8 flex flex-col justify-center">
-              <h2 className="text-2xl font-semibold text-white">{item.title}</h2>
-              <p className="mt-3 text-base leading-relaxed text-white/50">
-                {item.text}
-              </p>
+            <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0">
+              <div className="p-8">
+                <h2 className="text-2xl font-semibold text-white">{item.title}</h2>
+                <p className="mt-3 text-base leading-relaxed text-white/50">
+                  {item.text}
+                </p>
+              </div>
+              {index === 0 && (
+                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.08),transparent_70%)] p-8">
+                  <img
+                    alt="Без регистрации"
+                    className="h-48 w-full object-contain"
+                    src="/privacy-lock.svg"
+                  />
+                </div>
+              )}
+              {index === 1 && (
+                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                  <img
+                    alt="Без хранения запросов"
+                    className="h-48 w-full object-contain"
+                    src="/database-scan.svg"
+                  />
+                </div>
+              )}
+              {index === 2 && (
+                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                  <img
+                    alt="Без реальных вредоносных доменов"
+                    className="h-48 w-full object-contain"
+                    src="/verified-check.svg"
+                  />
+                </div>
+              )}
+              {index === 3 && (
+                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
+                  <img
+                    alt="С официальными маршрутами"
+                    className="h-48 w-full object-contain"
+                    src="/security-alert.svg"
+                  />
+                </div>
+              )}
             </GlassCard>
           ))}
         </section>

@@ -205,34 +205,61 @@ export function HomePage() {
           </div>
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <GlassCard delay={0.1} className="p-8">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
-                <Shield className="h-6 w-6 text-white/60" />
+            <GlassCard delay={0.1} className="overflow-hidden p-0">
+              <div className="p-8">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
+                  <Shield className="h-6 w-6 text-white/60" />
+                </div>
+                <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
+                <p className="mt-3 text-base leading-relaxed text-white/50">
+                  Моментальная сверка с актуальными базами OpenPhish и URLAbuse. Если домен уже засветился в малвари — вы узнаете об этом первыми.
+                </p>
               </div>
-              <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
-              <p className="mt-3 text-base leading-relaxed text-white/50">
-                Моментальная сверка с актуальными базами OpenPhish и URLAbuse. Если домен уже засветился в малвари — вы узнаете об этом первыми.
-              </p>
+              <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                <img
+                  alt="Защита от фишинга"
+                  className="h-48 w-full object-contain"
+                  src="/shield-protection.svg"
+                />
+              </div>
             </GlassCard>
 
-            <GlassCard delay={0.2} className="p-8">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
-                <Cpu className="h-6 w-6 text-white/60" />
+            <GlassCard delay={0.2} className="overflow-hidden p-0">
+              <div className="p-8">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
+                  <Cpu className="h-6 w-6 text-white/60" />
+                </div>
+                <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
+                <p className="mt-3 text-base leading-relaxed text-white/50">
+                  Быстрый разбор структуры URL, проверка на опечатки популярных брендов и подозрительные TLD-зоны. Срабатывает мгновенно.
+                </p>
               </div>
-              <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
-              <p className="mt-3 text-base leading-relaxed text-white/50">
-                Быстрый разбор структуры URL, проверка на опечатки популярных брендов и подозрительные TLD-зоны. Срабатывает мгновенно.
-              </p>
+              <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                <img
+                  alt="Сканирование базы данных"
+                  className="h-48 w-full object-contain"
+                  src="/database-scan.svg"
+                />
+              </div>
             </GlassCard>
 
-            <GlassCard delay={0.3} className="p-8 md:col-span-2 lg:col-span-1 border-violet-500/20 bg-violet-500/[0.02]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-                <Zap className="h-6 w-6 text-violet-400" />
+            <GlassCard delay={0.3} className="overflow-hidden p-0 md:col-span-2 lg:col-span-1 border-violet-500/20 bg-violet-500/[0.02]">
+              <div className="p-8">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
+                  <Zap className="h-6 w-6 text-violet-400" />
+                </div>
+                <h3 className="mt-6 text-2xl font-semibold text-white">Умный AI-слой</h3>
+                <p className="mt-3 text-base leading-relaxed text-violet-100/60">
+                  После быстрой проверки языковая модель сводит все сигналы воедино, объясняет причину риска простым языком и даёт чёткую рекомендацию.
+                </p>
               </div>
-              <h3 className="mt-6 text-2xl font-semibold text-white">Умный AI-слой</h3>
-              <p className="mt-3 text-base leading-relaxed text-violet-100/60">
-                После быстрой проверки языковая модель сводит все сигналы воедино, объясняет причину риска простым языком и даёт чёткую рекомендацию.
-              </p>
+              <div className="border-t border-violet-500/[0.15] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.1),transparent_70%)] p-8">
+                <img
+                  alt="AI анализ"
+                  className="h-48 w-full object-contain"
+                  src="/ai-analysis.svg"
+                />
+              </div>
             </GlassCard>
           </div>
         </div>
@@ -251,17 +278,46 @@ export function HomePage() {
 
             <div className="mt-14 grid gap-6 lg:grid-cols-3">
               {behaviorSteps.map((item, i) => (
-                <div key={item.step} className="rounded-[2rem] border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
-                      {i + 1}
-                    </span>
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/40">{item.step}</p>
+                <div key={item.step} className="overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.02]">
+                  <div className="p-8">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
+                        {i + 1}
+                      </span>
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/40">{item.step}</p>
+                    </div>
+                    <h3 className="mt-6 text-2xl font-semibold">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-white/50 sm:text-base">
+                      {item.text}
+                    </p>
                   </div>
-                  <h3 className="mt-6 text-2xl font-semibold">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-white/50 sm:text-base">
-                    {item.text}
-                  </p>
+                  {i === 0 && (
+                    <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
+                      <img
+                        alt="Пауза"
+                        className="h-48 w-full object-contain"
+                        src="/pause-stop.svg"
+                      />
+                    </div>
+                  )}
+                  {i === 1 && (
+                    <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08),transparent_70%)] p-8">
+                      <img
+                        alt="Процесс проверки"
+                        className="h-48 w-full object-contain"
+                        src="/process-flow.svg"
+                      />
+                    </div>
+                  )}
+                  {i === 2 && (
+                    <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                      <img
+                        alt="Действие"
+                        className="h-48 w-full object-contain"
+                        src="/action-go.svg"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -272,26 +328,51 @@ export function HomePage() {
       {/* ══════════ HOME PROOF ══════════ */}
       <section className="relative w-full bg-black pb-24 sm:pb-32 pt-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-          <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-white/40">Что даёт сервис</p>
-              <h2 className="mt-5 max-w-md text-4xl font-bold tracking-tight sm:text-5xl">
-                Понятный вход в реальный инструмент
-              </h2>
-            </div>
-            <div className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
-              {homeProof.map((item) => (
-                <div
-                  key={item.title}
-                  className="grid gap-3 py-6 sm:py-8 md:grid-cols-[240px_1fr]"
-                >
-                  <p className="text-lg font-medium text-white">{item.title}</p>
-                  <p className="text-base leading-relaxed text-white/50">
+          <div className="mb-14">
+            <p className="text-xs uppercase tracking-[0.24em] text-white/40">Что даёт сервис</p>
+            <h2 className="mt-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
+              Понятный вход в реальный инструмент
+            </h2>
+          </div>
+          
+          <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
+            {homeProof.map((item, index) => (
+              <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0">
+                <div className="p-8">
+                  <h3 className="text-xl font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 text-base leading-relaxed text-white/50">
                     {item.text}
                   </p>
                 </div>
-              ))}
-            </div>
+                {index === 0 && (
+                  <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.08),transparent_70%)] p-8">
+                    <img
+                      alt="Быстрый старт"
+                      className="h-48 w-full object-contain"
+                      src="/speed-fast.svg"
+                    />
+                  </div>
+                )}
+                {index === 1 && (
+                  <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                    <img
+                      alt="Объяснимый результат"
+                      className="h-48 w-full object-contain"
+                      src="/verified-check.svg"
+                    />
+                  </div>
+                )}
+                {index === 2 && (
+                  <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                    <img
+                      alt="Безопасная публикация"
+                      className="h-48 w-full object-contain"
+                      src="/global-network.svg"
+                    />
+                  </div>
+                )}
+              </GlassCard>
+            ))}
           </div>
         </div>
       </section>

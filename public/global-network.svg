@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .glow { animation: pulse 3s ease-in-out infinite; }
+    .globe { 
+      transform-origin: 200px 150px;
+      animation: rotate 20s linear infinite;
+    }
+    .orbit { 
+      stroke-dasharray: 5,5; 
+      animation: dash 1s linear infinite;
+    }
+    .dot { animation: blink 2s ease-in-out infinite; }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
+  <defs>
+    <radialGradient id="globeGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <circle cx="200" cy="150" r="100" fill="url(#globeGlow)" class="glow"/>
+  
+  <g class="globe">
+    <circle cx="200" cy="150" r="60" fill="none" stroke="#06b6d4" stroke-width="2"/>
+    <ellipse cx="200" cy="150" rx="60" ry="30" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6"/>
+    <ellipse cx="200" cy="150" rx="30" ry="60" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6"/>
+    <line x1="140" y1="150" x2="260" y2="150" stroke="#06b6d4" stroke-width="1" opacity="0.4"/>
+    <line x1="200" y1="90" x2="200" y2="210" stroke="#06b6d4" stroke-width="1" opacity="0.4"/>
+  </g>
+  
+  <circle cx="200" cy="150" r="80" fill="none" stroke="#06b6d4" stroke-width="1" opacity="0.2" class="orbit"/>
+  <circle cx="200" cy="150" r="100" fill="none" stroke="#06b6d4" stroke-width="1" opacity="0.15" class="orbit"/>
+  
+  <circle cx="280" cy="150" r="4" fill="#06b6d4" class="dot" style="animation-delay: 0s"/>
+  <circle cx="240" cy="100" r="3" fill="#06b6d4" class="dot" style="animation-delay: 0.3s"/>
+  <circle cx="160" cy="100" r="3" fill="#06b6d4" class="dot" style="animation-delay: 0.6s"/>
+  <circle cx="120" cy="150" r="4" fill="#06b6d4" class="dot" style="animation-delay: 0.9s"/>
+  <circle cx="160" cy="200" r="3" fill="#06b6d4" class="dot" style="animation-delay: 1.2s"/>
+  <circle cx="240" cy="200" r="3" fill="#06b6d4" class="dot" style="animation-delay: 1.5s"/>
+  
+  <g opacity="0.4">
+    <line x1="280" y1="150" x2="320" y2="150" stroke="#06b6d4" stroke-width="2"/>
+    <line x1="200" y1="90" x2="200" y2="50" stroke="#06b6d4" stroke-width="2"/>
+    <line x1="120" y1="150" x2="80" y2="150" stroke="#06b6d4" stroke-width="2"/>
+    <line x1="200" y1="210" x2="200" y2="250" stroke="#06b6d4" stroke-width="2"/>
+  </g>
+  
+  <g opacity="0.5">
+    <circle cx="320" cy="150" r="6" fill="none" stroke="#06b6d4" stroke-width="2" class="glow"/>
+    <circle cx="200" cy="50" r="6" fill="none" stroke="#06b6d4" stroke-width="2" class="glow"/>
+    <circle cx="80" cy="150" r="6" fill="none" stroke="#06b6d4" stroke-width="2" class="glow"/>
+    <circle cx="200" cy="250" r="6" fill="none" stroke="#06b6d4" stroke-width="2" class="glow"/>
+  </g>
+</svg>

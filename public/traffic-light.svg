@@ -1,48 +1,93 @@
-<svg width="960" height="960" viewBox="0 0 960 960" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="960" height="960" rx="72" fill="#071827"/>
-  <g opacity="0.45" filter="url(#blurA)">
-    <circle cx="480" cy="480" r="260" fill="#103555"/>
-  </g>
-  <g opacity="0.3">
-    <path d="M170 260H790" stroke="#5CB5FF" stroke-opacity="0.25" stroke-width="2"/>
-    <path d="M130 520H320" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="2"/>
-    <path d="M640 520H830" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="2"/>
-    <path d="M180 700H780" stroke="#5CB5FF" stroke-opacity="0.12" stroke-width="2"/>
-  </g>
-  <g filter="url(#shadow)">
-    <rect x="342" y="140" width="276" height="560" rx="78" fill="#13273A" stroke="#9ED1FF" stroke-opacity="0.4" stroke-width="4"/>
-    <rect x="380" y="184" width="200" height="472" rx="54" fill="#0A1B2B"/>
-    <circle cx="480" cy="286" r="78" fill="#23D28A"/>
-    <circle cx="480" cy="286" r="118" fill="url(#greenGlow)" fill-opacity="0.42"/>
-    <circle cx="480" cy="420" r="78" fill="#F1B432"/>
-    <circle cx="480" cy="420" r="118" fill="url(#yellowGlow)" fill-opacity="0.36"/>
-    <circle cx="480" cy="554" r="78" fill="#F2495C"/>
-    <circle cx="480" cy="554" r="118" fill="url(#redGlow)" fill-opacity="0.36"/>
-  </g>
-  <g opacity="0.7">
-    <path d="M298 340L214 392" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
-    <path d="M662 340L746 392" stroke="#5CB5FF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
-    <path d="M298 500L194 542" stroke="#5CB5FF" stroke-opacity="0.14" stroke-width="8" stroke-linecap="round"/>
-    <path d="M662 500L766 542" stroke="#5CB5FF" stroke-opacity="0.14" stroke-width="8" stroke-linecap="round"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes lightChange {
+      0% { fill: #ef4444; opacity: 0.8; }
+      33% { fill: #eab308; opacity: 0.8; }
+      66% { fill: #10b981; opacity: 0.8; }
+      100% { fill: #ef4444; opacity: 0.8; }
+    }
+    @keyframes glowRed {
+      0%, 100% { opacity: 0.2; }
+      16% { opacity: 0.6; }
+      33%, 100% { opacity: 0.2; }
+    }
+    @keyframes glowYellow {
+      0%, 33% { opacity: 0.2; }
+      50% { opacity: 0.6; }
+      66%, 100% { opacity: 0.2; }
+    }
+    @keyframes glowGreen {
+      0%, 66% { opacity: 0.2; }
+      83% { opacity: 0.6; }
+      100% { opacity: 0.2; }
+    }
+    .bg-glow { animation: pulse 3s ease-in-out infinite; }
+    .light-red { animation: glowRed 6s ease-in-out infinite; }
+    .light-yellow { animation: glowYellow 6s ease-in-out infinite; }
+    .light-green { animation: glowGreen 6s ease-in-out infinite; }
+  </style>
+  
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  
   <defs>
-    <filter id="blurA" x="100" y="100" width="760" height="760" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="60"/>
-    </filter>
-    <filter id="shadow" x="286" y="104" width="388" height="652" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="12" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
-    <radialGradient id="greenGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 286) rotate(90) scale(118)">
-      <stop stop-color="#81FFC4"/>
-      <stop offset="1" stop-color="#23D28A" stop-opacity="0"/>
+    <radialGradient id="trafficGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#58bfff;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#58bfff;stop-opacity:0"/>
     </radialGradient>
-    <radialGradient id="yellowGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 420) rotate(90) scale(118)">
-      <stop stop-color="#FFE49A"/>
-      <stop offset="1" stop-color="#F1B432" stop-opacity="0"/>
+    <radialGradient id="redGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0"/>
     </radialGradient>
-    <radialGradient id="redGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 554) rotate(90) scale(118)">
-      <stop stop-color="#FF9CAA"/>
-      <stop offset="1" stop-color="#F2495C" stop-opacity="0"/>
+    <radialGradient id="yellowGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#eab308;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#eab308;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="greenGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0"/>
     </radialGradient>
   </defs>
+  
+  <circle cx="200" cy="150" r="120" fill="url(#trafficGlow)" class="bg-glow"/>
+  
+  <g transform="translate(200, 150)">
+    <!-- Traffic light body -->
+    <rect x="-45" y="-120" width="90" height="240" rx="15" fill="#1e293b" stroke="#58bfff" stroke-width="2.5"/>
+    <rect x="-40" y="-115" width="80" height="230" rx="12" fill="#0f172a" opacity="0.5"/>
+    
+    <!-- Red light -->
+    <circle cx="0" cy="-70" r="28" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+    <circle cx="0" cy="-70" r="28" fill="url(#redGlow)" class="light-red"/>
+    <circle cx="0" cy="-70" r="22" fill="#ef4444" opacity="0.8" class="light-red"/>
+    <circle cx="-8" cy="-78" r="6" fill="#fca5a5" opacity="0.6"/>
+    
+    <!-- Yellow light -->
+    <circle cx="0" cy="0" r="28" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+    <circle cx="0" cy="0" r="28" fill="url(#yellowGlow)" class="light-yellow"/>
+    <circle cx="0" cy="0" r="22" fill="#eab308" opacity="0.8" class="light-yellow"/>
+    <circle cx="-8" cy="-8" r="6" fill="#fde047" opacity="0.6"/>
+    
+    <!-- Green light -->
+    <circle cx="0" cy="70" r="28" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+    <circle cx="0" cy="70" r="28" fill="url(#greenGlow)" class="light-green"/>
+    <circle cx="0" cy="70" r="22" fill="#10b981" opacity="0.8" class="light-green"/>
+    <circle cx="-8" cy="62" r="6" fill="#6ee7b7" opacity="0.6"/>
+    
+    <!-- Pole -->
+    <rect x="-8" y="120" width="16" height="40" rx="2" fill="#1e293b" stroke="#58bfff" stroke-width="1.5" opacity="0.6"/>
+  </g>
+  
+  <circle cx="200" cy="150" r="140" fill="none" stroke="#58bfff" stroke-width="1" opacity="0.2" class="bg-glow"/>
+  <circle cx="200" cy="150" r="160" fill="none" stroke="#58bfff" stroke-width="1" opacity="0.15" class="bg-glow"/>
+  
+  <g opacity="0.4" stroke="#58bfff" stroke-width="2">
+    <path d="M60,60 L60,90 M60,60 L90,60"/>
+    <path d="M340,60 L340,90 M340,60 L310,60"/>
+    <path d="M60,240 L60,210 M60,240 L90,240"/>
+    <path d="M340,240 L340,210 M340,240 L310,240"/>
+  </g>
 </svg>
