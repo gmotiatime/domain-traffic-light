@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
+import { useTypewriter } from "@/hooks/useTypewriter";
+import { useCountUp } from "@/hooks/useCountUp";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   behaviorSteps,
@@ -73,6 +76,7 @@ export function HomePage() {
   const [currentWord, setCurrentWord] = useState(0);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+  const [showTypewriter, setShowTypewriter] = useState(false);
 
   const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
   const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
@@ -83,6 +87,9 @@ export function HomePage() {
     "https://suspicious-site.com",
     "Введите адрес для анализа"
   ];
+
+  const typewriterText = "Сервис помогает быстро оценить риск ссылки, понять причину сигнала и перейти к безопасному действию до того, как пользователь введёт данные.";
+  const { displayedText } = useTypewriter(typewriterText, 30, 500);
 
   useEffect(() => {
     async function loadStats() {
@@ -215,9 +222,8 @@ export function HomePage() {
             </motion.h1>
             
             <motion.p variants={fadeUp} className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
-              Сервис помогает быстро оценить риск ссылки, понять причину сигнала и
-              перейти к безопасному действию до того, как пользователь введёт
-              данные.
+              {displayedText}
+              <span className="inline-block w-0.5 h-5 bg-white/60 ml-1 animate-pulse" />
             </motion.p>
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
@@ -469,7 +475,7 @@ export function HomePage() {
             <div className="text-center mb-14">
               <p className="text-xs uppercase tracking-[0.26em] text-white/40">Статистика в реальном времени</p>
               <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-                Проверено доменов: <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">{stats.total || stats.size || 0}</span>
+                Проверено доменов: <AnimatedCounter end={stats.total || stats.size || 0} className="inline-block bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent" />
               </h2>
             </div>
 
@@ -479,7 +485,7 @@ export function HomePage() {
                   <Shield className="h-6 w-6 text-green-400" />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-white/50">Безопасные</div>
-                <div className="mt-2 text-3xl font-bold text-green-400">{stats.verdicts?.low || 0}</div>
+                <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400" duration={1500} />
                 <p className="mt-2 text-sm text-white/40">Домены с низким риском</p>
               </GlassCard>
 
@@ -488,7 +494,7 @@ export function HomePage() {
                   <Search className="h-6 w-6 text-yellow-400" />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-white/50">Подозрительные</div>
-                <div className="mt-2 text-3xl font-bold text-yellow-400">{stats.verdicts?.medium || 0}</div>
+                <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400" duration={1500} />
                 <p className="mt-2 text-sm text-white/40">Требуют внимания</p>
               </GlassCard>
 
@@ -497,7 +503,7 @@ export function HomePage() {
                   <TrendingUp className="h-6 w-6 text-red-400" />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-white/50">Опасные</div>
-                <div className="mt-2 text-3xl font-bold text-red-400">{stats.verdicts?.high || 0}</div>
+                <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400" duration={1500} />
                 <p className="mt-2 text-sm text-white/40">Высокий риск фишинга</p>
               </GlassCard>
 
@@ -507,8 +513,12 @@ export function HomePage() {
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-white/50">База данных</div>
                 <div className="mt-2 text-3xl font-bold text-violet-400">
-                  {stats.dbSize ? `${(stats.dbSize / 1024).toFixed(0)}` : '—'}
-                  <span className="text-lg text-white/40 ml-1">KB</span>
+                  {stats.dbSize ? (
+                    <>
+                      <AnimatedCounter end={Math.floor(stats.dbSize / 1024)} className="inline-block" duration={1500} />
+                      <span className="text-lg text-white/40 ml-1">KB</span>
+                    </>
+                  ) : '—'}
                 </div>
                 <p className="mt-2 text-sm text-white/40">Размер кэша</p>
               </GlassCard>
