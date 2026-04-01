@@ -97,7 +97,11 @@ export default async function handler(req, res) {
           return nil
         end
         
-        local recordData = cjson.decode(record)
+        local success, recordData = pcall(cjson.decode, record)
+        if not success or type(recordData) ~= 'table' then
+          return nil
+        end
+        
         if not recordData.reports or #recordData.reports == 0 then
           return 0
         end
@@ -256,7 +260,11 @@ export default async function handler(req, res) {
         return nil
       end
       
-      local recordData = cjson.decode(record)
+      local success, recordData = pcall(cjson.decode, record)
+      if not success or type(recordData) ~= 'table' then
+        return nil
+      end
+      
       if not recordData.reports then
         recordData.reports = {}
       end
