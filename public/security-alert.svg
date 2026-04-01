@@ -1,31 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 10px #ef4444); transform: scale(0.95); }
+      50% { opacity: 0.9; filter: drop-shadow(0 0 30px #f87171); transform: scale(1.05); }
     }
     @keyframes alertPulse {
-      0%, 100% { transform: scale(1); opacity: 0.3; }
-      50% { transform: scale(1.05); opacity: 0.6; }
+      0%, 100% { transform: scale(1); opacity: 0.4; border-color: #ef4444; }
+      50% { transform: scale(1.02); opacity: 0.8; border-color: #fca5a5; }
     }
     @keyframes ringExpand {
-      0% { r: 70; opacity: 0.3; }
-      100% { r: 100; opacity: 0; }
+      0% { r: 70; opacity: 0.5; stroke-width: 2; }
+      100% { r: 120; opacity: 0; stroke-width: 0; }
     }
-    @keyframes blink {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
+    @keyframes blinkWarning {
+      0%, 100% { opacity: 0.3; fill: #ef4444; }
+      50% { opacity: 1; fill: #fca5a5; }
     }
-    @keyframes shake {
+    @keyframes shakeSoft {
       0%, 100% { transform: translate(200px, 100px) rotate(0deg); }
-      25% { transform: translate(198px, 100px) rotate(-1deg); }
-      75% { transform: translate(202px, 100px) rotate(1deg); }
+      20% { transform: translate(198px, 100px) rotate(-2deg); }
+      40% { transform: translate(202px, 100px) rotate(2deg); }
+      60% { transform: translate(199px, 100px) rotate(-1deg); }
+      80% { transform: translate(201px, 100px) rotate(1deg); }
     }
-    .glow { animation: pulse 3s ease-in-out infinite; }
+    .glow { transform-origin: center; animation: pulseGlow 2.5s ease-in-out infinite; }
     .alert { animation: alertPulse 2s ease-in-out infinite; }
-    .ring { animation: ringExpand 2s ease-out infinite; }
-    .indicator { animation: blink 1.5s ease-in-out infinite; }
-    .triangle { animation: shake 3s ease-in-out infinite; }
+    .ring { transform-origin: center; animation: ringExpand 2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+    .indicator { animation: blinkWarning 1.5s ease-in-out infinite; }
+    .triangle { animation: shakeSoft 4s ease-in-out infinite; }
   </style>
   
   <rect width="400" height="300" fill="#0a0a0a"/>

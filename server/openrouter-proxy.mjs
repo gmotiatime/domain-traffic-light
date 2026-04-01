@@ -603,7 +603,7 @@ async function saveRawCacheRecord(record) {
     ];
 
     if (nextRecord.host) {
-      writes.push(redisCache.set(getCacheHostKey(nextRecord.host), nextRecord));
+      writes.push(redisCache.set(getCacheHostKey(nextRecord.host), nextRecord.key));
     }
 
     await Promise.all(writes);
@@ -634,12 +634,16 @@ async function deleteRawCacheRecordByHost(hostInput) {
   if (redisCache) {
     const hostKey = getCacheHostKey(normalized.host);
     const record = await redisCache.get(hostKey);
-    if (!record?.key) return false;
+    if (!record) return false;
+
+    // Handle both cases: record can be a string (key) or an object with a key property
+    const recordKey = typeof record === 'string' ? record : record.key;
+    if (!recordKey) return false;
 
     await Promise.all([
       redisCache.del(hostKey),
-      redisCache.del(getCacheRecordKey(record.key)),
-      redisCache.srem(cacheIndexKey, getCacheRecordKey(record.key)),
+      redisCache.del(getCacheRecordKey(recordKey)),
+      redisCache.srem(cacheIndexKey, getCacheRecordKey(recordKey)),
     ]);
     return true;
   }
@@ -2576,7 +2580,7 @@ export function healthResponse() {
       : null,
     cacheEnabled,
     cacheStorage,
-    cachePersistent: hasRedisCache || localDiskCacheEnabled,
+    cachePersistent: hasRedisCache,
     uptime: Math.floor(process.uptime()),
   };
 }
@@ -2958,71 +2962,14 @@ app.post("/api/analyze", async (req, res) => {
   res.status(response.status).json(response.body);
 });
 
-app.post("/api/report", async (req, res) => {
+import reportHandler from "../api/report.mjs";
+
+app.all("/api/report", async (req, res) => {
   try {
-    const { host, verdict, score, reportText } = req.body;
-
-    if (!host || !reportText) {
-      res.status(400).json({ error: "Поля host и reportText обязательны." });
-      return;
-    }
-
-    const db = getDatabase();
-    const record = db.addReport(host, {
-      text: reportText,
-      verdict,
-      score,
-    });
-
-    if (!record) {
-      res.status(404).json({ error: "Запись для этого домена не найдена." });
-      return;
-    }
-
-    res.status(200).json({
-      ok: true,
-      message: "Жалоба успешно отправлена.",
-      host: record.host,
-      reportsCount: record.reports?.length || 0,
-    });
+    await reportHandler(req, res);
   } catch (error) {
     log("error", "Report error", { error: error.message });
-    res.status(500).json({ error: "Ошибка при сохранении жалобы." });
-  }
-});
-
-app.delete("/api/report", async (req, res) => {
-  try {
-    const token = req.headers["x-admin-token"];
-    if (!token || token !== adminToken) {
-      res.status(403).json({ error: "Доступ запрещён." });
-      return;
-    }
-
-    const { host, reportId } = req.query;
-
-    if (!host || !reportId) {
-      res.status(400).json({ error: "Поля host и reportId обязательны." });
-      return;
-    }
-
-    const db = getDatabase();
-    const record = db.deleteReport(host, reportId);
-
-    if (!record) {
-      res.status(404).json({ error: "Жалоба не найдена." });
-      return;
-    }
-
-    res.status(200).json({
-      ok: true,
-      message: "Жалоба удалена.",
-      host: record.host,
-      reportsCount: record.reports?.length || 0,
-    });
-  } catch (error) {
-    log("error", "Delete report error", { error: error.message });
-    res.status(500).json({ error: "Ошибка при удалении жалобы." });
+    if (!res.headersSent) res.status(500).json({ error: "Ошибка при обработке жалобы." });
   }
 });
 
@@ -3094,7 +3041,7 @@ const port = Number(process.env.PORT || 8787);
 export default app;
 
 // Экспорт функций для тестирования
-export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord };
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {

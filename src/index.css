@@ -104,4 +104,8 @@
   .text-soft-balance {
     text-wrap: balance;
   }
+
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
 }

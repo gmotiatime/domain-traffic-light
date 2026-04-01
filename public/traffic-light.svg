@@ -1,34 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.3; transform: scale(0.98); }
+      50% { opacity: 0.7; transform: scale(1.02); }
     }
-    @keyframes lightChange {
-      0% { fill: #ef4444; opacity: 0.8; }
-      33% { fill: #eab308; opacity: 0.8; }
-      66% { fill: #10b981; opacity: 0.8; }
-      100% { fill: #ef4444; opacity: 0.8; }
+    @keyframes seqRed {
+      0%, 25% { opacity: 0.9; filter: drop-shadow(0 0 15px #ef4444); }
+      30%, 100% { opacity: 0.2; filter: none; }
     }
-    @keyframes glowRed {
-      0%, 100% { opacity: 0.2; }
-      16% { opacity: 0.6; }
-      33%, 100% { opacity: 0.2; }
+    @keyframes seqYellow {
+      0%, 25% { opacity: 0.2; filter: none; }
+      30%, 55% { opacity: 0.9; filter: drop-shadow(0 0 15px #eab308); }
+      60%, 100% { opacity: 0.2; filter: none; }
     }
-    @keyframes glowYellow {
-      0%, 33% { opacity: 0.2; }
-      50% { opacity: 0.6; }
-      66%, 100% { opacity: 0.2; }
+    @keyframes seqGreen {
+      0%, 55% { opacity: 0.2; filter: none; }
+      60%, 95% { opacity: 0.9; filter: drop-shadow(0 0 15px #10b981); }
+      100% { opacity: 0.2; filter: none; }
     }
-    @keyframes glowGreen {
-      0%, 66% { opacity: 0.2; }
-      83% { opacity: 0.6; }
-      100% { opacity: 0.2; }
+    .bg-glow { 
+      transform-origin: center; 
+      animation: pulseGlow 4s ease-in-out infinite; 
     }
-    .bg-glow { animation: pulse 3s ease-in-out infinite; }
-    .light-red { animation: glowRed 6s ease-in-out infinite; }
-    .light-yellow { animation: glowYellow 6s ease-in-out infinite; }
-    .light-green { animation: glowGreen 6s ease-in-out infinite; }
+    .light-red { animation: seqRed 9s ease-in-out infinite; }
+    .light-yellow { animation: seqYellow 9s ease-in-out infinite; }
+    .light-green { animation: seqGreen 9s ease-in-out infinite; }
   </style>
   
   <rect width="400" height="300" fill="#0a0a0a"/>

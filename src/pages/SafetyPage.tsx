@@ -123,8 +123,37 @@ export function SafetyPage() {
           ))}
         </section>
 
+        {/* Context / Urgency section */}
+        <section className="mt-24 sm:mt-32">
+          <motion.div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
+                Контекст проблемы
+              </p>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-white/90 sm:text-4xl">
+                Меньше секунды <span className="text-white/40">на ошибку</span>
+              </h2>
+              <p className="mt-6 text-base leading-relaxed text-white/50">
+                Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение
+                о взломе, переходит по ссылке и сразу вводит код. Анализатор проектировался
+                с единственной целью — прервать этот автоматизм.
+              </p>
+            </div>
+            <div className="flex gap-4 sm:flex-row flex-col">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm">
+                <p className="text-3xl font-bold text-white">88%</p>
+                <p className="mt-2 text-sm text-white/50">Скам-атак начинаются<br/>с фишинговой ссылки</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-500/[0.15] bg-emerald-500/[0.02] p-6 backdrop-blur-sm">
+                <p className="text-3xl font-bold text-emerald-400">0</p>
+                <p className="mt-2 text-sm text-emerald-400/70">Личных данных<br/>сохраняется у нас</p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
         {/* Official Routes */}
-        <section className="mt-24 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+        <section className="mt-32 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
           <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
               Куда направлять пользователя

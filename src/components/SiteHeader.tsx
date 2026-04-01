@@ -69,8 +69,10 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
             </nav>
 
             <div className="hidden lg:flex lg:items-center lg:gap-2">
-              <Button asChild>
-                <a href={routeHref("/analyzer")}>Открыть анализатор</a>
+              <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-semibold transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-95 shadow-lg">
+                <a href={routeHref("/analyzer")}>
+                  Открыть анализатор
+                </a>
               </Button>
             </div>
 

@@ -1,5 +1,4 @@
 import { Redis } from "@upstash/redis";
-import { standardHeaders } from "../server/openrouter-proxy.mjs";
 import { createHash } from "crypto";
 
 function normalizeHost(host) {
@@ -22,28 +21,21 @@ function generateId(host) {
 
 export default async function handler(req, res) {
   try {
-    console.log("[API] Report handler started, method:", req.method);
-    
-    // Устанавливаем заголовки напрямую
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
     res.setHeader("Content-Type", "application/json");
     
-    console.log("[API] Headers set");
-    
-    // Определяем переменные в начале для доступа во всех блоках
     const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
     const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
     const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
     const cacheHostPrefix = `${cachePrefix}:host`;
+    const cacheRecordPrefix = `${cachePrefix}:record`;
     
-    // Подключение к Redis
     const redisRestUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
     const redisRestToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
     
     if (!redisRestUrl || !redisRestToken) {
-      console.error("[API] Redis not configured");
       res.status(503).json({ error: "База данных недоступна." });
       return;
     }
@@ -53,8 +45,6 @@ export default async function handler(req, res) {
       token: redisRestToken,
     });
     
-    console.log("[API] Redis ready");
-  
     if (req.method === "OPTIONS") {
       res.status(204).end();
       return;
@@ -65,258 +55,129 @@ export default async function handler(req, res) {
       return;
     }
 
-    console.log("[API] Method check passed");
+    async function getRecordAndKey(normalizedHost) {
+      const hostKey = `${cacheHostPrefix}:${normalizedHost}`;
+      const recordKeyOrData = await redis.get(hostKey);
+
+      if (!recordKeyOrData) return null;
+
+      let recordKeyStr = null;
+      let recordObj = null;
+
+      // Handle both host->key and host->full_object for backward compatibility during transition
+      if (typeof recordKeyOrData === 'string' && !recordKeyOrData.includes('{')) {
+        recordKeyStr = recordKeyOrData;
+        const fullRecordKey = `${cacheRecordPrefix}:${recordKeyStr}`;
+        recordObj = await redis.get(fullRecordKey);
+      } else if (typeof recordKeyOrData === 'string' && recordKeyOrData.includes('{')) {
+        try {
+          recordObj = JSON.parse(recordKeyOrData);
+        } catch(e) { /* ignore */ }
+        recordKeyStr = recordObj?.key || null;
+      } else {
+        recordObj = recordKeyOrData;
+        recordKeyStr = recordObj?.key || null;
+      }
+
+      if (!recordObj) return null;
+      return { hostKey, recordKeyStr, recordObj };
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // DELETE METHOD - Удаление жалобы
+    // DELETE METHOD
     // ═══════════════════════════════════════════════════════════════════════════
     if (req.method === "DELETE") {
       const host = String(req.query?.host || "").trim();
       const reportId = String(req.query?.reportId || "").trim();
 
       if (!host || !reportId) {
-        console.log("[API] Missing required query params");
         res.status(400).json({ error: "Параметры host и reportId обязательны." });
         return;
       }
 
       const normalized = normalizeHost(host);
-      const hostKey = `${cacheHostPrefix}:${normalized}`;
-      
-      console.log("[API] Deleting report:", { host: normalized, reportId });
+      const data = await getRecordAndKey(normalized);
 
-      // Lua скрипт для атомарного удаления жалобы из обоих ключей
-      const luaDeleteScript = `
-        local hostKey = KEYS[1]
-        local recordKey = KEYS[2]
-        local reportId = ARGV[1]
-        local now = ARGV[2]
-        local cachePrefix = ARGV[3]
-        
-        local recordKeyStr = redis.call('GET', hostKey)
-        if not recordKeyStr then
-          return nil
-        end
-        
-        -- Если hostKey содержит строку-ключ, получаем саму запись
-        local record
-        if type(recordKeyStr) == 'string' and not string.find(recordKeyStr, '{') then
-          local fullRecordKey = cachePrefix .. ':record:' .. recordKeyStr
-          record = redis.call('GET', fullRecordKey)
-        else
-          record = recordKeyStr
-        end
-        
-        if not record then
-          return nil
-        end
-        
-        local success, recordData = pcall(cjson.decode, record)
-        if not success or type(recordData) ~= 'table' then
-          return nil
-        end
-        
-        if not recordData.reports or #recordData.reports == 0 then
-          return 0
-        end
-        
-        local newReports = {}
-        local deleted = false
-        for i, report in ipairs(recordData.reports) do
-          if report.id ~= reportId then
-            table.insert(newReports, report)
-          else
-            deleted = true
-          end
-        end
-        
-        if not deleted then
-          return -1
-        end
-        
-        recordData.reports = newReports
-        recordData.updatedAt = tonumber(now)
-        
-        -- Обновляем оба ключа
-        local encodedData = cjson.encode(recordData)
-        if recordKey ~= "" then
-          redis.call('SET', recordKey, encodedData)
-        end
-        if recordData.key then
-          redis.call('SET', cachePrefix .. ':record:' .. recordData.key, encodedData)
-        end
-        
-        return #newReports
-      `;
-
-      try {
-        const now = Date.now();
-        
-        // Получаем record key из host записи
-        const hostRecord = await redis.get(hostKey);
-        const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
-        
-        const result = await redis.eval(
-          luaDeleteScript,
-          [hostKey, recordKey],
-          [reportId, now.toString(), cachePrefix]
-        );
-        
-        if (result === null) {
-          console.log("[API] No record found");
-          res.status(404).json({ error: "Запись для этого домена не найдена." });
-          return;
-        }
-        
-        if (result === -1) {
-          console.log("[API] Report not found");
-          res.status(404).json({ error: "Жалоба не найдена." });
-          return;
-        }
-        
-        console.log("[API] Report deleted, remaining reports:", result);
-
-        res.status(200).json({
-          ok: true,
-          message: "Жалоба успешно удалена.",
-          host: normalized,
-          reportsCount: result,
-        });
-      } catch (evalError) {
-        console.error("[API] Lua script error:", evalError);
-        // Fallback к старому методу
-        console.log("[API] Falling back to non-atomic method");
-        
-        let record = await redis.get(hostKey);
-        
-        if (!record) {
-          console.log("[API] No record found");
-          res.status(404).json({ error: "Запись для этого домена не найдена." });
-          return;
-        }
-
-        if (!Array.isArray(record.reports)) {
-          record.reports = [];
-        }
-
-        const reportIndex = record.reports.findIndex(r => r.id === reportId);
-        if (reportIndex === -1) {
-          console.log("[API] Report not found");
-          res.status(404).json({ error: "Жалоба не найдена." });
-          return;
-        }
-
-        record.reports.splice(reportIndex, 1);
-        record.updatedAt = Date.now();
-        
-        console.log("[API] Saving to Redis, reports count:", record.reports.length);
-        
-        // Обновляем оба ключа
-        await redis.set(hostKey, record);
-        
-        if (record.key) {
-          const recordKey = `${cachePrefix}:record:${record.key}`;
-          await redis.set(recordKey, record);
-        }
-        
-        console.log("[API] Deleted successfully");
-
-        res.status(200).json({
-          ok: true,
-          message: "Жалоба успешно удалена.",
-          host: normalized,
-          reportsCount: record.reports.length,
-        });
+      if (!data) {
+        res.status(404).json({ error: "Запись для этого домена не найдена." });
+        return;
       }
+
+      const { recordKeyStr, recordObj } = data;
+
+      if (!Array.isArray(recordObj.reports)) {
+        res.status(404).json({ error: "Жалоба не найдена." });
+        return;
+      }
+
+      const initialLength = recordObj.reports.length;
+      recordObj.reports = recordObj.reports.filter(r => r.id !== reportId);
+
+      if (recordObj.reports.length === initialLength) {
+        res.status(404).json({ error: "Жалоба не найдена." });
+        return;
+      }
+
+      recordObj.updatedAt = Date.now();
+
+      // Ensure TTL
+      const ttlSeconds = 7 * 24 * 60 * 60;
+      const writes = [];
+
+      if (recordKeyStr) {
+        writes.push(redis.set(`${cacheRecordPrefix}:${recordKeyStr}`, recordObj, { ex: ttlSeconds }));
+        // Just keep the pointer in hostKey
+        writes.push(redis.set(`${cacheHostPrefix}:${normalized}`, recordKeyStr, { ex: ttlSeconds }));
+      } else {
+        // Fallback for old records
+        writes.push(redis.set(`${cacheHostPrefix}:${normalized}`, recordObj, { ex: ttlSeconds }));
+      }
+
+      await Promise.all(writes);
+
+      res.status(200).json({
+        ok: true,
+        message: "Жалоба успешно удалена.",
+        host: normalized,
+        reportsCount: recordObj.reports.length,
+      });
       return;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // POST METHOD - Добавление жалобы
+    // POST METHOD
     // ═══════════════════════════════════════════════════════════════════════════
-    
-    // На Vercel req.body может быть getter, который парсит JSON
     let body;
     try {
       body = req.body || {};
     } catch (parseError) {
-      console.error("[API] Body parse error:", parseError.message);
       res.status(400).json({ error: "Неверный формат JSON в теле запроса." });
       return;
     }
     
-    console.log("[API] Body parsed:", Object.keys(body));
-
     const { host, verdict, score, reportText } = body;
 
     if (!host || !reportText) {
-      console.log("[API] Missing required fields");
       res.status(400).json({ error: "Поля host и reportText обязательны." });
       return;
     }
 
     const normalized = normalizeHost(host);
-    const hostKey = `${cacheHostPrefix}:${normalized}`;
-    
-    console.log("[API] Host normalized:", normalized);
-    console.log("[API] Cache key:", hostKey);
+    const data = await getRecordAndKey(normalized);
 
+    if (!data) {
+      res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
+      return;
+    }
+
+    const { recordKeyStr, recordObj } = data;
     const now = Date.now();
 
-    // Используем Lua скрипт для атомарного добавления жалобы в оба ключа
-    console.log("[API] Adding report atomically with Lua script");
-    
-    const luaScript = `
-      local hostKey = KEYS[1]
-      local recordKey = KEYS[2]
-      local reportJson = ARGV[1]
-      local now = ARGV[2]
-      local cachePrefix = ARGV[3]
-      
-      local recordKeyStr = redis.call('GET', hostKey)
-      if not recordKeyStr then
-        return nil
-      end
-      
-      -- Если hostKey содержит строку-ключ, получаем саму запись
-      local record
-      if type(recordKeyStr) == 'string' and not string.find(recordKeyStr, '{') then
-        local fullRecordKey = cachePrefix .. ':record:' .. recordKeyStr
-        record = redis.call('GET', fullRecordKey)
-      else
-        record = recordKeyStr
-      end
-      
-      if not record then
-        return nil
-      end
-      
-      local success, recordData = pcall(cjson.decode, record)
-      if not success or type(recordData) ~= 'table' then
-        return nil
-      end
-      
-      if not recordData.reports then
-        recordData.reports = {}
-      end
-      
-      local newReport = cjson.decode(reportJson)
-      table.insert(recordData.reports, newReport)
-      recordData.updatedAt = tonumber(now)
-      
-      -- Обновляем оба ключа
-      local encodedData = cjson.encode(recordData)
-      if recordKey ~= "" then
-        redis.call('SET', recordKey, encodedData)
-      end
-      if recordData.key then
-        redis.call('SET', cachePrefix .. ':record:' .. recordData.key, encodedData)
-      end
-      
-      return #recordData.reports
-    `;
+    if (!Array.isArray(recordObj.reports)) {
+      recordObj.reports = [];
+    }
 
-    const report = {
+    const newReport = {
       id: generateId(`report-${normalized}-${now}`),
       text: String(reportText || "").trim().slice(0, 500),
       verdict: verdict || "unknown",
@@ -325,110 +186,37 @@ export default async function handler(req, res) {
       resolved: false
     };
 
-    try {
-      // Получаем ключ записи из host индекса
-      const recordKeyFromHost = await redis.get(hostKey);
-      console.log("[API] hostKey:", hostKey);
-      console.log("[API] recordKeyFromHost:", recordKeyFromHost);
-      console.log("[API] recordKeyFromHost type:", typeof recordKeyFromHost);
-      
-      // Если получили строку-ключ, получаем саму запись
-      let hostRecord;
-      if (typeof recordKeyFromHost === 'string') {
-        const fullRecordKey = `${cachePrefix}:record:${recordKeyFromHost}`;
-        console.log("[API] Fetching from:", fullRecordKey);
-        hostRecord = await redis.get(fullRecordKey);
-      } else {
-        hostRecord = recordKeyFromHost;
-      }
-      
-      console.log("[API] hostRecord exists:", !!hostRecord);
-      console.log("[API] hostRecord type:", typeof hostRecord);
-      
-      if (!hostRecord || typeof hostRecord === 'string') {
-        console.log("[API] No valid record found");
-        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
-        return;
-      }
-      
-      const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
-      
-      const reportsCount = await redis.eval(
-        luaScript,
-        [hostKey, recordKey],
-        [JSON.stringify(report), now.toString(), cachePrefix]
-      );
-      
-      if (reportsCount === null) {
-        console.log("[API] No record found from Lua");
-        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
-        return;
-      }
-      
-      console.log("[API] Report saved atomically, total reports:", reportsCount);
+    recordObj.reports.push(newReport);
+    recordObj.updatedAt = now;
 
-      res.status(200).json({
-        ok: true,
-        message: "Жалоба успешно отправлена.",
-        host: normalized,
-        reportsCount: reportsCount,
-      });
-    } catch (evalError) {
-      console.error("[API] Lua script error:", evalError.message);
-      // Fallback к старому методу если Lua не поддерживается
-      console.log("[API] Falling back to non-atomic method");
-      
-      let record = await redis.get(hostKey);
-      
-      console.log("[API] Record type:", typeof record);
-      console.log("[API] Record value:", JSON.stringify(record).substring(0, 100));
-      
-      if (!record || typeof record === 'string') {
-        console.log("[API] No valid record found, got:", typeof record);
-        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
-        return;
-      }
+    // Ensure TTL
+    const ttlSeconds = 7 * 24 * 60 * 60;
+    const writes = [];
 
-      if (!Array.isArray(record.reports)) {
-        record.reports = [];
-      }
-
-      record.reports.push(report);
-      record.updatedAt = now;
-      
-      console.log("[API] Saving to Redis, reports count:", record.reports.length);
-      
-      // Обновляем оба ключа
-      await redis.set(hostKey, record);
-      
-      if (record.key) {
-        const recordKey = `${cachePrefix}:record:${record.key}`;
-        await redis.set(recordKey, record);
-      }
-      
-      console.log("[API] Saved successfully");
-
-      res.status(200).json({
-        ok: true,
-        message: "Жалоба успешно отправлена.",
-        host: normalized,
-        reportsCount: record.reports.length,
-      });
+    if (recordKeyStr) {
+      writes.push(redis.set(`${cacheRecordPrefix}:${recordKeyStr}`, recordObj, { ex: ttlSeconds }));
+      // Just keep the pointer in hostKey
+      writes.push(redis.set(`${cacheHostPrefix}:${normalized}`, recordKeyStr, { ex: ttlSeconds }));
+    } else {
+      // Fallback for old records
+      writes.push(redis.set(`${cacheHostPrefix}:${normalized}`, recordObj, { ex: ttlSeconds }));
     }
+
+    await Promise.all(writes);
+
+    res.status(200).json({
+      ok: true,
+      message: "Жалоба успешно отправлена.",
+      host: normalized,
+      reportsCount: recordObj.reports.length,
+    });
   } catch (error) {
-    console.error("[API] Top-level error:", error.message);
-    console.error("[API] Error stack:", error.stack);
-    
-    // Пытаемся отправить ответ, если еще не отправлен
+    console.error("[API] Report handler error:", error.message);
     if (!res.headersSent) {
-      try {
-        res.status(500).json({ 
-          error: "Ошибка при обработке жалобы.",
-          message: error.message
-        });
-      } catch (resError) {
-        console.error("[API] Failed to send error response:", resError.message);
-      }
+      res.status(500).json({ 
+        error: "Ошибка при обработке жалобы.",
+        message: error.message
+      });
     }
   }
 }

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-import { methodBlocks } from "@/lib/site-content";
+import { methodBlocks, ruleReference } from "@/lib/site-content";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -130,6 +130,34 @@ export function MethodPage() {
             </div>
           </GlassCard>
         </div>
+
+        {/* Heuristics Logic */}
+        <section className="mt-24 sm:mt-32">
+          <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-white/40">
+              Эвристический анализ
+            </p>
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-white/90 sm:text-4xl">
+              На что мы <span className="text-white/40">обращаем внимание</span>
+            </h2>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/50">
+              Встроенный локальный набор правил (Ruleset) не обращается к базам данных, 
+              а оценивает паттерны и слова-маркеры в доменном имени.
+            </p>
+          </motion.div>
+
+          <div className="mt-12 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {ruleReference.map((rule, idx) => (
+              <GlassCard key={rule.title} delay={idx * 0.1} className="p-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-white">
+                  {idx === 0 ? "🔍" : idx === 1 ? "🎭" : idx === 2 ? "🪤" : "🧩"}
+                </div>
+                <h3 className="mt-5 text-lg font-medium text-white">{rule.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/50">{rule.detail}</p>
+              </GlassCard>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

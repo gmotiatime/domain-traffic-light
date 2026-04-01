@@ -96,12 +96,14 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl transition-all hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] hover:border-white/[0.1] ${className}`}
       variants={fadeUp}
+      whileHover={{ y: -2 }}
       style={glow ? { background: glow } : undefined}
     >
       {/* top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 transition-opacity hover:opacity-100" />
       {children}
     </motion.div>
   );
@@ -474,12 +476,12 @@ export function AnalyzerPage() {
             className="mx-auto mt-10 max-w-2xl"
             onSubmit={(e) => { e.preventDefault(); runAnalysis(draft); }}
           >
-            <div className="relative flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-white/20 focus-within:bg-white/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.04)]">
-              <div className="flex flex-1 items-center gap-3 px-4">
+            <div className="relative flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-white/20 focus-within:bg-white/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.05)]">
+              <div className="flex flex-1 items-center gap-3 px-4 z-20">
                 <Globe className="h-5 w-5 shrink-0 text-white/30" />
                 <input
                   ref={inputRef}
-                  className="w-full bg-transparent py-3.5 text-lg text-white outline-none placeholder:text-white/30"
+                  className="w-full bg-transparent py-3.5 text-lg text-white outline-none placeholder:text-white/30 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                   id="domain-input"
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Домен или ссылка..."
@@ -487,8 +489,9 @@ export function AnalyzerPage() {
                   autoComplete="off"
                 />
               </div>
+              
               <Button
-                className="h-12 shrink-0 rounded-xl px-6 text-sm font-medium shadow-lg transition-transform hover:scale-[1.03] active:scale-95"
+                className="h-12 shrink-0 rounded-xl bg-white text-black px-6 text-sm font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-white/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95"
                 type="submit"
               >
                 Анализ

@@ -1,27 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 10px #3b82f6); }
+      50% { opacity: 0.8; filter: drop-shadow(0 0 25px #60a5fa); }
     }
     @keyframes scan {
-      0% { transform: translateY(0); opacity: 0; }
-      50% { opacity: 0.6; }
-      100% { transform: translateY(30px); opacity: 0; }
+      0% { transform: translateY(-20px); opacity: 0; filter: blur(2px); }
+      30% { opacity: 0.8; filter: blur(0px); }
+      70% { opacity: 0.8; filter: blur(0px); }
+      100% { transform: translateY(40px); opacity: 0; filter: blur(2px); }
     }
-    @keyframes blink {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 1; }
+    @keyframes blinkData {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); fill: #93c5fd; }
     }
-    @keyframes dash {
-      to { stroke-dashoffset: -20; }
+    @keyframes dashStream {
+      to { stroke-dashoffset: -30; }
     }
-    .glow { animation: pulse 3s ease-in-out infinite; }
-    .scan-line { animation: scan 2s ease-in-out infinite; }
-    .data-dot { animation: blink 1.5s ease-in-out infinite; }
+    .glow { transform-origin: center; animation: pulseGlow 3s ease-in-out infinite; }
+    .scan-line { animation: scan 3s ease-in-out infinite; }
+    .data-dot { transform-origin: center; animation: blinkData 2s ease-in-out infinite; }
     .dash-line { 
-      stroke-dasharray: 5,5; 
-      animation: dash 1s linear infinite;
+      stroke-dasharray: 6,6; 
+      animation: dashStream 1.5s linear infinite;
     }
   </style>
   

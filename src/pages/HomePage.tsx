@@ -41,15 +41,18 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl transition-all hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.03)] hover:border-white/[0.1] ${className}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
       style={glow ? { background: glow } : undefined}
     >
       {/* top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
+      {/* dynamic glow overlay */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 transition-opacity hover:opacity-100" />
       {children}
     </motion.div>
   );
@@ -229,16 +232,16 @@ export function HomePage() {
                   openAnalyzerWithInput(heroInput);
                 }}
               >
-                <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative">
+                <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative z-20">
                   <Globe className="h-6 w-6 shrink-0 text-white/30" />
                   <div className="relative w-full">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={currentPlaceholder}
-                        initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
+                        initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -10, filter: "blur(10px)" }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
                         className="pointer-events-none absolute inset-0 flex items-center text-lg text-white/30"
                       >
                         {!heroInput && placeholders[currentPlaceholder]}
@@ -246,13 +249,13 @@ export function HomePage() {
                     </AnimatePresence>
                     <input
                       id="domain-input"
-                      className="w-full bg-transparent text-lg text-white outline-none relative z-10"
+                      className="w-full bg-transparent text-lg text-white outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                       onChange={(event) => setHeroInput(event.target.value)}
                       value={heroInput}
                     />
                   </div>
                 </div>
-                <Button className="h-14 w-full sm:w-auto rounded-xl px-8 text-base font-medium shadow-lg transition-transform hover:scale-[1.03] active:scale-95" type="submit">
+                <Button className="h-14 w-full sm:w-auto rounded-xl bg-white text-black px-8 text-base font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-white/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95" type="submit">
                   Анализ
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

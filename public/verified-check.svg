@@ -1,24 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 10px #10b981); transform: scale(0.98); }
+      50% { opacity: 0.8; filter: drop-shadow(0 0 25px #34d399); transform: scale(1.02); }
     }
     @keyframes checkDraw {
-      0% { stroke-dashoffset: 100; }
-      100% { stroke-dashoffset: 0; }
+      0% { stroke-dashoffset: 100; opacity: 0; }
+      20% { opacity: 1; stroke-dashoffset: 50; }
+      40% { stroke-dashoffset: 0; }
+      80% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: -100; opacity: 0; }
     }
     @keyframes ringExpand {
-      0% { r: 40; opacity: 0.6; }
-      100% { r: 60; opacity: 0; }
+      0% { r: 40; opacity: 0.8; stroke-width: 2.5; }
+      100% { r: 80; opacity: 0; stroke-width: 0.5; }
     }
-    .glow { animation: pulse 3s ease-in-out infinite; }
+    .glow { transform-origin: center; animation: pulseGlow 4s ease-in-out infinite; }
     .check { 
       stroke-dasharray: 100; 
       stroke-dashoffset: 100;
-      animation: checkDraw 2s ease-out infinite;
+      animation: checkDraw 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
-    .ring { animation: ringExpand 2s ease-out infinite; }
+    .ring { 
+      transform-origin: center;
+      animation: ringExpand 2.5s ease-out infinite; 
+    }
   </style>
   
   <rect width="400" height="300" fill="#0a0a0a"/>
