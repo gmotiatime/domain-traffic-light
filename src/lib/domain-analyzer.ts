@@ -355,6 +355,22 @@ const phishingPrefixes = new Set([
   "prize",
 ]);
 
+// Whitelist легитимных доменов для предотвращения false positives
+const legitimateDomains = new Set([
+  "discord.gg",
+  "discord.com", 
+  "discordapp.com",
+  "zoom.us",
+  "zoom.com",
+  "hypixel.net",
+  "hypixel.com",
+  "pornhub.com",
+  "likee.com",
+  "likee.video",
+  "nvidia.com",
+  "nvidia.cn",
+]);
+
 // Известные фишинговые паттерны (typosquatting популярных сервисов)
 const knownPhishingPatterns = [
   // Discord variations
@@ -617,6 +633,14 @@ function hasPhishingPrefix(host: string): string | null {
 }
 
 function matchesKnownPhishingPattern(host: string): boolean {
+  // Сначала проверяем, не является ли домен легитимным
+  const hostLower = host.toLowerCase();
+  const canonicalHost = hostLower.startsWith("www.") ? hostLower.slice(4) : hostLower;
+  
+  if (legitimateDomains.has(canonicalHost)) {
+    return false; // Легитимный домен - не фишинг
+  }
+  
   return knownPhishingPatterns.some(pattern => pattern.test(host));
 }
 
@@ -751,6 +775,16 @@ export function analyzeDomainInput(input: string): AnalysisResult {
   };
 
   // ── 1. Официальный домен ──────────────────────────────────────────────────
+
+  // Проверяем whitelist легитимных доменов
+  if (legitimateDomains.has(canonicalHost)) {
+    pushReason(
+      "Легитимный домен из whitelist",
+      `Домен ${canonicalHost} находится в списке проверенных легитимных сервисов.`,
+      -30,
+      "positive",
+    );
+  }
 
   if (officialDomains.has(canonicalHost)) {
     pushReason(
