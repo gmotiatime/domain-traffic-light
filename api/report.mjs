@@ -91,8 +91,22 @@ export default async function handler(req, res) {
         local recordKey = KEYS[2]
         local reportId = ARGV[1]
         local now = ARGV[2]
+        local cachePrefix = ARGV[3]
         
-        local record = redis.call('GET', hostKey)
+        local recordKeyStr = redis.call('GET', hostKey)
+        if not recordKeyStr then
+          return nil
+        end
+        
+        -- Если hostKey содержит строку-ключ, получаем саму запись
+        local record
+        if type(recordKeyStr) == 'string' and not string.find(recordKeyStr, '{') then
+          local fullRecordKey = cachePrefix .. ':record:' .. recordKeyStr
+          record = redis.call('GET', fullRecordKey)
+        else
+          record = recordKeyStr
+        end
+        
         if not record then
           return nil
         end
@@ -124,9 +138,12 @@ export default async function handler(req, res) {
         recordData.updatedAt = tonumber(now)
         
         -- Обновляем оба ключа
-        redis.call('SET', hostKey, cjson.encode(recordData))
+        local encodedData = cjson.encode(recordData)
         if recordKey ~= "" then
-          redis.call('SET', recordKey, cjson.encode(recordData))
+          redis.call('SET', recordKey, encodedData)
+        end
+        if recordData.key then
+          redis.call('SET', cachePrefix .. ':record:' .. recordData.key, encodedData)
         end
         
         return #newReports
@@ -142,7 +159,7 @@ export default async function handler(req, res) {
         const result = await redis.eval(
           luaDeleteScript,
           [hostKey, recordKey],
-          [reportId, now.toString()]
+          [reportId, now.toString(), cachePrefix]
         );
         
         if (result === null) {
@@ -254,8 +271,22 @@ export default async function handler(req, res) {
       local recordKey = KEYS[2]
       local reportJson = ARGV[1]
       local now = ARGV[2]
+      local cachePrefix = ARGV[3]
       
-      local record = redis.call('GET', hostKey)
+      local recordKeyStr = redis.call('GET', hostKey)
+      if not recordKeyStr then
+        return nil
+      end
+      
+      -- Если hostKey содержит строку-ключ, получаем саму запись
+      local record
+      if type(recordKeyStr) == 'string' and not string.find(recordKeyStr, '{') then
+        local fullRecordKey = cachePrefix .. ':record:' .. recordKeyStr
+        record = redis.call('GET', fullRecordKey)
+      else
+        record = recordKeyStr
+      end
+      
       if not record then
         return nil
       end
@@ -274,9 +305,12 @@ export default async function handler(req, res) {
       recordData.updatedAt = tonumber(now)
       
       -- Обновляем оба ключа
-      redis.call('SET', hostKey, cjson.encode(recordData))
+      local encodedData = cjson.encode(recordData)
       if recordKey ~= "" then
-        redis.call('SET', recordKey, cjson.encode(recordData))
+        redis.call('SET', recordKey, encodedData)
+      end
+      if recordData.key then
+        redis.call('SET', cachePrefix .. ':record:' .. recordData.key, encodedData)
       end
       
       return #recordData.reports
@@ -292,22 +326,41 @@ export default async function handler(req, res) {
     };
 
     try {
-      // Получаем record key из host записи
-      const hostRecord = await redis.get(hostKey);
+      // Получаем ключ записи из host индекса
+      const recordKeyFromHost = await redis.get(hostKey);
       console.log("[API] hostKey:", hostKey);
+      console.log("[API] recordKeyFromHost:", recordKeyFromHost);
+      console.log("[API] recordKeyFromHost type:", typeof recordKeyFromHost);
+      
+      // Если получили строку-ключ, получаем саму запись
+      let hostRecord;
+      if (typeof recordKeyFromHost === 'string') {
+        const fullRecordKey = `${cachePrefix}:record:${recordKeyFromHost}`;
+        console.log("[API] Fetching from:", fullRecordKey);
+        hostRecord = await redis.get(fullRecordKey);
+      } else {
+        hostRecord = recordKeyFromHost;
+      }
+      
       console.log("[API] hostRecord exists:", !!hostRecord);
-      console.log("[API] hostRecord.key:", hostRecord?.key);
+      console.log("[API] hostRecord type:", typeof hostRecord);
+      
+      if (!hostRecord || typeof hostRecord === 'string') {
+        console.log("[API] No valid record found");
+        res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
+        return;
+      }
       
       const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
       
       const reportsCount = await redis.eval(
         luaScript,
         [hostKey, recordKey],
-        [JSON.stringify(report), now.toString()]
+        [JSON.stringify(report), now.toString(), cachePrefix]
       );
       
       if (reportsCount === null) {
-        console.log("[API] No record found");
+        console.log("[API] No record found from Lua");
         res.status(404).json({ error: "Запись для этого домена не найдена. Сначала выполните анализ домена." });
         return;
       }
