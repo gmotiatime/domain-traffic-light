@@ -294,6 +294,10 @@ export default async function handler(req, res) {
     try {
       // Получаем record key из host записи
       const hostRecord = await redis.get(hostKey);
+      console.log("[API] hostKey:", hostKey);
+      console.log("[API] hostRecord exists:", !!hostRecord);
+      console.log("[API] hostRecord.key:", hostRecord?.key);
+      
       const recordKey = hostRecord?.key ? `${cachePrefix}:record:${hostRecord.key}` : "";
       
       const reportsCount = await redis.eval(
