@@ -27,7 +27,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl ${className}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
@@ -41,7 +41,7 @@ function GlassCard({
 
 export function SafetyPage() {
   return (
-    <div className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden bg-black text-white selection:bg-white/20">
+    <div className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden bg-background text-foreground selection:bg-foreground/20">
       
       {/* Animated Mesh Orbs */}
       <div className="pointer-events-none absolute inset-0 -z-[5] overflow-hidden">
@@ -61,13 +61,13 @@ export function SafetyPage() {
         
         {/* Header */}
         <motion.div className="max-w-3xl" initial="initial" whileInView="whileInView" variants={fadeUp} viewport={{ once: true }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-white/40">
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-foreground/40">
             Безопасность
           </p>
-          <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl text-white">
-            Приватность и границы <span className="text-white/40">инструмента.</span>
+          <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl text-foreground">
+            Приватность и границы <span className="text-foreground/40">инструмента.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/50 sm:text-lg">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-foreground/50 sm:text-lg">
             Отдельный экран, чтобы прояснить официальные маршруты помощи и
             гарантировать, что анализатор не хранит ваши данные.
           </p>
@@ -78,13 +78,13 @@ export function SafetyPage() {
           {safetyPrinciples.map((item, index) => (
             <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0">
               <div className="p-8">
-                <h2 className="text-2xl font-semibold text-white">{item.title}</h2>
-                <p className="mt-3 text-base leading-relaxed text-white/50">
+                <h2 className="text-2xl font-semibold text-foreground">{item.title}</h2>
+                <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   {item.text}
                 </p>
               </div>
               {index === 0 && (
-                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.08),transparent_70%)] p-8">
+                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.08),transparent_70%)] p-8">
                   <img
                     alt="Без регистрации"
                     className="h-48 w-full object-contain"
@@ -93,7 +93,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 1 && (
-                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
                   <img
                     alt="Без хранения запросов"
                     className="h-48 w-full object-contain"
@@ -102,7 +102,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 2 && (
-                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
                   <img
                     alt="Без реальных вредоносных доменов"
                     className="h-48 w-full object-contain"
@@ -111,7 +111,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 3 && (
-                <div className="border-t border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
+                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
                   <img
                     alt="С официальными маршрутами"
                     className="h-48 w-full object-contain"
@@ -130,19 +130,19 @@ export function SafetyPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
                 Контекст проблемы
               </p>
-              <h2 className="mt-5 text-3xl font-bold tracking-tight text-white/90 sm:text-4xl">
-                Меньше секунды <span className="text-white/40">на ошибку</span>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground/90 sm:text-4xl">
+                Меньше секунды <span className="text-foreground/40">на ошибку</span>
               </h2>
-              <p className="mt-6 text-base leading-relaxed text-white/50">
+              <p className="mt-6 text-base leading-relaxed text-foreground/50">
                 Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение
                 о взломе, переходит по ссылке и сразу вводит код. Анализатор проектировался
                 с единственной целью — прервать этот автоматизм.
               </p>
             </div>
             <div className="flex gap-4 sm:flex-row flex-col">
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm">
-                <p className="text-3xl font-bold text-white">88%</p>
-                <p className="mt-2 text-sm text-white/50">Скам-атак начинаются<br/>с фишинговой ссылки</p>
+              <div className="rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-6 backdrop-blur-sm">
+                <p className="text-3xl font-bold text-foreground">88%</p>
+                <p className="mt-2 text-sm text-foreground/50">Скам-атак начинаются<br/>с фишинговой ссылки</p>
               </div>
               <div className="rounded-2xl border border-emerald-500/[0.15] bg-emerald-500/[0.02] p-6 backdrop-blur-sm">
                 <p className="text-3xl font-bold text-emerald-400">0</p>
@@ -158,10 +158,10 @@ export function SafetyPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
               Куда направлять пользователя
             </p>
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-white/90 sm:text-5xl">
-              После сигнала риска нужен <span className="text-white/40">следующий шаг.</span>
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
+              После сигнала риска нужен <span className="text-foreground/40">следующий шаг.</span>
             </h2>
-            <p className="mt-6 text-base leading-relaxed text-white/50">
+            <p className="mt-6 text-base leading-relaxed text-foreground/50">
               Мы не банк и не полиция. Наша цель — быстро указать на опасность и
               маршрутизировать юзера туда, где ему окажут компетентную помощь.
             </p>
@@ -169,7 +169,7 @@ export function SafetyPage() {
 
           <div className="flex flex-col gap-4">
             {officialRoutes.map((route, index) => (
-              <GlassCard key={route.title} delay={index * 0.1} className="p-5 sm:p-6 transition-colors hover:bg-white/[0.04] group">
+              <GlassCard key={route.title} delay={index * 0.1} className="p-5 sm:p-6 transition-colors hover:bg-foreground/[0.04] group">
                 <a
                   className="flex items-start justify-between gap-4 outline-none"
                   href={route.href}
@@ -177,12 +177,12 @@ export function SafetyPage() {
                   target="_blank"
                 >
                   <div>
-                    <p className="text-xl font-medium text-white group-hover:text-rose-200 transition-colors">{route.title}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-white/50 sm:text-base">
+                    <p className="text-xl font-medium text-foreground group-hover:text-rose-200 transition-colors">{route.title}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground/50 sm:text-base">
                       {route.text}
                     </p>
                   </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] group-hover:bg-rose-500/20 group-hover:text-rose-400 transition-colors">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.05] group-hover:bg-rose-500/20 group-hover:text-rose-400 transition-colors">
                     <ArrowUpRight className="h-5 w-5" />
                   </div>
                 </a>
@@ -193,20 +193,20 @@ export function SafetyPage() {
 
         {/* FAQ Area */}
         <section className="mt-32">
-          <motion.p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/40" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+          <motion.p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground/40" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
             FAQ
           </motion.p>
           <div className="mt-6 space-y-4">
             {faqItems.map((item, index) => (
               <GlassCard key={item.title} delay={index * 0.1} className="p-6">
                 <details className="group marker:content-['']">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium text-white/90 outline-none">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium text-foreground/90 outline-none">
                     <span>{item.title}</span>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.05] group-open:bg-white/10 transition-colors">
-                      <ChevronDown className="h-4 w-4 text-white/50 transition-transform group-open:rotate-180" />
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] group-open:bg-foreground/10 transition-colors">
+                      <ChevronDown className="h-4 w-4 text-foreground/50 transition-transform group-open:rotate-180" />
                     </span>
                   </summary>
-                  <p className="mt-4 pt-4 border-t border-white/[0.05] text-base leading-relaxed text-white/50">
+                  <p className="mt-4 pt-4 border-t border-foreground/[0.05] text-base leading-relaxed text-foreground/50">
                     {item.text}
                   </p>
                 </details>

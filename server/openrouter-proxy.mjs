@@ -81,6 +81,7 @@ const cachePrefix = configuredCachePrefix || `threat-cache:${cacheVersion}`;
 const cacheRecordPrefix = `${cachePrefix}:record`;
 const cacheHostPrefix = `${cachePrefix}:host`;
 const cacheIndexKey = `${cachePrefix}:keys`;
+const cacheStatsKey = `${cachePrefix}:stats`;
 const legacyCachePrefixes = String(
   process.env.THREAT_CACHE_LEGACY_PREFIXES || "threat-cache:v7,threat-cache:v6",
 )
@@ -605,6 +606,14 @@ async function saveRawCacheRecord(record) {
     if (nextRecord.host) {
       writes.push(redisCache.set(getCacheHostKey(nextRecord.host), nextRecord.key));
     }
+
+    // Update stats atomically
+    const verdict = nextRecord.data?.aiAdjustedResult?.verdict || nextRecord.data?.enrichedLocalResult?.verdict || nextRecord.data?.analysis?.verdict || 'low';
+    writes.push(
+      redisCache.hincrby(cacheStatsKey, 'total', 1),
+      redisCache.hincrby(cacheStatsKey, `verdict:${verdict}`, 1),
+      redisCache.hset(cacheStatsKey, { newestRecord: String(nextRecord.updatedAt || Date.now()) }),
+    );
 
     await Promise.all(writes);
     return nextRecord;
@@ -2438,6 +2447,8 @@ ${networkSummary}
 9. Если нет новых полезных причин — верни пустой массив reasons.
 10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
 11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
+12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), затем формулируй вердикт.
+13. Scoring guide: low=0-19 (безопасный), medium=20-49 (подозрительный), high=50-100 (опасный). Не ставь score=0 если есть хоть один сигнал.
 
 ## ПРИМЕРЫ ХОРОШЕГО И ПЛОХОГО СТИЛЯ
 ❌ Плохо: "домен выглядит нормально", "есть отдельный поддомен", "используется HTTPS"
@@ -2590,40 +2601,34 @@ export async function cacheStatsResponse() {
 
   if (redisCache) {
     try {
-      size = await redisCache.scard(cacheIndexKey);
-      
-      // Получаем детальную статистику из Redis
-      const keys = await redisCache.smembers(cacheIndexKey);
-      const keyList = (Array.isArray(keys) ? keys : []).slice(0, 200);
-      
-      if (keyList.length > 0) {
-        const records = await redisCache.mget(...keyList);
-        const validRecords = records.filter(r => r && r.data);
-        
-        const verdicts = validRecords.reduce((acc, r) => {
-          const verdict = r.data?.aiAdjustedResult?.verdict || r.data?.enrichedLocalResult?.verdict || r.data?.analysis?.verdict || 'low';
-          acc[verdict] = (acc[verdict] || 0) + 1;
-          return acc;
-        }, {});
-        
-        const timestamps = validRecords
-          .map(r => r.createdAt || r.updatedAt)
-          .filter(t => t && typeof t === 'number');
-        
-        return {
-          size: validRecords.length,
-          total: validRecords.length,
-          active: validRecords.length,
-          expired: 0,
-          verdicts,
-          enabled: cacheEnabled,
-          storage: cacheStorage,
-          persistent: true,
-          dbSize: JSON.stringify(validRecords).length,
-          oldestRecord: timestamps.length > 0 ? Math.min(...timestamps) : null,
-          newestRecord: timestamps.length > 0 ? Math.max(...timestamps) : null,
-        };
+      // O(1) — use scard for count + hash for stats
+      const [cardSize, statsHash] = await Promise.all([
+        redisCache.scard(cacheIndexKey),
+        redisCache.hgetall(cacheStatsKey),
+      ]);
+
+      size = cardSize || 0;
+      const stats = statsHash || {};
+
+      const verdicts = {};
+      for (const [k, v] of Object.entries(stats)) {
+        if (k.startsWith('verdict:')) {
+          verdicts[k.replace('verdict:', '')] = Number(v) || 0;
+        }
       }
+
+      return {
+        size,
+        total: size,
+        active: size,
+        expired: 0,
+        verdicts,
+        enabled: cacheEnabled,
+        storage: cacheStorage,
+        persistent: true,
+        oldestRecord: stats.oldestRecord ? Number(stats.oldestRecord) : null,
+        newestRecord: stats.newestRecord ? Number(stats.newestRecord) : null,
+      };
     } catch (error) {
       console.error('[Cache] Error getting Redis stats:', error.message);
       size = null;

@@ -3,9 +3,27 @@ dist/
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Environment files
 .env
 .env.*
+.emv.*
 !.env.example
 
+# Vercel
 .vercel
-server/threat-db.json
+
+# Database files (now in Redis)
+server/threat-db*.json
+server/*.backup-*.json
+cache-dump.json
+threat-db*.json
+
+# Test artifacts
+test-*.json
+test-*.mjs
+nul
+
+# OS junk
+Thumbs.db
+desktop.ini

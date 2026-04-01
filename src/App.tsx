@@ -9,25 +9,33 @@ import { AdminPage } from "@/pages/AdminPage";
 import { AnalyzerPage } from "@/pages/AnalyzerPage";
 import { HomePage } from "@/pages/HomePage";
 import { MethodPage } from "@/pages/MethodPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 import { SafetyPage } from "@/pages/SafetyPage";
 
-function readRoute() {
+function readRoute(): SitePath | "404" {
   if (typeof window === "undefined") {
     return "/" as SitePath;
   }
 
-  return normalizeHashRoute(window.location.hash);
+  const hash = window.location.hash.replace(/^#/, "") || "/";
+  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin"];
+  if (sitePaths.includes(hash)) {
+    return hash as SitePath;
+  }
+  return hash === "/" ? "/" as SitePath : "404";
 }
 
-const routeTitles: Record<SitePath, string> = {
+const routeTitles: Record<SitePath | "404", string> = {
   "/": "Доменный светофор.AI",
   "/analyzer": "Анализ риска | Доменный светофор",
   "/method": "Методика | Доменный светофор",
   "/safety": "Безопасность | Доменный светофор",
   "/admin": "Админка кэша | Доменный светофор",
+  "404": "Красный свет | Тупик",
+  "/404": "Красный свет | Тупик",
 };
 
-function renderPage(path: SitePath) {
+function renderPage(path: SitePath | "404") {
   switch (path) {
     case "/analyzer":
       return <AnalyzerPage />;
@@ -37,6 +45,8 @@ function renderPage(path: SitePath) {
       return <SafetyPage />;
     case "/admin":
       return <AdminPage />;
+    case "404":
+      return <NotFoundPage />;
     case "/":
     default:
       return <HomePage />;
@@ -44,19 +54,19 @@ function renderPage(path: SitePath) {
 }
 
 export default function App() {
-  const [path, setPath] = useState<SitePath>(readRoute);
+  const [path, setPath] = useState<SitePath | "404">(readRoute);
 
   useEffect(() => {
     if (!window.location.hash) {
       window.location.hash = routeHref("/");
     } else {
-      document.title = routeTitles[readRoute()] || "Доменный светофор.AI";
+      document.title = routeTitles[readRoute() as SitePath] || "Доменный светофор.AI";
     }
 
     const handleHashChange = () => {
       const newPath = readRoute();
       setPath(newPath);
-      document.title = routeTitles[newPath] || "Доменный светофор.AI";
+      document.title = routeTitles[newPath as SitePath] || "Доменный светофор.AI";
       window.scrollTo({ top: 0, behavior: "auto" });
     };
 
@@ -83,7 +93,7 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <SiteHeader activePath={path} />
+      <SiteHeader activePath={path === "404" ? "/" : path} />
       <AnimatePresence mode="wait">
         <motion.main
           className={path === "/" ? "relative z-10" : "relative z-10 pt-24"}

@@ -96,7 +96,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl transition-all hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] hover:border-white/[0.1] ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all hover:bg-foreground/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] hover:border-foreground/[0.1] ${className}`}
       variants={fadeUp}
       whileHover={{ y: -2 }}
       style={glow ? { background: glow } : undefined}
@@ -410,15 +410,15 @@ export function AnalyzerPage() {
   /*  RENDER                                         */
   /* ════════════════════════════════════════════════ */
   return (
-    <section className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden text-white bg-black">
+    <section className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden text-foreground bg-background">
       {/* ── Background layers ── */}
       <video
         autoPlay loop muted playsInline
         className="fixed inset-0 z-0 h-full w-full object-cover scale-105"
         src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260319_015952_e1deeb12-8fb7-4071-a42a-60779fc64ab6.mp4"
       />
-      <div className="fixed inset-0 z-[1] bg-black/60" />
-      <div className="fixed inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/80" />
+      <div className="fixed inset-0 z-[1] bg-black/40 dark:bg-background/70" />
+      <div className="fixed inset-0 z-[2] bg-gradient-to-b from-black/60 via-black/20 to-background/90 dark:to-black/90" />
 
       {/* Animated mesh orbs */}
       <div className="pointer-events-none fixed inset-0 z-[3] overflow-hidden">
@@ -443,7 +443,7 @@ export function AnalyzerPage() {
         <motion.div initial="initial" animate="animate" variants={stagger}>
           <motion.div variants={fadeUp} className="text-center">
             <div className="mx-auto flex items-center justify-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white/60 backdrop-blur-md">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/5 px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-foreground/60 backdrop-blur-md">
                 <Activity className="h-3 w-3" />
                 AI-анализатор
               </span>
@@ -458,12 +458,12 @@ export function AnalyzerPage() {
             <h1 className="mx-auto mt-8 max-w-3xl text-5xl font-bold leading-[1.1] tracking-[-0.04em] sm:text-6xl md:text-7xl">
               Проверьте домен
               <br />
-              <span className="bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 bg-clip-text text-transparent">
                 за секунды.
               </span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/50 sm:text-lg">
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-foreground/50 sm:text-lg">
               AI + ruleset + фиды фишинга + сетевые сигналы.
               <br className="hidden sm:block" />
               Мгновенный анализ вместо слепого доверия.
@@ -476,12 +476,12 @@ export function AnalyzerPage() {
             className="mx-auto mt-10 max-w-2xl"
             onSubmit={(e) => { e.preventDefault(); runAnalysis(draft); }}
           >
-            <div className="relative flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-white/20 focus-within:bg-white/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.05)]">
+            <div className="relative flex items-center gap-2 rounded-2xl border border-foreground/10 bg-foreground/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.05)]">
               <div className="flex flex-1 items-center gap-3 px-4 z-20">
-                <Globe className="h-5 w-5 shrink-0 text-white/30" />
+                <Globe className="h-5 w-5 shrink-0 text-foreground/30" />
                 <input
                   ref={inputRef}
-                  className="w-full bg-transparent py-3.5 text-lg text-white outline-none placeholder:text-white/30 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                  className="w-full bg-transparent py-3.5 text-lg text-foreground outline-none placeholder:text-foreground/30 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                   id="domain-input"
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Домен или ссылка..."
@@ -491,7 +491,7 @@ export function AnalyzerPage() {
               </div>
               
               <Button
-                className="h-12 shrink-0 rounded-xl bg-white text-black px-6 text-sm font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-white/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95"
+                className="h-12 shrink-0 rounded-xl bg-foreground text-black px-6 text-sm font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-foreground/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95"
                 type="submit"
               >
                 Анализ
@@ -500,8 +500,8 @@ export function AnalyzerPage() {
             </div>
 
             {/* Status line */}
-            <div className="mt-3 flex items-center justify-between text-xs text-white/40">
-              <label className="flex cursor-pointer items-center gap-2 transition-colors hover:text-white/70">
+            <div className="mt-3 flex items-center justify-between text-xs text-foreground/40">
+              <label className="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground/70">
                 <input
                   type="checkbox"
                   checked={telemetryConsent}
@@ -509,7 +509,7 @@ export function AnalyzerPage() {
                     setTelemetryConsent(e.target.checked);
                     window.localStorage.setItem("domain-traffic-light:telemetry", String(e.target.checked));
                   }}
-                  className="rounded border-white/20 bg-white/5 accent-emerald-500"
+                  className="rounded border-foreground/20 bg-foreground/5 accent-emerald-500"
                 />
                 Анонимно сохранять результат в общую базу
               </label>
@@ -522,7 +522,7 @@ export function AnalyzerPage() {
                   </span>
                 )}
                 {isAiEnriching && (
-                  <span className="inline-flex items-center gap-1.5 text-white/60">
+                  <span className="inline-flex items-center gap-1.5 text-foreground/60">
                     <Zap className="h-3 w-3 animate-pulse" />
                     AI обрабатывает…
                   </span>
@@ -543,10 +543,10 @@ export function AnalyzerPage() {
                         setDraft(item.domain);
                         runAnalysis(item.domain);
                       }}
-                      className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium transition-colors hover:bg-white/10"
+                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1 text-[11px] font-medium transition-colors hover:bg-foreground/10"
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
-                      <span className="text-white/60">{item.domain}</span>
+                      <span className="text-foreground/60">{item.domain}</span>
                     </button>
                   );
                 })}
@@ -569,7 +569,7 @@ export function AnalyzerPage() {
                 <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} />
                 Вердикт
               </span>
-              <span className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-[11px] text-white/50">
+              <span className="rounded-full border border-foreground/8 bg-foreground/5 px-3 py-1 text-[11px] text-foreground/50">
                 {result.score}/100
               </span>
               {aiExplanation && (
@@ -582,7 +582,7 @@ export function AnalyzerPage() {
                     <Sparkles className="mr-1 inline h-3 w-3" />
                     {aiShiftLabel}
                   </span>
-                  <span className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-[11px] text-white/50">
+                  <span className="rounded-full border border-foreground/8 bg-foreground/5 px-3 py-1 text-[11px] text-foreground/50">
                     {aiExplanation.model}
                   </span>
                 </>
@@ -593,7 +593,7 @@ export function AnalyzerPage() {
               {result.verdictLabel}
             </h2>
 
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-foreground/60 sm:text-lg">
               {result.summary}
             </p>
 
@@ -606,11 +606,11 @@ export function AnalyzerPage() {
 
             {/* Progress bar */}
             <div className="mt-8">
-              <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-white/30">
+              <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-foreground/30">
                 <span>Безопасно</span>
                 <span>Опасно</span>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/5">
                 <motion.div
                   className={`h-full rounded-full ${cfg.progressClass}`}
                   initial={{ width: 0 }}
@@ -629,8 +629,8 @@ export function AnalyzerPage() {
                   { label: "Зона", value: result.breakdown.tld },
                   { label: "Поддомен", value: result.breakdown.subdomain || "—" },
                 ].map((item) => (
-                  <span key={item.label} className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-1.5 text-xs text-white/50">
-                    {item.label}: <span className="text-white/80">{item.value}</span>
+                  <span key={item.label} className="rounded-full border border-foreground/8 bg-foreground/[0.03] px-3.5 py-1.5 text-xs text-foreground/50">
+                    {item.label}: <span className="text-foreground/80">{item.value}</span>
                   </span>
                 ))}
               </div>
@@ -642,8 +642,8 @@ export function AnalyzerPage() {
                     disabled={!telemetryConsent}
                     className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
                       telemetryConsent
-                        ? "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
-                        : "border-white/5 bg-white/[0.01] text-white/30 cursor-not-allowed"
+                        ? "border-foreground/10 bg-foreground/[0.03] text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground/80"
+                        : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
                     }`}
                   >
                     <Flag className="h-3 w-3" />
@@ -663,27 +663,27 @@ export function AnalyzerPage() {
           <div className="flex flex-col gap-4 lg:col-span-5">
             {/* Primary action */}
             <GlassCard className="p-6">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Действие
               </div>
-              <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
+              <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
                 {primaryAction(result.verdict)}
               </p>
             </GlassCard>
 
             {/* Quick actions */}
             <GlassCard className="flex-1 p-5">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Рекомендации</p>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-foreground/40">Рекомендации</p>
               <div className="mt-4 space-y-1">
                 {quickActions.map((action, i) => {
                   const Icon = actionIcons[i] ?? ShieldQuestion;
                   return (
-                    <div key={`${action}-${i}`} className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-white/[0.03]">
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-white/60">
+                    <div key={`${action}-${i}`} className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-foreground/[0.03]">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-foreground/60">
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <p className="text-sm leading-relaxed text-white/60">{action}</p>
+                      <p className="text-sm leading-relaxed text-foreground/60">{action}</p>
                     </div>
                   );
                 })}
@@ -695,27 +695,27 @@ export function AnalyzerPage() {
           <GlassCard className="lg:col-span-8 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TriangleAlert className="h-4 w-4 text-white/40" />
-                <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">
+                <TriangleAlert className="h-4 w-4 text-foreground/40" />
+                <p className="text-[11px] uppercase tracking-[0.2em] text-foreground/40">
                   Сигналы · {result.reasons.length}
                 </p>
               </div>
             </div>
 
             {leadReason && (
-              <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="mt-5 rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">Главный сигнал</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/30">Главный сигнал</span>
                     <div className="mt-2 flex items-center gap-2">
-                      <p className="text-sm font-medium text-white/90">{leadReason.title}</p>
+                      <p className="text-sm font-medium text-foreground/90">{leadReason.title}</p>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[leadReason.tone].pill}`}>
                         {toneStyles[leadReason.tone].label}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-white/50">{leadReason.detail}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground/50">{leadReason.detail}</p>
                   </div>
-                  <span className="shrink-0 text-sm font-medium text-white/70">
+                  <span className="shrink-0 text-sm font-medium text-foreground/70">
                     {leadReason.scoreDelta > 0 ? `+${leadReason.scoreDelta}` : leadReason.scoreDelta}
                   </span>
                 </div>
@@ -723,19 +723,19 @@ export function AnalyzerPage() {
             )}
 
             {visibleReasons.length > 0 && (
-              <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
                 {visibleReasons.map((reason, i) => (
                   <div key={`${reason.title}-${i}`} className="flex items-start justify-between gap-4 px-5 py-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm text-white/80">{reason.title}</p>
+                        <p className="text-sm text-foreground/80">{reason.title}</p>
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone].pill}`}>
                           {toneStyles[reason.tone].label}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm leading-relaxed text-white/40">{reason.detail}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-foreground/40">{reason.detail}</p>
                     </div>
-                    <span className="shrink-0 text-sm text-white/60">
+                    <span className="shrink-0 text-sm text-foreground/60">
                       {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
                     </span>
                   </div>
@@ -746,37 +746,48 @@ export function AnalyzerPage() {
 
           {/* ── AI insights ── */}
           <GlassCard className="lg:col-span-4 p-6">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
               <Sparkles className="h-3.5 w-3.5 text-violet-400" />
               AI-слой
             </div>
 
             {aiExplanation ? (
               <div className="mt-4">
-                <p className="text-sm leading-relaxed text-white/60">{aiExplanation.summary}</p>
+                <p className="text-sm leading-relaxed text-foreground/60">{aiExplanation.summary}</p>
                 {aiSignals.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {aiSignals.map((reason, i) => (
-                      <div key={`ai-${i}`} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                      <div key={`ai-${i}`} className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm text-white/70">{aiReasonTitle(reason, i)}</p>
-                          <span className="text-xs text-white/40">
-                            {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
-                          </span>
+                           <p className="text-sm text-foreground/70">{aiReasonTitle(reason, i)}</p>
+                           <span className="text-xs text-foreground/40">
+                             {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
+                           </span>
                         </div>
-                        <p className="mt-1 text-xs leading-relaxed text-white/40">{reason.detail}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-foreground/40">{reason.detail}</p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+            ) : isAiEnriching ? (
+              <div className="mt-5 space-y-3">
+                <div className="h-3 w-5/6 animate-pulse rounded-full bg-foreground/10" />
+                <div className="h-3 w-4/6 animate-pulse rounded-full bg-foreground/10" />
+                <div className="h-3 w-3/4 animate-pulse rounded-full bg-foreground/10" />
+                <div className="mt-6 space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={`skel-${i}`} className="h-[4.5rem] w-full animate-pulse rounded-xl border border-foreground/5 bg-foreground/[0.03]" />
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className="mt-4 flex flex-col items-center justify-center py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <Sparkles className="h-5 w-5 text-white/20" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04] transition-colors hover:bg-foreground/[0.08]">
+                  <Sparkles className="h-5 w-5 text-foreground/20" />
                 </div>
-                <p className="mt-3 text-sm text-white/30">
-                  {isAiEnriching ? "AI анализирует домен…" : "AI уточнит результат автоматически"}
+                <p className="mt-3 text-sm text-foreground/30">
+                  AI уточнит результат автоматически
                 </p>
               </div>
             )}
@@ -785,15 +796,15 @@ export function AnalyzerPage() {
           {/* ── Reference sections ── */}
           <GlassCard className="lg:col-span-6 p-6">
             <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-white/70">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
                 <span>Что учитывает модель</span>
-                <ChevronDown className="h-4 w-4 text-white/30 transition-transform group-open:rotate-180" />
+                <ChevronDown className="h-4 w-4 text-foreground/30 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-4 space-y-3">
                 {ruleReference.map((rule, i) => (
-                  <div key={`${rule.title}-${i}`} className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
-                    <p className="text-sm text-white/70">{rule.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/40">{rule.detail}</p>
+                  <div key={`${rule.title}-${i}`} className="rounded-xl border border-foreground/[0.04] bg-foreground/[0.02] px-4 py-3">
+                    <p className="text-sm text-foreground/70">{rule.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-foreground/40">{rule.detail}</p>
                   </div>
                 ))}
               </div>
@@ -802,15 +813,15 @@ export function AnalyzerPage() {
 
           <GlassCard className="lg:col-span-6 p-6">
             <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-white/70">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
                 <span>Справочные домены</span>
-                <ChevronDown className="h-4 w-4 text-white/30 transition-transform group-open:rotate-180" />
+                <ChevronDown className="h-4 w-4 text-foreground/30 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-4 space-y-3">
                 {officialDomains.map((item, i) => (
-                  <div key={`${item.domain}-${i}`} className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
-                    <p className="text-sm text-white/70">{item.domain}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/40">{item.description}</p>
+                  <div key={`${item.domain}-${i}`} className="rounded-xl border border-foreground/[0.04] bg-foreground/[0.02] px-4 py-3">
+                    <p className="text-sm text-foreground/70">{item.domain}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-foreground/40">{item.description}</p>
                   </div>
                 ))}
               </div>
@@ -826,19 +837,19 @@ export function AnalyzerPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4"
             onClick={() => setShowReportModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl"
+              className="relative w-full max-w-lg rounded-3xl border border-foreground/10 bg-[#0a0a0a] p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => setShowReportModal(false)}
-                className="absolute right-4 top-4 rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+                className="absolute right-4 top-4 rounded-lg p-2 text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground/80"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -848,20 +859,20 @@ export function AnalyzerPage() {
                   <Flag className="h-5 w-5 text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Пожаловаться на результат</h3>
-                  <p className="text-sm text-white/50">Домен: {result.host}</p>
+                  <h3 className="text-lg font-semibold text-foreground">Пожаловаться на результат</h3>
+                  <p className="text-sm text-foreground/50">Домен: {result.host}</p>
                 </div>
               </div>
 
               <div className="mt-6">
-                <label className="mb-2 block text-sm text-white/60">
+                <label className="mb-2 block text-sm text-foreground/60">
                   Опишите проблему с результатом анализа:
                 </label>
                 <textarea
                   value={reportText}
                   onChange={(e) => setReportText(e.target.value)}
                   placeholder="Например: результат неверный, домен безопасный..."
-                  className="min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/20"
+                  className="min-h-[120px] w-full rounded-2xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm text-foreground outline-none placeholder:text-foreground/30 focus:border-foreground/20"
                   disabled={isSubmittingReport}
                 />
               </div>

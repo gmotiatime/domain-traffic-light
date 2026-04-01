@@ -1,4 +1,4 @@
-export const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin"] as const;
+export const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/404"] as const;
 
 export type SitePath = (typeof sitePaths)[number];
 
@@ -9,7 +9,7 @@ export function normalizeHashRoute(hash: string): SitePath {
     return cleaned as SitePath;
   }
 
-  return "/";
+  return "/404";
 }
 
 export function routeHref(path: SitePath) {

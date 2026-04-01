@@ -1,0 +1,514 @@
+{
+  "timestamp": "2026-03-30T19:34:07.056Z",
+  "apiBase": "https://www.gmotia.tech",
+  "summary": {
+    "totalTests": 8,
+    "totalPassed": 7,
+    "totalFailed": 1,
+    "successRate": 88
+  },
+  "results": {
+    "legitimate": [
+      {
+        "domain": "google.com",
+        "expectedVerdict": "low",
+        "description": "Популярный легитимный сайт",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "google.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Новых признаков угроз не обнаружено; домен успешно резолвится, HTTP‑перенаправление ведёт на тот же registrable domain и TLS‑сертификат соответствует домену.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 3925,
+          "latencyMs": 2012,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "google.com",
+          "found": true,
+          "cached": true,
+          "verdict": "medium",
+          "score": 30,
+          "cachedAt": 1774899215363,
+          "updatedAt": 1774899215363
+        },
+        "secondAnalysis": {
+          "domain": "google.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Новых признаков угроз не обнаружено; домен успешно резолвится, HTTP‑перенаправление ведёт на тот же registrable domain и TLS‑сертификат соответствует домену.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 675,
+          "latencyMs": 2012,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        }
+      },
+      {
+        "domain": "github.com",
+        "expectedVerdict": "low",
+        "description": "Известная платформа разработки",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "github.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "github.com успешно резолвится, отвечает HTTP 200 без редиректа и использует TLS‑сертификат, выданный на сам домен; в известных фишинговых базах нет совпадений.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 1416,
+          "latencyMs": 870,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "github.com",
+          "found": true,
+          "cached": true,
+          "verdict": "medium",
+          "score": 30,
+          "cachedAt": 1774899222950,
+          "updatedAt": 1774899222950
+        },
+        "secondAnalysis": {
+          "domain": "github.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "github.com успешно резолвится, отвечает HTTP 200 без редиректа и использует TLS‑сертификат, выданный на сам домен; в известных фишинговых базах нет совпадений.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 679,
+          "latencyMs": 870,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        }
+      },
+      {
+        "domain": "microsoft.com",
+        "expectedVerdict": "low",
+        "description": "Крупная IT компания",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "microsoft.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Домен microsoft.com корректно резолвится, HTTP‑перенаправление ведёт на тот же registrable domain и TLS‑сертификат соответствует имени хоста; в threat‑feeds совпадений нет.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 1264,
+          "latencyMs": 872,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "microsoft.com",
+          "found": true,
+          "cached": true,
+          "verdict": "medium",
+          "score": 30,
+          "cachedAt": 1774899230283,
+          "updatedAt": 1774899230283
+        },
+        "secondAnalysis": {
+          "domain": "microsoft.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Домен microsoft.com корректно резолвится, HTTP‑перенаправление ведёт на тот же registrable domain и TLS‑сертификат соответствует имени хоста; в threat‑feeds совпадений нет.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 439,
+          "latencyMs": 872,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        }
+      }
+    ],
+    "suspicious": [
+      {
+        "domain": "free-discord-nitro.xyz",
+        "expectedVerdict": "high",
+        "description": "Подозрительные слова + рискованный TLD",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "free-discord-nitro.xyz",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 65,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен free-discord-nitro.xyz не резолвится, использует часто‑фишинговый TLD .xyz и содержит бренд Discord с приманкой free‑, что указывает на высокий риск фишинга.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 2349,
+          "latencyMs": 1850,
+          "reasons": [
+            {
+              "title": "DNS failure",
+              "detail": "DNS не резолвится для free-discord-nitro.xyz",
+              "scoreDelta": 30,
+              "tone": "warning"
+            },
+            {
+              "title": "Brand lure",
+              "detail": "Домен содержит бренд 'discord' и слово 'nitro' с префиксом 'free-', типичный шаблон фишинга",
+              "scoreDelta": 15,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "free-discord-nitro.xyz",
+          "found": true,
+          "cached": true,
+          "verdict": "high",
+          "score": 65,
+          "cachedAt": 1774899237337,
+          "updatedAt": 1774899237337
+        },
+        "secondAnalysis": {
+          "domain": "free-discord-nitro.xyz",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 65,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен free-discord-nitro.xyz не резолвится, использует часто‑фишинговый TLD .xyz и содержит бренд Discord с приманкой free‑, что указывает на высокий риск фишинга.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 663,
+          "latencyMs": 1850,
+          "reasons": [
+            {
+              "title": "DNS failure",
+              "detail": "DNS не резолвится для free-discord-nitro.xyz",
+              "scoreDelta": 30,
+              "tone": "warning"
+            },
+            {
+              "title": "Brand lure",
+              "detail": "Домен содержит бренд 'discord' и слово 'nitro' с префиксом 'free-', типичный шаблон фишинга",
+              "scoreDelta": 15,
+              "tone": "warning"
+            }
+          ]
+        }
+      },
+      {
+        "domain": "secure-login-verify.top",
+        "expectedVerdict": "high",
+        "description": "Множество слов-ловушек",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "secure-login-verify.top",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 65,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен secure-login-verify.top не резолвится, содержит типичные фишинговые префиксы и не предоставляет TLS‑сертификат, что указывает на высокий риск.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 2426,
+          "latencyMs": 2036,
+          "reasons": [
+            {
+              "title": "DNS failure",
+              "detail": "DNS‑запрос для secure-login-verify.top не вернул ни A, ни AAAA записей.",
+              "scoreDelta": 30,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "secure-login-verify.top",
+          "found": true,
+          "cached": true,
+          "verdict": "high",
+          "score": 65,
+          "cachedAt": 1774899244867,
+          "updatedAt": 1774899244867
+        },
+        "secondAnalysis": {
+          "domain": "secure-login-verify.top",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 65,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен secure-login-verify.top не резолвится, содержит типичные фишинговые префиксы и не предоставляет TLS‑сертификат, что указывает на высокий риск.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 438,
+          "latencyMs": 2036,
+          "reasons": [
+            {
+              "title": "DNS failure",
+              "detail": "DNS‑запрос для secure-login-verify.top не вернул ни A, ни AAAA записей.",
+              "scoreDelta": 30,
+              "tone": "warning"
+            }
+          ]
+        }
+      },
+      {
+        "domain": "claim-reward-now.site",
+        "expectedVerdict": "high",
+        "description": "Фишинговые префиксы",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "claim-reward-now.site",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Домен claim-reward-now.site не резолвится и содержит типичные фишинговые приманки, что указывает на потенциальный риск.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 2300,
+          "latencyMs": 1900,
+          "reasons": [
+            {
+              "title": "No DNS",
+              "detail": "DNS запрос для claim-reward-now.site не возвращает записи A/AAAA, домен не резолвится.",
+              "scoreDelta": 10,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "claim-reward-now.site",
+          "found": true,
+          "cached": true,
+          "verdict": "medium",
+          "score": 30,
+          "cachedAt": 1774899252205,
+          "updatedAt": 1774899252205
+        },
+        "secondAnalysis": {
+          "domain": "claim-reward-now.site",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Домен claim-reward-now.site не резолвится и содержит типичные фишинговые приманки, что указывает на потенциальный риск.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 932,
+          "latencyMs": 1900,
+          "reasons": [
+            {
+              "title": "No DNS",
+              "detail": "DNS запрос для claim-reward-now.site не возвращает записи A/AAAA, домен не резолвится.",
+              "scoreDelta": 10,
+              "tone": "warning"
+            }
+          ]
+        }
+      }
+    ],
+    "neutral": [
+      {
+        "domain": "example.com",
+        "expectedVerdict": "low",
+        "description": "Тестовый домен",
+        "passed": true,
+        "firstAnalysis": {
+          "domain": "example.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Для example.com не обнаружено признаков фишинга: домен резолвится, HTTPS‑сертификат выдан на сам домен, перенаправлений нет.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 1731,
+          "latencyMs": 1332,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "example.com",
+          "found": true,
+          "cached": true,
+          "verdict": "medium",
+          "score": 30,
+          "cachedAt": 1774899259198,
+          "updatedAt": 1774899259198
+        },
+        "secondAnalysis": {
+          "domain": "example.com",
+          "success": true,
+          "status": 200,
+          "verdict": "medium",
+          "score": 30,
+          "verdictLabel": "Нужна перепроверка",
+          "summary": "Для example.com не обнаружено признаков фишинга: домен резолвится, HTTPS‑сертификат выдан на сам домен, перенаправлений нет.",
+          "model": "openai/gpt-oss-120b",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 494,
+          "latencyMs": 1332,
+          "reasons": [
+            {
+              "title": "AI не вернул причины",
+              "detail": "Сервер получил ответ без объяснений и использовал безопасный fallback.",
+              "scoreDelta": 0,
+              "tone": "warning"
+            }
+          ]
+        }
+      },
+      {
+        "domain": "test.example",
+        "expectedVerdict": "low",
+        "description": "Учебная зона",
+        "passed": false,
+        "firstAnalysis": {
+          "domain": "test.example",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 80,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен не резолвится и не имеет доступного TLS-сертификата, что может указывать на высокий риск фишинга или недействительный сайт.",
+          "model": "llama-3.3-70b-versatile",
+          "source": "groq",
+          "cached": false,
+          "elapsed": 1788,
+          "latencyMs": 1407,
+          "reasons": [
+            {
+              "title": "DNS не резолвится",
+              "detail": "Домен test.example не резолвится в DNS, что может быть признаком нового или заблокированного домена, часто используемого в фишинговых атаках.",
+              "scoreDelta": 50,
+              "tone": "critical"
+            },
+            {
+              "title": "Отсутствие TLS",
+              "detail": "Для домена test.example не доступен TLS-сертификат, что является warning-сигналом, особенно для сайтов, которые должны использовать HTTPS.",
+              "scoreDelta": 30,
+              "tone": "warning"
+            }
+          ]
+        },
+        "lookupResult": {
+          "domain": "test.example",
+          "found": true,
+          "cached": true,
+          "verdict": "high",
+          "score": 80,
+          "cachedAt": 1774899265999,
+          "updatedAt": 1774899265999
+        },
+        "secondAnalysis": {
+          "domain": "test.example",
+          "success": true,
+          "status": 200,
+          "verdict": "high",
+          "score": 80,
+          "verdictLabel": "Высокий риск",
+          "summary": "Домен не резолвится и не имеет доступного TLS-сертификата, что может указывать на высокий риск фишинга или недействительный сайт.",
+          "model": "llama-3.3-70b-versatile",
+          "source": "groq",
+          "cached": true,
+          "elapsed": 510,
+          "latencyMs": 1407,
+          "reasons": [
+            {
+              "title": "DNS не резолвится",
+              "detail": "Домен test.example не резолвится в DNS, что может быть признаком нового или заблокированного домена, часто используемого в фишинговых атаках.",
+              "scoreDelta": 50,
+              "tone": "critical"
+            },
+            {
+              "title": "Отсутствие TLS",
+              "detail": "Для домена test.example не доступен TLS-сертификат, что является warning-сигналом, особенно для сайтов, которые должны использовать HTTPS.",
+              "scoreDelta": 30,
+              "tone": "warning"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
