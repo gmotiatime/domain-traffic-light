@@ -2610,12 +2610,17 @@ export async function cacheStatsResponse() {
 
   if (redisCache) {
     try {
-      // O(1) — use scard for count + hash for stats
-      const [cardSize, statsHash, infoStr] = await Promise.all([
+      const promises = [
         redisCache.scard(cacheIndexKey),
         redisCache.hgetall(cacheStatsKey),
-        redisCache.info().catch(() => "")
-      ]);
+      ];
+      if (typeof redisCache.info === 'function') {
+        promises.push(redisCache.info().catch(() => ""));
+      } else {
+        promises.push(Promise.resolve(""));
+      }
+      
+      const [cardSize, statsHash, infoStr] = await Promise.all(promises);
 
       size = cardSize || 0;
       const stats = statsHash || {};
@@ -2625,6 +2630,12 @@ export async function cacheStatsResponse() {
         if (match && match[1]) {
           dbSize = parseInt(match[1], 10);
         }
+      }
+
+      // Если REST API Upstash не поддерживает команду INFO, аппроксимируем размер:
+      // каждый JSON-рекорд весит в среднем 1850 байт
+      if (!dbSize && size > 0) {
+        dbSize = size * 1850;
       }
 
       // Check if stats hash has verdict data
