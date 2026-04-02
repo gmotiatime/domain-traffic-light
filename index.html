@@ -22,9 +22,35 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
     <title>Доменный светофор.AI</title>
+
+    <style>
+      .app-loader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #09090b;
+      }
+      .app-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        border-top-color: rgba(255, 255, 255, 0.4);
+        animation: spin 1s ease-in-out infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-loader">
+        <div class="app-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

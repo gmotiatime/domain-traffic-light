@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Scale } from "lucide-react";
 
 import { faqItems, officialRoutes, safetyPrinciples } from "@/lib/site-content";
 
@@ -84,7 +84,7 @@ export function SafetyPage() {
                 </p>
               </div>
               {index === 0 && (
-                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.08),transparent_70%)] p-8">
+                <div className="p-8">
                   <img
                     alt="Без регистрации"
                     className="h-48 w-full object-contain"
@@ -93,7 +93,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 1 && (
-                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                <div className="p-8">
                   <img
                     alt="Без хранения запросов"
                     className="h-48 w-full object-contain"
@@ -102,7 +102,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 2 && (
-                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                <div className="p-8">
                   <img
                     alt="Без реальных вредоносных доменов"
                     className="h-48 w-full object-contain"
@@ -111,7 +111,7 @@ export function SafetyPage() {
                 </div>
               )}
               {index === 3 && (
-                <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
+                <div className="p-8">
                   <img
                     alt="С официальными маршрутами"
                     className="h-48 w-full object-contain"
@@ -188,6 +188,56 @@ export function SafetyPage() {
                 </a>
               </GlassCard>
             ))}
+          </div>
+        </section>
+
+        {/* CyberLaw (#КиберПраво) Section */}
+        <section className="mt-32">
+          <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/20 text-violet-400">
+                <Scale className="h-4 w-4" />
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-400/80">
+                #КиберПраво
+              </p>
+            </div>
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
+              Правовой контекст <span className="text-foreground/40">и защита.</span>
+            </h2>
+            <p className="mt-6 text-base leading-relaxed text-foreground/50">
+              Фишинг — это не просто вид мошенничества, это уголовно наказуемое деяние по законодательству Республики Беларусь. Каждый пользователь сети обладает неотъемлемым правом на тайну, защиту своих данных и правовую помощь.
+            </p>
+          </motion.div>
+
+          <div className="mt-12 grid gap-6 lg:grid-cols-2">
+            <GlassCard delay={0.1} className="p-8 border-violet-500/10 bg-violet-500/[0.02]">
+              <h3 className="text-2xl font-semibold text-foreground">Закон о защите персональных данных</h3>
+              <p className="mt-4 text-base leading-relaxed text-foreground/50">
+                В соответствии с Законом Республики Беларусь «О защите персональных данных», вы являетесь полноправным субъектом персональных данных. Никто не имеет права собирать, обрабатывать и использовать ваши данные (включая связки логин-пароль, ФИО, телефон) без вашего явного и осознанного согласия. Фишинговые ресурсы грубо нарушают этот закон, собирая данные неправомерно.
+              </p>
+            </GlassCard>
+
+            <GlassCard delay={0.2} className="p-8 border-rose-500/10 bg-rose-500/[0.02]">
+              <h3 className="text-2xl font-semibold text-foreground">Куда обращаться пострадавшему?</h3>
+              <p className="mt-4 text-base leading-relaxed text-foreground/50">
+                Юридическая фиксация инцидента критически важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
+              </p>
+              <ul className="mt-5 space-y-4">
+                <li className="flex items-start gap-4">
+                  <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
+                  <p className="text-base text-foreground/80">
+                    <a href="https://cpd.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">НЦЗПД (cpd.by)</a> — при незаконно собранных контактных и личных данных.
+                  </p>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
+                  <p className="text-base text-foreground/80">
+                    <a href="https://cert.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">CERT.BY (cert.by)</a> — национальный центр реагирования на компьютерные инциденты для блокировки вредоносного ресурса.
+                  </p>
+                </li>
+              </ul>
+            </GlassCard>
           </div>
         </section>
 

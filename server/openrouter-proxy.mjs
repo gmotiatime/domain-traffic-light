@@ -2606,17 +2606,26 @@ export function healthResponse() {
 
 export async function cacheStatsResponse() {
   let size = responseCache.size;
+  let dbSize = 0;
 
   if (redisCache) {
     try {
       // O(1) — use scard for count + hash for stats
-      const [cardSize, statsHash] = await Promise.all([
+      const [cardSize, statsHash, infoStr] = await Promise.all([
         redisCache.scard(cacheIndexKey),
         redisCache.hgetall(cacheStatsKey),
+        redisCache.info().catch(() => "")
       ]);
 
       size = cardSize || 0;
       const stats = statsHash || {};
+
+      if (infoStr) {
+        const match = infoStr.match(/used_memory:(\d+)/);
+        if (match && match[1]) {
+          dbSize = parseInt(match[1], 10);
+        }
+      }
 
       // Check if stats hash has verdict data
       const hasVerdictData = Object.keys(stats).some(k => k.startsWith('verdict:'));
@@ -2645,15 +2654,20 @@ export async function cacheStatsResponse() {
         persistent: true,
         oldestRecord: stats.oldestRecord ? Number(stats.oldestRecord) : null,
         newestRecord: stats.newestRecord ? Number(stats.newestRecord) : null,
+        dbSize,
       };
     } catch (error) {
       console.error('[Cache] Error getting Redis stats:', error.message);
       size = null;
     }
+  } else {
+    // Memory cache
+    dbSize = JSON.stringify([...responseCache.values()]).length;
   }
 
   return {
     size,
+    dbSize,
     enabled: cacheEnabled,
     storage: cacheStorage,
     persistent: hasRedisCache,

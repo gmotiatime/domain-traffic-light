@@ -100,7 +100,7 @@ export function MethodPage() {
                   помогают быстро понять риск ещё до ввода данных.
                 </p>
               </div>
-              <div className="flex-1 border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(88,191,255,0.1),transparent_70%)] p-4 sm:p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 <img
                   alt="Светофор риска"
                   className="h-full w-full object-cover"
@@ -120,7 +120,7 @@ export function MethodPage() {
                   прав пользователя и официальных маршрутов помощи.
                 </p>
               </div>
-              <div className="flex-1 border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(124,199,255,0.1),transparent_70%)] p-4 sm:p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 <img
                   alt="Иллюстрация КиберПраво"
                   className="h-full w-full object-cover"

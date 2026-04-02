@@ -284,7 +284,7 @@ export function HomePage() {
       </section>
 
       {/* ══════════ AI FEATURES (NEW SECTION) ══════════ */}
-      <section className="relative w-full bg-background py-24 sm:py-32">
+      <section className="relative w-full bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <div className="max-w-3xl">
             <p className="text-xs uppercase tracking-[0.26em] text-foreground/40">Подкапотная магия</p>
@@ -297,14 +297,14 @@ export function HomePage() {
             <GlassCard delay={0.1} className="overflow-hidden p-0">
               <div className="p-8">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04]">
-                  <Shield className="h-6 w-6 text-foreground/60" />
+                  <Shield className="h-6 w-6 text-foreground/60" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   Моментальная сверка с актуальными базами OpenPhish и URLAbuse. Если домен уже засветился в малвари — вы узнаете об этом первыми.
                 </p>
               </div>
-              <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+              <div className="p-8">
                 <img
                   alt="Защита от фишинга"
                   className="h-48 w-full object-contain"
@@ -316,14 +316,14 @@ export function HomePage() {
             <GlassCard delay={0.2} className="overflow-hidden p-0">
               <div className="p-8">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04]">
-                  <Cpu className="h-6 w-6 text-foreground/60" />
+                  <Cpu className="h-6 w-6 text-foreground/60" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   Быстрый разбор структуры URL, проверка на опечатки популярных брендов и подозрительные TLD-зоны. Срабатывает мгновенно.
                 </p>
               </div>
-              <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+              <div className="p-8">
                 <img
                   alt="Сканирование базы данных"
                   className="h-48 w-full object-contain"
@@ -335,14 +335,14 @@ export function HomePage() {
             <GlassCard delay={0.3} className="overflow-hidden p-0 md:col-span-2 lg:col-span-1 border-violet-500/20 bg-violet-500/[0.02]">
               <div className="p-8">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-                  <Zap className="h-6 w-6 text-violet-400" />
+                  <Zap className="h-6 w-6 text-violet-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold text-foreground">Умный AI-слой</h3>
                 <p className="mt-3 text-base leading-relaxed text-violet-100/60">
                   После быстрой проверки языковая модель сводит все сигналы воедино, объясняет причину риска простым языком и даёт чёткую рекомендацию.
                 </p>
               </div>
-              <div className="border-t border-violet-500/[0.15] bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.1),transparent_70%)] p-8">
+              <div className="p-8">
                 <img
                   alt="AI анализ"
                   className="h-48 w-full object-contain"
@@ -355,7 +355,7 @@ export function HomePage() {
       </section>
 
       {/* ══════════ BEHAVIOR LOGIC ══════════ */}
-      <section className="relative w-full bg-background py-24 sm:py-32">
+      <section className="relative w-full bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <GlassCard className="p-8 sm:p-12 md:p-14">
             <div className="max-w-3xl">
@@ -386,7 +386,7 @@ export function HomePage() {
                     </p>
                   </div>
                   {i === 0 && (
-                    <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08),transparent_70%)] p-8">
+                    <div className="p-8">
                       <img
                         alt="Пауза"
                         className="h-48 w-full object-contain"
@@ -395,7 +395,7 @@ export function HomePage() {
                     </div>
                   )}
                   {i === 1 && (
-                    <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08),transparent_70%)] p-8">
+                    <div className="p-8">
                       <img
                         alt="Процесс проверки"
                         className="h-48 w-full object-contain"
@@ -404,7 +404,7 @@ export function HomePage() {
                     </div>
                   )}
                   {i === 2 && (
-                    <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                    <div className="p-8">
                       <img
                         alt="Действие"
                         className="h-48 w-full object-contain"
@@ -420,7 +420,7 @@ export function HomePage() {
       </section>
 
       {/* ══════════ HOME PROOF ══════════ */}
-      <section className="relative w-full bg-background pb-24 sm:pb-32 pt-10">
+      <section className="relative w-full bg-background pb-16 sm:pb-20 pt-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <div className="mb-14">
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Что даёт сервис</p>
@@ -439,7 +439,7 @@ export function HomePage() {
                   </p>
                 </div>
                 {index === 0 && (
-                  <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.08),transparent_70%)] p-8">
+                  <div className="p-8">
                     <img
                       alt="Быстрый старт"
                       className="h-48 w-full object-contain"
@@ -448,7 +448,7 @@ export function HomePage() {
                   </div>
                 )}
                 {index === 1 && (
-                  <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)] p-8">
+                  <div className="p-8">
                     <img
                       alt="Объяснимый результат"
                       className="h-48 w-full object-contain"
@@ -457,7 +457,7 @@ export function HomePage() {
                   </div>
                 )}
                 {index === 2 && (
-                  <div className="border-t border-foreground/[0.06] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_70%)] p-8">
+                  <div className="p-8">
                     <img
                       alt="Безопасная публикация"
                       className="h-48 w-full object-contain"
@@ -473,7 +473,7 @@ export function HomePage() {
 
       {/* ══════════ STATS SECTION ══════════ */}
       {stats && (
-        <section className="relative w-full bg-background py-24 sm:py-32">
+        <section className="relative w-full bg-background py-16 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
             <div className="text-center mb-14">
               <p className="text-xs uppercase tracking-[0.26em] text-foreground/40">Статистика в реальном времени</p>
@@ -485,7 +485,7 @@ export function HomePage() {
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <GlassCard delay={0.1} className="p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/[0.08]">
-                  <Shield className="h-6 w-6 text-green-400" />
+                  <Shield className="h-6 w-6 text-green-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Безопасные</div>
                 <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400" duration={1500} />
@@ -494,7 +494,7 @@ export function HomePage() {
 
               <GlassCard delay={0.2} className="p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-500/[0.08]">
-                  <Search className="h-6 w-6 text-yellow-400" />
+                  <Search className="h-6 w-6 text-yellow-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Подозрительные</div>
                 <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400" duration={1500} />
@@ -503,7 +503,7 @@ export function HomePage() {
 
               <GlassCard delay={0.3} className="p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/[0.08]">
-                  <TrendingUp className="h-6 w-6 text-red-400" />
+                  <TrendingUp className="h-6 w-6 text-red-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Опасные</div>
                 <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400" duration={1500} />
@@ -512,7 +512,7 @@ export function HomePage() {
 
               <GlassCard delay={0.4} className="p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-                  <Database className="h-6 w-6 text-violet-400" />
+                  <Database className="h-6 w-6 text-violet-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">База данных</div>
                 <div className="mt-2 text-3xl font-bold text-violet-400">
@@ -541,7 +541,7 @@ export function HomePage() {
       )}
 
       {/* ══════════ CTA SECTION ══════════ */}
-      <section className="relative w-full bg-background py-20 pb-32">
+      <section className="relative w-full bg-background py-16 pb-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <GlassCard className="flex flex-col items-center justify-center p-12 text-center sm:p-20" glow="radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.05) 0%, transparent 70%)">
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Готовы проверить ссылку?</h2>
