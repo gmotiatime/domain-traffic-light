@@ -489,34 +489,34 @@ export function HomePage() {
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              <GlassCard delay={0.1} className="p-6">
+              <GlassCard delay={0.1} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(74,222,128,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Shield className="h-8 w-8 text-green-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Безопасные</div>
-                <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400" duration={1500} />
+                <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]" duration={1500} />
                 <p className="mt-2 text-sm text-foreground/40">Домены с низким риском</p>
               </GlassCard>
 
-              <GlassCard delay={0.2} className="p-6">
+              <GlassCard delay={0.2} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(250,204,21,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Search className="h-8 w-8 text-yellow-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Подозрительные</div>
-                <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400" duration={1500} />
+                <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]" duration={1500} />
                 <p className="mt-2 text-sm text-foreground/40">Требуют внимания</p>
               </GlassCard>
 
-              <GlassCard delay={0.3} className="p-6">
+              <GlassCard delay={0.3} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(248,113,113,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <TrendingUp className="h-8 w-8 text-red-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Опасные</div>
-                <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400" duration={1500} />
+                <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.3)]" duration={1500} />
                 <p className="mt-2 text-sm text-foreground/40">Высокий риск фишинга</p>
               </GlassCard>
 
-              <GlassCard delay={0.4} className="p-6">
+              <GlassCard delay={0.4} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(167,139,250,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Database className="h-8 w-8 text-violet-400" strokeWidth={1.5} />
                 </div>

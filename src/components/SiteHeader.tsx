@@ -39,7 +39,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                 <Shield className="h-4 w-4" />
               </span>
               <span className="flex min-w-0 items-end gap-1.5">
-                <span className="truncate text-[1.05rem] font-semibold tracking-[-0.03em] sm:text-[1.15rem] md:text-[1.28rem]">
+                <span className="truncate text-[1.05rem] font-bold tracking-[-0.03em] sm:text-[1.15rem] md:text-[1.28rem] bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                   Доменный светофор
                 </span>
                 <span className="mb-0.5 shrink-0 text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground sm:text-[0.68rem]">
@@ -71,7 +71,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
             </nav>
 
             <div className="hidden lg:flex lg:items-center lg:gap-2">
-              <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-semibold transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-95 shadow-lg">
+              <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-bold tracking-tight transition-all duration-300 hover:bg-white hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]">
                 <a href={routeHref("/analyzer")}>
                   Открыть анализатор
                 </a>
@@ -112,7 +112,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                 })}
               </nav>
               <div className="mt-3">
-                <Button asChild className="w-full">
+                <Button asChild className="w-full rounded-xl bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.15)]">
                   <a href={routeHref("/analyzer")} onClick={() => setIsMenuOpen(false)}>
                     Открыть анализатор
                   </a>
