@@ -1,69 +1,75 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulseGlow {
-      0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 10px #10b981); transform: scale(0.98); }
-      50% { opacity: 0.8; filter: drop-shadow(0 0 25px #34d399); transform: scale(1.02); }
+    @keyframes pulseBlue {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.05); opacity: 1; }
     }
-    @keyframes checkDraw {
-      0% { stroke-dashoffset: 100; opacity: 0; }
-      20% { opacity: 1; stroke-dashoffset: 50; }
-      40% { stroke-dashoffset: 0; }
-      80% { stroke-dashoffset: 0; opacity: 1; }
-      100% { stroke-dashoffset: -100; opacity: 0; }
+    @keyframes rotateDoc {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
-    @keyframes ringExpand {
-      0% { r: 40; opacity: 0.8; stroke-width: 2.5; }
-      100% { r: 80; opacity: 0; stroke-width: 0.5; }
+    @keyframes writeLines {
+      from { stroke-dashoffset: 40; }
+      to { stroke-dashoffset: 0; }
     }
-    .glow { transform-origin: center; animation: pulseGlow 4s ease-in-out infinite; }
-    .check { 
-      stroke-dasharray: 100; 
-      stroke-dashoffset: 100;
-      animation: checkDraw 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
-    .ring { 
-      transform-origin: center;
-      animation: ringExpand 2.5s ease-out infinite; 
-    }
+    .shield-pulse { animation: pulseBlue 3s ease-in-out infinite; transform-origin: 200px 150px; }
+    .doc-ring { animation: rotateDoc 15s linear infinite; transform-origin: 200px 150px; }
+    .doc-line { stroke-dasharray: 40; animation: writeLines 2s linear infinite alternate; }
   </style>
-  
-  <rect width="400" height="300" fill="#0a0a0a"/>
-  
+
   <defs>
-    <radialGradient id="checkGlow" cx="50%" cy="50%">
-      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3"/>
-      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0"/>
+    <radialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
     </radialGradient>
+    
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <filter id="neonBlue" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
   </defs>
-  
-  <circle cx="200" cy="150" r="100" fill="url(#checkGlow)" class="glow"/>
-  
-  <g transform="translate(200, 150)">
-    <circle cx="0" cy="0" r="50" fill="#1e293b" stroke="#10b981" stroke-width="3"/>
-    <circle cx="0" cy="0" r="40" fill="none" stroke="#10b981" stroke-width="2" opacity="0.4"/>
-    
-    <path d="M-20,0 L-5,20 L25,-20" 
-          fill="none" stroke="#10b981" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" class="check"/>
+
+  <circle cx="200" cy="150" r="140" fill="url(#blueGlow)" />
+
+  <g class="doc-ring">
+    <circle cx="200" cy="150" r="105" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="10 5" />
+    <circle cx="200" cy="150" r="115" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.6" fill="none" stroke-dasharray="2 15" filter="url(#neonBlue)"/>
   </g>
-  
-  <circle cx="200" cy="150" r="40" fill="none" stroke="#10b981" stroke-width="2" class="ring" style="animation-delay: 0s"/>
-  <circle cx="200" cy="150" r="40" fill="none" stroke="#10b981" stroke-width="2" class="ring" style="animation-delay: 0.7s"/>
-  <circle cx="200" cy="150" r="40" fill="none" stroke="#10b981" stroke-width="2" class="ring" style="animation-delay: 1.4s"/>
-  
-  <circle cx="200" cy="150" r="70" fill="none" stroke="#10b981" stroke-width="1" opacity="0.2" class="glow"/>
-  <circle cx="200" cy="150" r="90" fill="none" stroke="#10b981" stroke-width="1" opacity="0.15" class="glow"/>
-  
-  <g opacity="0.5">
-    <circle cx="120" cy="150" r="8" fill="none" stroke="#10b981" stroke-width="2" class="glow"/>
-    <path d="M115,150 L118,153 L125,145" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Side decorative nodes -->
+  <circle cx="90" cy="150" r="4" fill="#60a5fa" filter="url(#neonBlue)"/>
+  <circle cx="310" cy="150" r="4" fill="#60a5fa" filter="url(#neonBlue)"/>
+  <line x1="90" y1="150" x2="120" y2="150" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.5"/>
+  <line x1="280" y1="150" x2="310" y2="150" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.5"/>
+
+  <g class="shield-pulse">
+    <!-- Document/Badge shape -->
+    <path d="M160 80 L240 80 A10 10 0 0 1 250 90 L250 190 A10 10 0 0 1 240 200 L200 220 L160 200 A10 10 0 0 1 150 190 L150 90 A10 10 0 0 1 160 80 Z" fill="url(#glassGradient)" stroke="url(#blueGrad)" stroke-width="2" filter="url(#neonBlue)"/>
     
-    <circle cx="280" cy="150" r="8" fill="none" stroke="#10b981" stroke-width="2" class="glow"/>
-    <path d="M275,150 L278,153 L285,145" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+    <path d="M165 92 L235 92 L235 186 L200 203 L165 186 Z" fill="#000d1a" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.6"/>
+
+    <!-- Text Lines inside badge -->
+    <line x1="180" y1="110" x2="220" y2="110" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" class="doc-line" filter="url(#neonBlue)"/>
+    <line x1="180" y1="125" x2="210" y2="125" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" class="doc-line" filter="url(#neonBlue)" style="animation-delay: 0.5s"/>
     
-    <circle cx="200" cy="70" r="8" fill="none" stroke="#10b981" stroke-width="2" class="glow"/>
-    <path d="M195,70 L198,73 L205,65" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
-    
-    <circle cx="200" cy="230" r="8" fill="none" stroke="#10b981" stroke-width="2" class="glow"/>
-    <path d="M195,230 L198,233 L205,225" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+    <!-- Verified Ribbon/Check -->
+    <circle cx="200" cy="160" r="22" fill="#1d4ed8" filter="url(#neonBlue)" stroke="#60a5fa" stroke-width="2"/>
+    <path d="M190 160 L197 167 L210 152" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
+
 </svg>

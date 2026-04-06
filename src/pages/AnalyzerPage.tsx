@@ -96,14 +96,14 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all hover:bg-foreground/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] hover:border-foreground/[0.1] ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
       variants={fadeUp}
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -4, scale: 1.005 }}
       style={glow ? { background: glow } : undefined}
     >
       {/* top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 transition-opacity hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100" />
       {children}
     </motion.div>
   );
@@ -458,7 +458,7 @@ export function AnalyzerPage() {
             <h1 className="mx-auto mt-8 max-w-3xl text-5xl font-bold leading-[1.1] tracking-[-0.04em] sm:text-6xl md:text-7xl">
               Проверьте домен
               <br />
-              <span className="bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
                 за секунды.
               </span>
             </h1>
@@ -476,12 +476,12 @@ export function AnalyzerPage() {
             className="mx-auto mt-10 max-w-2xl"
             onSubmit={(e) => { e.preventDefault(); runAnalysis(draft); }}
           >
-            <div className="relative flex items-center gap-2 rounded-2xl border border-foreground/10 bg-foreground/[0.04] p-2 backdrop-blur-2xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.05)]">
+            <div className="relative flex items-center gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_rgba(255,255,255,0.07)] hover:bg-foreground/[0.05]">
               <div className="flex flex-1 items-center gap-3 px-4 z-20">
-                <Globe className="h-5 w-5 shrink-0 text-foreground/30" />
+                <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
                 <input
                   ref={inputRef}
-                  className="w-full bg-transparent py-3.5 text-lg text-foreground outline-none placeholder:text-foreground/30 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                  className="w-full bg-transparent py-3.5 text-xl font-medium text-foreground outline-none placeholder:text-foreground/30 placeholder:font-normal transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                   id="domain-input"
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Домен или ссылка..."
@@ -491,11 +491,11 @@ export function AnalyzerPage() {
               </div>
               
               <Button
-                className="h-12 shrink-0 rounded-xl bg-foreground text-black px-6 text-sm font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-foreground/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95"
+                className="h-14 shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95"
                 type="submit"
               >
                 Анализ
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
 
@@ -543,10 +543,10 @@ export function AnalyzerPage() {
                         setDraft(item.domain);
                         runAnalysis(item.domain);
                       }}
-                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1 text-[11px] font-medium transition-colors hover:bg-foreground/10"
+                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3.5 py-1.5 text-xs font-medium transition-all duration-300 hover:bg-foreground/10 hover:border-foreground/20 hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
-                      <span className="text-foreground/60">{item.domain}</span>
+                      <span className={`h-2 w-2 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
+                      <span className="text-foreground/70">{item.domain}</span>
                     </button>
                   );
                 })}
@@ -589,7 +589,10 @@ export function AnalyzerPage() {
               )}
             </div>
 
-            <h2 className={`mt-8 text-5xl font-bold tracking-[-0.04em] sm:text-6xl md:text-7xl ${cfg.textClass}`}>
+            <h2 
+              className={`mt-8 text-6xl font-bold tracking-[-0.04em] sm:text-7xl md:text-8xl drop-shadow-[0_0_25px_currentColor] transition-colors duration-500 ${cfg.textClass}`}
+              style={{ filter: "brightness(1.1)" }}
+            >
               {result.verdictLabel}
             </h2>
 
@@ -629,8 +632,8 @@ export function AnalyzerPage() {
                   { label: "Зона", value: result.breakdown.tld },
                   { label: "Поддомен", value: result.breakdown.subdomain || "—" },
                 ].map((item) => (
-                  <span key={item.label} className="rounded-full border border-foreground/8 bg-foreground/[0.03] px-3.5 py-1.5 text-xs text-foreground/50">
-                    {item.label}: <span className="text-foreground/80">{item.value}</span>
+                  <span key={item.label} className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-4 py-2 text-xs text-foreground/60 shadow-sm backdrop-blur-md">
+                    {item.label}: <span className="text-foreground/90 font-medium tracking-wide">{item.value}</span>
                   </span>
                 ))}
               </div>

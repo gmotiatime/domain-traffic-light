@@ -36,7 +36,7 @@
     .star { transform-origin: center; animation: sparkle 2.5s ease-in-out infinite; }
   </style>
   
-  <rect width="400" height="300" fill="#0a0a0a"/>
+  
   
   <defs>
     <radialGradient id="cyberGlow" cx="50%" cy="50%">

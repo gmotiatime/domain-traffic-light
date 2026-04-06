@@ -14,6 +14,8 @@ import {
 } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
 
+import BorderGlow from "@/components/BorderGlow";
+
 /* ─── animation presets ─── */
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -31,29 +33,35 @@ const stagger = {
 function GlassCard({
   children,
   className = "",
+  containerClassName = "",
   delay = 0,
   glow,
 }: {
   children: React.ReactNode;
   className?: string;
+  containerClassName?: string;
   delay?: number;
   glow?: string;
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all hover:bg-foreground/[0.04] hover:shadow-[0_0_40px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
+      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
-      style={glow ? { background: glow } : undefined}
     >
-      {/* top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
-      {/* dynamic glow overlay */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 transition-opacity hover:opacity-100" />
-      {children}
+      <BorderGlow
+        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
+        borderRadius={32}
+        glowRadius={30}
+        fillOpacity={0}
+        backgroundColor="#000000"
+      >
+        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
+          {children}
+        </div>
+      </BorderGlow>
     </motion.div>
   );
 }
@@ -213,7 +221,7 @@ export function HomePage() {
                 </motion.span>
               </span>
               <br />
-              <span className="bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
                 до ввода данных
               </span>
             </motion.h1>
@@ -226,14 +234,14 @@ export function HomePage() {
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
               <form
-                className="relative flex flex-col items-center gap-3 sm:flex-row sm:gap-2 rounded-[2rem] border border-foreground/10 bg-foreground/[0.04] p-3 backdrop-blur-2xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+                className="relative flex flex-col items-center gap-3 sm:flex-row sm:gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all duration-300 hover:bg-foreground/[0.05] focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_rgba(255,255,255,0.07)]"
                 onSubmit={(event) => {
                   event.preventDefault();
                   openAnalyzerWithInput(heroInput);
                 }}
               >
                 <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative z-20">
-                  <Globe className="h-6 w-6 shrink-0 text-foreground/30" />
+                  <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
                   <div className="relative w-full">
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -242,22 +250,22 @@ export function HomePage() {
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                         exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
-                        className="pointer-events-none absolute inset-0 flex items-center text-lg text-foreground/30"
+                        className="pointer-events-none absolute inset-0 flex items-center text-xl text-foreground/30"
                       >
                         {!heroInput && placeholders[currentPlaceholder]}
                       </motion.div>
                     </AnimatePresence>
                     <input
                       id="domain-input"
-                      className="w-full bg-transparent text-lg text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                      className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                       onChange={(event) => setHeroInput(event.target.value)}
                       value={heroInput}
                     />
                   </div>
                 </div>
-                <Button className="h-14 w-full sm:w-auto rounded-xl bg-foreground text-black px-8 text-base font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-foreground/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95" type="submit">
+                <Button className="h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95" type="submit">
                   Анализ
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </form>
 
@@ -294,59 +302,59 @@ export function HomePage() {
           </div>
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <GlassCard delay={0.1} className="overflow-hidden p-0">
+            <GlassCard delay={0.1} className="overflow-hidden p-0" glow="radial-gradient(circle at 100% 100%, rgba(34,197,94,0.08), transparent 70%)">
               <div className="p-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04]">
-                  <Shield className="h-6 w-6 text-foreground/60" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Shield className="h-8 w-8 text-green-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   Моментальная сверка с актуальными базами OpenPhish и URLAbuse. Если домен уже засветился в малвари — вы узнаете об этом первыми.
                 </p>
               </div>
-              <div className="p-8">
+              <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Защита от фишинга"
-                  className="h-48 w-full object-contain"
-                  src="/shield-protection.svg"
+                  className="h-48 w-full object-contain mix-blend-screen"
+                  src="/shield-protection.svg?v=4"
                 />
               </div>
             </GlassCard>
 
-            <GlassCard delay={0.2} className="overflow-hidden p-0">
+            <GlassCard delay={0.2} className="overflow-hidden p-0" glow="radial-gradient(circle at 100% 100%, rgba(59,130,246,0.08), transparent 70%)">
               <div className="p-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04]">
-                  <Cpu className="h-6 w-6 text-foreground/60" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Cpu className="h-8 w-8 text-blue-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   Быстрый разбор структуры URL, проверка на опечатки популярных брендов и подозрительные TLD-зоны. Срабатывает мгновенно.
                 </p>
               </div>
-              <div className="p-8">
+              <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Сканирование базы данных"
-                  className="h-48 w-full object-contain"
-                  src="/database-scan.svg"
+                  className="h-48 w-full object-contain mix-blend-screen"
+                  src="/database-scan.svg?v=4"
                 />
               </div>
             </GlassCard>
 
-            <GlassCard delay={0.3} className="overflow-hidden p-0 md:col-span-2 lg:col-span-1 border-violet-500/20 bg-violet-500/[0.02]">
+            <GlassCard delay={0.3} containerClassName="md:col-span-2 lg:col-span-1" className="overflow-hidden p-0" glow="radial-gradient(circle at 100% 100%, rgba(139,92,246,0.08), transparent 70%)">
               <div className="p-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-                  <Zap className="h-6 w-6 text-violet-400" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Zap className="h-8 w-8 text-violet-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold text-foreground">Умный AI-слой</h3>
                 <p className="mt-3 text-base leading-relaxed text-violet-100/60">
                   После быстрой проверки языковая модель сводит все сигналы воедино, объясняет причину риска простым языком и даёт чёткую рекомендацию.
                 </p>
               </div>
-              <div className="p-8">
+              <div className="px-8 pb-8 pt-0">
                 <img
                   alt="AI анализ"
-                  className="h-48 w-full object-contain"
-                  src="/ai-analysis.svg"
+                  className="h-48 w-full object-contain mix-blend-screen"
+                  src="/ai-analysis.svg?v=4"
                 />
               </div>
             </GlassCard>
@@ -355,8 +363,8 @@ export function HomePage() {
       </section>
 
       {/* ══════════ BEHAVIOR LOGIC ══════════ */}
-      <section className="relative w-full bg-background py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+      <section className="relative w-full bg-[#000000] py-16 sm:py-20 overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 relative z-10">
           <GlassCard className="p-8 sm:p-12 md:p-14">
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Логика сервиса</p>
@@ -367,51 +375,58 @@ export function HomePage() {
 
             <div className="mt-14 grid gap-6 lg:grid-cols-3">
               {behaviorSteps.map((item, i) => (
-                <div key={item.step} className="relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] transition-colors hover:bg-foreground/[0.03]">
-                  {/* Big glowing background number */}
-                  <span className="absolute -top-6 -right-2 text-[10rem] font-bold leading-none text-foreground/[0.03] select-none pointer-events-none z-0">
-                    {i + 1}
-                  </span>
-                  
-                  <div className="p-8 relative z-10">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-xs font-bold text-foreground shadow-[0_0_15px_rgba(255,255,255,0.08)]">
+                <div key={item.step} className="flex flex-col">
+                  <BorderGlow
+                    className="rounded-[2rem] h-full w-full border-white/5 shadow-2xl p-0 overflow-hidden"
+                    borderRadius={32}
+                    glowRadius={30}
+                    fillOpacity={0}
+                    backgroundColor="#000000"
+                  >
+                    <div className="relative flex flex-col justify-between h-full w-full">
+                      {/* Big glowing background number */}
+                      <span className="absolute -top-6 -right-2 text-[10rem] font-bold leading-none text-foreground/[0.03] select-none pointer-events-none z-0">
                         {i + 1}
                       </span>
-                      <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">{item.step}</p>
+                      
+                      <div className="flex-1 p-8 relative z-10 lg:min-h-[220px]">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-xs font-bold text-foreground shadow-[0_0_15px_rgba(255,255,255,0.08)]">
+                            {i + 1}
+                          </span>
+                          <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">{item.step}</p>
+                        </div>
+                        <h3 className="mt-6 text-2xl font-semibold text-foreground/90">{item.title}</h3>
+                        <p className="mt-3 text-sm leading-relaxed text-foreground/50 sm:text-base">
+                          {item.text}
+                        </p>
+                      </div>
+                      
+                      <div className="px-8 pb-8 mt-auto flex-shrink-0">
+                        {i === 0 && (
+                          <img
+                            alt="Пауза"
+                            className="h-48 w-full object-contain"
+                            src="/pause-stop.svg?v=4"
+                          />
+                        )}
+                        {i === 1 && (
+                          <img
+                            alt="Процесс проверки"
+                            className="h-48 w-full object-contain"
+                            src="/process-flow.svg?v=4"
+                          />
+                        )}
+                        {i === 2 && (
+                          <img
+                            alt="Действие"
+                            className="h-48 w-full object-contain"
+                            src="/action-go.svg?v=4"
+                          />
+                        )}
+                      </div>
                     </div>
-                    <h3 className="mt-6 text-2xl font-semibold text-foreground/90">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-foreground/50 sm:text-base">
-                      {item.text}
-                    </p>
-                  </div>
-                  {i === 0 && (
-                    <div className="p-8">
-                      <img
-                        alt="Пауза"
-                        className="h-48 w-full object-contain"
-                        src="/pause-stop.svg"
-                      />
-                    </div>
-                  )}
-                  {i === 1 && (
-                    <div className="p-8">
-                      <img
-                        alt="Процесс проверки"
-                        className="h-48 w-full object-contain"
-                        src="/process-flow.svg"
-                      />
-                    </div>
-                  )}
-                  {i === 2 && (
-                    <div className="p-8">
-                      <img
-                        alt="Действие"
-                        className="h-48 w-full object-contain"
-                        src="/action-go.svg"
-                      />
-                    </div>
-                  )}
+                  </BorderGlow>
                 </div>
               ))}
             </div>
@@ -430,43 +445,34 @@ export function HomePage() {
           </div>
           
           <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
-            {homeProof.map((item, index) => (
-              <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0">
-                <div className="p-8">
-                  <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-3 text-base leading-relaxed text-foreground/50">
-                    {item.text}
-                  </p>
-                </div>
-                {index === 0 && (
-                  <div className="p-8">
-                    <img
-                      alt="Быстрый старт"
-                      className="h-48 w-full object-contain"
-                      src="/speed-fast.svg"
-                    />
+            {homeProof.map((item, index) => {
+              const cardColors = [
+                'rgba(250,204,21,0.08)', // Yellow for speed
+                'rgba(59,130,246,0.08)', // Blue for verified
+                'rgba(168,85,247,0.08)'  // Purple for global network
+              ];
+              return (
+                <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0" glow={`radial-gradient(circle at 50% 100%, ${cardColors[index]}, transparent 60%)`}>
+                  <div className="p-8 pb-2">
+                    <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
+                    <p className="mt-3 text-base leading-relaxed text-foreground/50">
+                      {item.text}
+                    </p>
                   </div>
-                )}
-                {index === 1 && (
-                  <div className="p-8">
-                    <img
-                      alt="Объяснимый результат"
-                      className="h-48 w-full object-contain"
-                      src="/verified-check.svg"
-                    />
+                  <div className="px-8 pb-8 pt-4">
+                    {index === 0 && (
+                      <img alt="Быстрый старт" className="h-48 w-full object-contain mix-blend-screen" src="/speed-fast.svg?v=4" />
+                    )}
+                    {index === 1 && (
+                      <img alt="Объяснимый результат" className="h-48 w-full object-contain mix-blend-screen" src="/verified-check.svg?v=4" />
+                    )}
+                    {index === 2 && (
+                      <img alt="Безопасная публикация" className="h-48 w-full object-contain mix-blend-screen" src="/global-network.svg?v=4" />
+                    )}
                   </div>
-                )}
-                {index === 2 && (
-                  <div className="p-8">
-                    <img
-                      alt="Безопасная публикация"
-                      className="h-48 w-full object-contain"
-                      src="/global-network.svg"
-                    />
-                  </div>
-                )}
-              </GlassCard>
-            ))}
+                </GlassCard>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -484,8 +490,8 @@ export function HomePage() {
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <GlassCard delay={0.1} className="p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/[0.08]">
-                  <Shield className="h-6 w-6 text-green-400" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Shield className="h-8 w-8 text-green-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Безопасные</div>
                 <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400" duration={1500} />
@@ -493,8 +499,8 @@ export function HomePage() {
               </GlassCard>
 
               <GlassCard delay={0.2} className="p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-500/[0.08]">
-                  <Search className="h-6 w-6 text-yellow-400" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Search className="h-8 w-8 text-yellow-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Подозрительные</div>
                 <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400" duration={1500} />
@@ -502,8 +508,8 @@ export function HomePage() {
               </GlassCard>
 
               <GlassCard delay={0.3} className="p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/[0.08]">
-                  <TrendingUp className="h-6 w-6 text-red-400" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <TrendingUp className="h-8 w-8 text-red-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Опасные</div>
                 <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400" duration={1500} />
@@ -511,8 +517,8 @@ export function HomePage() {
               </GlassCard>
 
               <GlassCard delay={0.4} className="p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-                  <Database className="h-6 w-6 text-violet-400" strokeWidth={1.5} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
+                  <Database className="h-8 w-8 text-violet-400" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">База данных</div>
                 <div className="mt-2 text-3xl font-bold text-violet-400">
@@ -549,14 +555,14 @@ export function HomePage() {
               Вставьте любой подозрительный домен и посмотрите, как работает алгоритм в реальном времени.
             </p>
             <Button 
-              className="mt-10 h-14 rounded-full px-10 text-base font-semibold shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-transform hover:scale-105"
+              className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-95"
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
                 document.getElementById('domain-input')?.focus();
               }}
             >
               Начать анализ
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </GlassCard>
         </div>

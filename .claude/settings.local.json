@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p video-remotion)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -1,67 +1,76 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
   <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
+    @keyframes rippleExpand {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
     }
-    @keyframes checkGrow {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 1; }
+    @keyframes successFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.02); }
     }
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes dashAround {
+      0% { stroke-dashoffset: 400; }
+      100% { stroke-dashoffset: 0; }
     }
-    .glow { animation: pulse 3s ease-in-out infinite; }
-    .check { animation: checkGrow 2s ease-in-out infinite; }
-    .gear { 
-      transform-origin: 200px 150px;
-      animation: rotate 8s linear infinite;
-    }
+    .ripple-1 { animation: rippleExpand 3s ease-out infinite; transform-origin: 200px 150px; }
+    .ripple-2 { animation: rippleExpand 3s ease-out infinite 1.5s; transform-origin: 200px 150px; }
+    .icon-float { animation: successFloat 4s ease-in-out infinite; }
+    .draw-circle { stroke-dasharray: 400; animation: dashAround 8s linear infinite; }
   </style>
-  
-  <rect width="400" height="300" fill="#0a0a0a"/>
-  
+
   <defs>
-    <radialGradient id="actionGlow" cx="50%" cy="50%">
-      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3"/>
-      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0"/>
+    <!-- Core Glow Gradient -->
+    <radialGradient id="greenGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#10b981" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
     </radialGradient>
+    
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#047857" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <filter id="neonGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
   </defs>
-  
-  <circle cx="200" cy="150" r="100" fill="url(#actionGlow)" class="glow"/>
-  
-  <!-- Gear -->
-  <g class="gear">
-    <circle cx="200" cy="150" r="40" fill="#1e293b" stroke="#10b981" stroke-width="3"/>
-    <circle cx="200" cy="150" r="25" fill="#0f172a"/>
+
+  <!-- Ambient Glow -->
+  <circle cx="200" cy="150" r="130" fill="url(#greenGlow)" />
+
+  <!-- Background Ripples -->
+  <circle cx="200" cy="150" r="60" fill="none" stroke="#10b981" stroke-width="2" class="ripple-1" filter="url(#neonGreen)"/>
+  <circle cx="200" cy="150" r="60" fill="none" stroke="#34d399" stroke-width="1" class="ripple-2" filter="url(#neonGreen)"/>
+
+  <!-- Background Lines -->
+  <line x1="200" y1="20" x2="200" y2="40" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-opacity="0.5"/>
+  <line x1="200" y1="260" x2="200" y2="280" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-opacity="0.5"/>
+  <line x1="20" y1="150" x2="40" y2="150" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-opacity="0.5"/>
+  <line x1="360" y1="150" x2="380" y2="150" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-opacity="0.5"/>
+
+  <!-- Rotating Border -->
+  <circle cx="200" cy="150" r="95" fill="none" stroke="#047857" stroke-width="1" />
+  <circle cx="200" cy="150" r="95" fill="none" stroke="#34d399" stroke-width="2" class="draw-circle" filter="url(#neonGreen)"/>
+
+  <g class="icon-float">
+    <!-- Glassmorphic Shield/Shield-like circle -->
+    <circle cx="200" cy="150" r="70" fill="url(#glassGradient)" stroke="url(#greenGrad)" stroke-width="2" filter="url(#neonGreen)"/>
     
-    <!-- Gear teeth -->
-    <rect x="195" y="100" width="10" height="15" fill="#10b981"/>
-    <rect x="195" y="185" width="10" height="15" fill="#10b981"/>
-    <rect x="150" y="145" width="15" height="10" fill="#10b981"/>
-    <rect x="235" y="145" width="15" height="10" fill="#10b981"/>
-    
-    <rect x="165" y="115" width="12" height="12" fill="#10b981" transform="rotate(45 171 121)"/>
-    <rect x="223" y="115" width="12" height="12" fill="#10b981" transform="rotate(-45 229 121)"/>
-    <rect x="165" y="173" width="12" height="12" fill="#10b981" transform="rotate(-45 171 179)"/>
-    <rect x="223" y="173" width="12" height="12" fill="#10b981" transform="rotate(45 229 179)"/>
+    <circle cx="200" cy="150" r="55" fill="#021c13" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.6"/>
+
+    <!-- Perfect Checkmark -->
+    <path d="M175 152 L192 169 L228 133" fill="none" stroke="#34d399" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#neonGreen)"/>
   </g>
-  
-  <!-- Action arrow -->
-  <g transform="translate(280, 150)" class="check">
-    <circle cx="0" cy="0" r="30" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
-    <path d="M-10,0 L5,0 M5,0 L-2,-8 M5,0 L-2,8" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  
-  <circle cx="200" cy="150" r="80" fill="none" stroke="#10b981" stroke-width="1" opacity="0.2" class="glow"/>
-  <circle cx="200" cy="150" r="100" fill="none" stroke="#10b981" stroke-width="1" opacity="0.15" class="glow"/>
-  <circle cx="200" cy="150" r="120" fill="none" stroke="#10b981" stroke-width="1" opacity="0.1" class="glow"/>
-  
-  <g opacity="0.5">
-    <circle cx="120" cy="150" r="5" fill="#10b981" class="glow"/>
-    <circle cx="280" cy="150" r="5" fill="#10b981" class="glow"/>
-    <circle cx="200" cy="70" r="5" fill="#10b981" class="glow"/>
-    <circle cx="200" cy="230" r="5" fill="#10b981" class="glow"/>
-  </g>
+
 </svg>
