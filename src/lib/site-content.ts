@@ -48,13 +48,6 @@ export const behaviorSteps = [
   },
 ] as const;
 
-export const analyzerExamples = [
-  { label: "Официальный", input: "https://cert.by/" },
-  { label: "Учебный безопасный", input: "portal.example" },
-  { label: "Сомнительный login", input: "login.portal.example" },
-  { label: "Подмена и verify", input: "verify-suspicious.test" },
-] as const;
-
 export const ruleReference = [
   {
     title: "Punycode и смешение письменностей",
