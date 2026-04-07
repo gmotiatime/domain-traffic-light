@@ -3,7 +3,16 @@ export const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/40
 export type SitePath = (typeof sitePaths)[number];
 
 export function normalizeHashRoute(hash: string): SitePath {
-  const cleaned = hash.replace(/^#/, "") || "/";
+  let cleaned = hash.trim().toLowerCase();
+
+  // Remove query parameters if present
+  const queryIndex = cleaned.indexOf('?');
+  if (queryIndex !== -1) {
+    cleaned = cleaned.substring(0, queryIndex);
+  }
+
+  // Remove all leading hashes
+  cleaned = cleaned.replace(/^#+/, "") || "/";
 
   if (sitePaths.includes(cleaned as SitePath)) {
     return cleaned as SitePath;
