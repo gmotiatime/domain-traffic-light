@@ -20,7 +20,7 @@ import { Redis } from "@upstash/redis";
 dotenv.config({ path: envLocalFile });
 dotenv.config({ path: envFile });
 
-const corsOrigin = process.env.CORS_ORIGIN || "*";
+const corsOrigin = process.env.CORS_ORIGIN || "";
 const app = express();
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
@@ -1635,7 +1635,9 @@ function log(level, message, meta = {}) {
 app.use(express.json({ limit: "256kb" }));
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", corsOrigin);
+  if (corsOrigin) {
+    res.header("Access-Control-Allow-Origin", corsOrigin);
+  }
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   // Безопасность
@@ -2562,7 +2564,9 @@ async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
 }
 
 function applyResponseHeaders(res) {
-  res.header("Access-Control-Allow-Origin", corsOrigin);
+  if (corsOrigin) {
+    res.header("Access-Control-Allow-Origin", corsOrigin);
+  }
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.header("X-Content-Type-Options", "nosniff");
@@ -2572,7 +2576,7 @@ function applyResponseHeaders(res) {
 
 export function standardHeaders() {
   return {
-    "Access-Control-Allow-Origin": corsOrigin,
+    ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "X-Content-Type-Options": "nosniff",
