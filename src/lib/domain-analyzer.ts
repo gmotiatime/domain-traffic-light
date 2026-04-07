@@ -623,10 +623,10 @@ function findNearOfficialMatch(host: string): string | null {
 function hasPhishingPrefix(host: string): string | null {
   const parts = host.split(".");
   for (const part of parts) {
-    for (const prefix of phishingPrefixes) {
-      if (part.startsWith(prefix + "-") || part === prefix) {
-        return prefix;
-      }
+    const hyphenIndex = part.indexOf("-");
+    const extracted = hyphenIndex !== -1 ? part.substring(0, hyphenIndex) : part;
+    if (phishingPrefixes.has(extracted)) {
+      return extracted;
     }
   }
   return null;
