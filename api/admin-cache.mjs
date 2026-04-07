@@ -24,10 +24,21 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "PATCH") {
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body || "{}")
-        : req.body || {};
+    let body = req.body || {};
+    if (typeof req.body === "string") {
+      try {
+        body = JSON.parse(req.body || "{}");
+      } catch (e) {
+        res.status(400).json({ error: "Invalid JSON payload" });
+        return;
+      }
+    }
+
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      res.status(400).json({ error: "Invalid JSON payload: expected an object" });
+      return;
+    }
+
     const response = await adminCacheUpdateResponse(body, req.headers || {});
     res.status(response.status).json(response.body);
     return;
