@@ -23,6 +23,13 @@ dotenv.config({ path: envFile });
 const corsOrigin = process.env.CORS_ORIGIN || "";
 const app = express();
 
+const trustProxy = process.env.TRUST_PROXY || 1;
+if (trustProxy) {
+  // Configures Express to trust the proxy (e.g., Vercel, Cloudflare)
+  // When parsing the X-Forwarded-For header to securely set req.ip
+  app.set("trust proxy", trustProxy === "true" ? true : isNaN(Number(trustProxy)) ? trustProxy : Number(trustProxy));
+}
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -55,7 +62,7 @@ function consumeRateLimit(key) {
 }
 
 function rateLimit(req, res, next) {
-  const limited = consumeRateLimit(req.ip || req.connection.remoteAddress || "unknown");
+  const limited = consumeRateLimit(req.ip || req.connection?.remoteAddress || "unknown");
   if (limited) {
     res.status(429).json(limited);
     return;
