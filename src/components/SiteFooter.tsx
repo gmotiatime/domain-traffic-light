@@ -28,6 +28,10 @@ export function SiteFooter() {
               {item.label}
             </a>
           ))}
+          <div className="mt-2 h-px w-12 bg-foreground/10 md:mr-0 md:ml-auto" />
+          <a href={routeHref("/changelog")} className="transition-all hover:text-foreground hover:translate-x-1 md:hover:-translate-x-1">
+            Changelog
+          </a>
         </div>
       </div>
     </footer>
