@@ -77,7 +77,8 @@ export function ParticleBackground() {
         ctx.fill();
 
         // Draw connections
-        particlesRef.current.slice(i + 1).forEach((otherParticle) => {
+        for (let j = i + 1; j < particlesRef.current.length; j++) {
+          const otherParticle = particlesRef.current[j];
           const dx = particle.x - otherParticle.x;
           const dy = particle.y - otherParticle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
@@ -90,7 +91,7 @@ export function ParticleBackground() {
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
-        });
+        }
       });
 
       animationFrameRef.current = requestAnimationFrame(animate);
