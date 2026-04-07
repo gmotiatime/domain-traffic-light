@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:web\" \"npm:dev:api\"",
     "dev:web": "vite",
-    "dev:api": "node server/openrouter-proxy.mjs",
+    "dev:api": "tsx server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "start": "node server/openrouter-proxy.mjs",
+    "start": "tsx server/index.ts",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts"
   },
   "dependencies": {
@@ -36,6 +36,8 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
+    "@types/dotenv": "^6.1.1",
+    "@types/express": "^5.0.6",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^22.13.4",
     "@types/react": "^18.3.12",
@@ -48,6 +50,7 @@
     "shadcn": "^4.1.2",
     "tailwindcss": "^3.4.16",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
   }

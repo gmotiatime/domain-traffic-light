@@ -1,6 +1,6 @@
-import { cacheStatsResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { healthResponse, standardHeaders } from "../server/index.ts";
 
-export default async function handler(req, res) {
+export default function handler(req: any, res: any) {
   const headers = standardHeaders();
 
   Object.entries(headers).forEach(([key, value]) => {
@@ -17,5 +17,5 @@ export default async function handler(req, res) {
     return;
   }
 
-  res.status(200).json(await cacheStatsResponse());
+  res.status(200).json(healthResponse());
 }

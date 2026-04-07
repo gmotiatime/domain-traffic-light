@@ -1,6 +1,8 @@
-import { standardHeaders, getRawCacheRecordByHost, normalizeInput } from "../server/openrouter-proxy.mjs";
+import { standardHeaders } from "../server/index.ts";
+import { getRawCacheRecordByHost } from "../server/modules/cache.ts";
+import { normalizeInput } from "../server/modules/utils.ts";
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   const headers = standardHeaders();
 
   Object.entries(headers).forEach(([key, value]) => {

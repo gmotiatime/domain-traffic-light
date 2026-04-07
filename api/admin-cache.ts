@@ -1,11 +1,11 @@
+import { standardHeaders } from "../server/index.ts";
 import {
   adminCacheDeleteResponse,
   adminCacheGetResponse,
-  adminCacheUpdateResponse,
-  standardHeaders,
-} from "../server/openrouter-proxy.mjs";
+  adminCacheUpdateResponse
+} from "../server/modules/cache.ts";
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   const headers = standardHeaders();
 
   Object.entries(headers).forEach(([key, value]) => {
