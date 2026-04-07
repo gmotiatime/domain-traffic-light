@@ -30,6 +30,7 @@ import {
 import { useHistory } from "@/lib/history-store";
 import { officialDomains, ruleReference } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
+import { ReportModal } from "@/components/ReportModal";
 
 /* ─── animation presets ─── */
 const fadeUp = {
@@ -224,9 +225,6 @@ export function AnalyzerPage() {
     note: "Проверяем AI backend.",
   });
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportText, setReportText] = useState("");
-  const [reportStatus, setReportStatus] = useState("");
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { history, addHistory } = useHistory();
 
@@ -290,47 +288,6 @@ export function AnalyzerPage() {
     setAiExplanation(null); setThreatIntel(null); setUrlAbuseIntel(null);
     const localResult = analyzeDomainInput(nextInput);
     setBaselineResult(localResult); setResult(localResult); setStatusNote(note);
-  }
-
-  async function handleReportSubmit() {
-    if (!reportText.trim() || !result.host || result.host === "—") {
-      setReportStatus("Введите текст жалобы.");
-      return;
-    }
-
-    setIsSubmittingReport(true);
-    setReportStatus("Отправляем жалобу...");
-
-    try {
-      const response = await fetch(getApiUrl("/api/report"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          host: result.host,
-          verdict: result.verdict,
-          score: result.score,
-          reportText: reportText.trim(),
-        }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Не удалось отправить жалобу.");
-      }
-
-      setReportStatus("Жалоба отправлена! Спасибо за обратную связь.");
-      setTimeout(() => {
-        setShowReportModal(false);
-        setReportText("");
-        setReportStatus("");
-      }, 2000);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Ошибка отправки.";
-      setReportStatus(message);
-    } finally {
-      setIsSubmittingReport(false);
-    }
   }
 
   function runAnalysis(nextInput: string) {
@@ -834,82 +791,15 @@ export function AnalyzerPage() {
       </div>
 
       {/* ══════════ REPORT MODAL ══════════ */}
-      <AnimatePresence>
-        {showReportModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4"
-            onClick={() => setShowReportModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-lg rounded-3xl border border-foreground/10 bg-[#0a0a0a] p-6 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setShowReportModal(false)}
-                className="absolute right-4 top-4 rounded-lg p-2 text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground/80"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10">
-                  <Flag className="h-5 w-5 text-amber-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Пожаловаться на результат</h3>
-                  <p className="text-sm text-foreground/50">Домен: {result.host}</p>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="mb-2 block text-sm text-foreground/60">
-                  Опишите проблему с результатом анализа:
-                </label>
-                <textarea
-                  value={reportText}
-                  onChange={(e) => setReportText(e.target.value)}
-                  placeholder="Например: результат неверный, домен безопасный..."
-                  className="min-h-[120px] w-full rounded-2xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm text-foreground outline-none placeholder:text-foreground/30 focus:border-foreground/20"
-                  disabled={isSubmittingReport}
-                />
-              </div>
-
-              {reportStatus && (
-                <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
-                  reportStatus.includes("отправлена")
-                    ? "border-green-500/20 bg-green-500/10 text-green-400"
-                    : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                }`}>
-                  {reportStatus}
-                </div>
-              )}
-
-              <div className="mt-6 flex gap-3">
-                <Button
-                  onClick={handleReportSubmit}
-                  disabled={isSubmittingReport || !reportText.trim()}
-                  className="flex-1"
-                >
-                  {isSubmittingReport ? "Отправка..." : "Отправить"}
-                </Button>
-                <Button
-                  onClick={() => setShowReportModal(false)}
-                  variant="secondary"
-                  disabled={isSubmittingReport}
-                >
-                  Отмена
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {result && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          host={result.host}
+          verdict={result.verdict}
+          score={result.score}
+        />
+      )}
     </section>
   );
 }
