@@ -33,5 +33,17 @@ describe('site-router', () => {
       assert.strictEqual(normalizeHashRoute('#/unknown'), '/404');
       assert.strictEqual(normalizeHashRoute('random'), '/404');
     });
+
+    it('should handle edge cases like whitespace, casing, query parameters, multiple hashes, and single slashes', () => {
+      // Whitespace
+      assert.strictEqual(normalizeHashRoute(' #/analyzer '), '/analyzer');
+      // Case variations - should be normalized to lowercase
+      assert.strictEqual(normalizeHashRoute('#/ANALYZER'), '/analyzer');
+      assert.strictEqual(normalizeHashRoute(''), '/');
+      assert.strictEqual(normalizeHashRoute(' '), '/');
+      assert.strictEqual(normalizeHashRoute('/'), '/');
+      assert.strictEqual(normalizeHashRoute('##/analyzer'), '/analyzer');
+      assert.strictEqual(normalizeHashRoute('#/analyzer?q=1'), '/analyzer');
+    });
   });
 });
