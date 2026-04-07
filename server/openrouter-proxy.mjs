@@ -3,7 +3,7 @@ import path from "node:path";
 import dns from "node:dns/promises";
 import tls from "node:tls";
 import { fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -444,7 +444,18 @@ function assertAdminAccess(headers = {}) {
   }
 
   const providedToken = getAdminTokenFromHeaders(headers);
-  if (!providedToken || providedToken !== adminToken) {
+
+  if (!providedToken) {
+    return {
+      status: 401,
+      body: { error: "Недостаточно прав." },
+    };
+  }
+
+  const providedBuffer = Buffer.from(providedToken);
+  const adminBuffer = Buffer.from(adminToken);
+
+  if (providedBuffer.length !== adminBuffer.length || !timingSafeEqual(providedBuffer, adminBuffer)) {
     return {
       status: 401,
       body: { error: "Недостаточно прав." },
