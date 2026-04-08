@@ -1,4 +1,5 @@
 import { analyzeResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { analyzeSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
   const headers = standardHeaders();
@@ -33,11 +34,15 @@ export default async function handler(req, res) {
     }
   }
 
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    res.status(400).json({ error: "Invalid JSON payload: expected an object" });
+  const parsedBody = analyzeSchema.safeParse(body);
+  if (!parsedBody.success) {
+    res.status(400).json({
+      error: "Ошибка валидации входных данных",
+      details: parsedBody.error.errors,
+    });
     return;
   }
 
-  const response = await analyzeResponse(body, { ip });
+  const response = await analyzeResponse(parsedBody.data, { ip });
   res.status(response.status).json(response.body);
 }

@@ -1,4 +1,5 @@
 import { standardHeaders, getRawCacheRecordByHost, normalizeInput } from "../server/openrouter-proxy.mjs";
+import { lookupSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
   const headers = standardHeaders();
@@ -17,13 +18,16 @@ export default async function handler(req, res) {
     return;
   }
 
-  const url = String(req.query?.url || req.query?.link || "").trim();
-
-  if (!url) {
-    res.status(400).json({ error: "Параметр url или link обязателен." });
+  const parsedQuery = lookupSchema.safeParse(req.query || {});
+  if (!parsedQuery.success) {
+    res.status(400).json({
+      error: "Ошибка валидации входных данных",
+      details: parsedQuery.error.errors,
+    });
     return;
   }
 
+  const url = String(parsedQuery.data.url || parsedQuery.data.link || "").trim();
   const normalized = normalizeInput(url);
   if ("error" in normalized) {
     res.status(400).json({ error: normalized.error });
