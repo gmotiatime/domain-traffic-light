@@ -38,13 +38,13 @@ function GlassCard({
       viewport={{ once: true, amount: 0.1 }}
     >
       <BorderGlow
-        className={`w-full h-full rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-colors hover:bg-foreground/[0.04] flex flex-col ${className}`}
+        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
         borderRadius={32}
         glowRadius={30}
         fillOpacity={0}
-        backgroundColor="transparent"
+        backgroundColor="#000000"
       >
-        <div className="flex-1 flex flex-col h-full" style={glow ? { background: glow } : undefined}>
+        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
           {children}
         </div>
       </BorderGlow>
