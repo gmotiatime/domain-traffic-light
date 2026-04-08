@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import dns from "node:dns/promises";
 import tls from "node:tls";
+import net from "node:net";
 import { fileURLToPath } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
 
@@ -232,6 +233,7 @@ function buildCacheRecord(key, data, existingRecord = null) {
       threat: data?.threatIntel || null,
       urlAbuse: data?.urlAbuseIntel || null,
       network: data?.networkSignals || null,
+      whois: data?.whoisSignals || null,
       ai: {
         model: data?.model || null,
         source: data?.source || null,
@@ -1311,6 +1313,63 @@ async function lookupHttpSignals(normalized) {
   }
 }
 
+function whoisQuery(domain, server = "whois.iana.org") {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    const socket = net.createConnection(43, server, () => {
+      socket.write(domain + "\r\n");
+    });
+    socket.setTimeout(3000);
+    socket.on("data", (chunk) => {
+      data += chunk;
+    });
+    socket.on("end", () => resolve(data));
+    socket.on("error", reject);
+    socket.on("timeout", () => {
+      socket.destroy();
+      reject(new Error("WHOIS timeout"));
+    });
+  });
+}
+
+async function lookupWhoisSignals(host) {
+  try {
+    const rootData = await whoisQuery(host);
+    const match = rootData.match(/whois:\s*([^\s]+)/i);
+    let data = rootData;
+    if (match) {
+      data = await whoisQuery(host, match[1]);
+    }
+    const creationMatch = data.match(
+      /(?:Creation Date|Created|Registration Date|Registered on|created:)[^\d]*(\d{4}[-./]\d{2}[-./]\d{2}(?:T\d{2}:\d{2}:\d{2}Z)?)/i
+    );
+    if (creationMatch) {
+      const creationDate = new Date(creationMatch[1]);
+      const ageDays = Math.floor((Date.now() - creationDate.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        available: true,
+        creationDate: creationMatch[1],
+        ageDays: ageDays,
+        note: `Домен зарегистрирован ${ageDays} дней назад (${creationMatch[1]}).`,
+      };
+    }
+    return {
+      available: false,
+      creationDate: null,
+      ageDays: null,
+      note: "Дата регистрации не найдена в WHOIS.",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? sanitizeString(error.message, 120) : "WHOIS query failed.";
+    return {
+      available: false,
+      creationDate: null,
+      ageDays: null,
+      note: `WHOIS недоступен: ${message}`,
+    };
+  }
+}
+
 function lookupTlsSignals(host) {
   return new Promise((resolve) => {
     let settled = false;
@@ -1512,6 +1571,63 @@ function applyUrlAbuseToAnalysis(localAnalysis, urlAbuseIntel, normalized) {
     ]
       .filter((value, index, array) => array.indexOf(value) === index)
       .slice(0, 5),
+  };
+}
+
+function applyWhoisToAnalysis(localAnalysis, whoisSignals, normalized) {
+  if (!localAnalysis || !whoisSignals || !normalized) {
+    return localAnalysis;
+  }
+
+  const baseReasons = Array.isArray(localAnalysis.reasons) ? [...localAnalysis.reasons] : [];
+  let score = Number.isFinite(Number(localAnalysis.score)) ? Number(localAnalysis.score) : 0;
+  let changed = false;
+
+  if (whoisSignals.available && typeof whoisSignals.ageDays === "number") {
+    if (whoisSignals.ageDays < 7) {
+      baseReasons.push({
+        title: "Свежий домен",
+        detail: `Домен ${normalized.host} зарегистрирован всего ${whoisSignals.ageDays} дней назад. Это крайне подозрительно для легитимных сайтов.`,
+        scoreDelta: 25,
+        tone: "critical",
+      });
+      score += 25;
+      changed = true;
+    } else if (whoisSignals.ageDays < 30) {
+      baseReasons.push({
+        title: "Новый домен",
+        detail: `Домен ${normalized.host} зарегистрирован недавно (${whoisSignals.ageDays} дней назад). Требуется повышенная осторожность.`,
+        scoreDelta: 15,
+        tone: "warning",
+      });
+      score += 15;
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return localAnalysis;
+  }
+
+  const normalizedScore = Math.max(0, Math.min(100, score));
+  let verdict = localAnalysis.verdict || "low";
+  if (normalizedScore >= 42 && verdict !== "high") {
+    verdict = "high";
+  } else if (normalizedScore >= 12 && verdict === "low") {
+    verdict = "medium";
+  }
+
+  return {
+    ...localAnalysis,
+    host: normalized.host,
+    breakdown: buildBreakdown(normalized.host),
+    analyzedAt: new Date().toISOString(),
+    score: normalizedScore,
+    verdict,
+    verdictLabel: verdict === "high" ? "Высокий риск" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+    summary: localAnalysis.summary,
+    reasons: sortReasons(baseReasons).slice(0, 10),
+    actions: localAnalysis.actions,
   };
 }
 
@@ -2413,12 +2529,16 @@ function buildPrompt(
   normalized,
   localAnalysis,
   networkSignals,
+  whoisSignals,
   threatIntel,
   urlAbuseIntel,
 ) {
   const localReasons = buildLocalSignalSummary(localAnalysis);
   const networkSummary = buildNetworkSignalSummary(networkSignals);
   const threatIntelSummary = buildThreatIntelSummary(threatIntel, urlAbuseIntel);
+  const whoisSummary = whoisSignals?.available && whoisSignals.ageDays !== null
+    ? `whois_age_days: ${whoisSignals.ageDays}`
+    : "whois: unavailable";
   const breakdown = buildBreakdown(normalized.host);
 
   return `## КОНТЕКСТ
@@ -2443,10 +2563,12 @@ ${localReasons}
 ## THREAT FEEDS
 ${threatIntelSummary}
 
-## СЕТЕВЫЕ СИГНАЛЫ (DNS / HTTP / TLS)
+## СЕТЕВЫЕ СИГНАЛЫ (DNS / HTTP / TLS / WHOIS)
 ${networkSummary}
+${whoisSummary}
 
-## ИНСТРУКЦИИ ПО АНАЛИЗУ СЕТЕВЫХ СИГНАЛОВ
+## ИНСТРУКЦИИ ПО АНАЛИЗУ СЕТЕВЫХ СИГНАЛОВ И WHOIS
+- Если whois_age_days < 30 → домен зарегистрирован недавно, это подозрительно (warning). Если < 7 дней — это очень свежий домен (critical).
 - Если dns_resolved=no → домен не резолвится, это серьёзный warning (может быть новый/свежий фишинг или мёртвый домен).
 - Если http redirect ведёт на ДРУГОЙ registrable domain → это critical: redirect-маскировка.
 - Если apex-домен просто ведёт на \`www\` того же registrable domain — это НОРМАЛЬНО и не должно считаться риском.
@@ -2883,7 +3005,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   log("info", "Analyze request", { host: normalized.host });
 
-  const [threatIntel, urlAbuseIntel, networkSignals] = await Promise.all([
+  const [threatIntel, urlAbuseIntel, networkSignals, whoisSignals] = await Promise.all([
     lookupThreatIntel(normalized).catch((error) => {
       const message =
         error instanceof Error ? sanitizeString(error.message, 120) : "Threat intel failed.";
@@ -2947,6 +3069,19 @@ export async function analyzeResponse(body = {}, meta = {}) {
         },
       };
     }),
+    lookupWhoisSignals(normalized.host).catch((error) => {
+      const message = error instanceof Error ? sanitizeString(error.message, 120) : "WHOIS lookup failed.";
+      log("warn", "WHOIS lookup failed", {
+        host: normalized.host,
+        error: message,
+      });
+      return {
+        available: false,
+        creationDate: null,
+        ageDays: null,
+        note: `WHOIS недоступен: ${message}`,
+      };
+    }),
   ]);
 
   // Применяем сетевые сигналы как дополнительные reasons
@@ -2956,8 +3091,14 @@ export async function analyzeResponse(body = {}, meta = {}) {
     normalized,
   );
 
-  const threatEnrichedAnalysis = applyThreatIntelToAnalysis(
+  const whoisEnrichedAnalysis = applyWhoisToAnalysis(
     networkEnrichedAnalysis,
+    whoisSignals,
+    normalized
+  );
+
+  const threatEnrichedAnalysis = applyThreatIntelToAnalysis(
+    whoisEnrichedAnalysis,
     threatIntel,
     normalized,
   );
@@ -2976,6 +3117,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         threatIntel,
         urlAbuseIntel,
         networkSignals,
+        whoisSignals,
         enrichedLocalResult: enrichedLocalAnalysis,
       },
     };
@@ -2996,6 +3138,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
     normalized,
     enrichedLocalAnalysis,
     networkSignals,
+    whoisSignals,
     threatIntel,
     urlAbuseIntel,
   );
@@ -3023,6 +3166,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         threatIntel,
         urlAbuseIntel,
         networkSignals,
+        whoisSignals,
         enrichedLocalResult: enrichedLocalAnalysis,
         latencyMs: Date.now() - startTime,
       };
@@ -3061,6 +3205,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         threatIntel,
         urlAbuseIntel,
         networkSignals,
+        whoisSignals,
         enrichedLocalResult: enrichedLocalAnalysis,
       },
     };
