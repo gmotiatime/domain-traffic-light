@@ -1,9 +1,10 @@
 import { useState } from "react";
 
 import { motion } from "framer-motion";
-import { Menu, Shield, X } from "lucide-react";
+import { Menu, Moon, Shield, Sun, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/useTheme";
 import { navItems } from "@/lib/site-content";
 import { routeHref, type SitePath } from "@/lib/site-router";
 
@@ -22,6 +23,7 @@ function navLinkClass(active: boolean) {
 
 export function SiteHeader({ activePath }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -71,6 +73,14 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
             </nav>
 
             <div className="hidden lg:flex lg:items-center lg:gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-foreground transition-colors hover:bg-white/10"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 text-white/70" /> : <Moon className="h-4 w-4 text-white/70" />}
+              </button>
               <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-bold tracking-tight transition-all duration-300 hover:bg-white hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]">
                 <a href={routeHref("/analyzer")}>
                   Открыть анализатор
@@ -78,15 +88,25 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
               </Button>
             </div>
 
-            <button
-              aria-expanded={isMenuOpen}
-              aria-label={isMenuOpen ? "Закрыть меню" : "Открыть меню"}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-foreground transition-colors hover:bg-white/10 lg:hidden"
-              onClick={() => setIsMenuOpen((value) => !value)}
-              type="button"
-            >
-              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
+            <div className="flex items-center gap-2 lg:hidden">
+              <button
+                type="button"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-foreground transition-colors hover:bg-white/10"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 text-white/70" /> : <Moon className="h-4 w-4 text-white/70" />}
+              </button>
+              <button
+                aria-expanded={isMenuOpen}
+                aria-label={isMenuOpen ? "Закрыть меню" : "Открыть меню"}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-foreground transition-colors hover:bg-white/10"
+                onClick={() => setIsMenuOpen((value) => !value)}
+                type="button"
+              >
+                {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {isMenuOpen ? (
