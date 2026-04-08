@@ -102,7 +102,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative transition-all duration-300 hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${containerClassName}`}
+      className={`group relative transition-all duration-300 hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${containerClassName}`}
       variants={fadeUp}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -4, scale: 1.005 }}
