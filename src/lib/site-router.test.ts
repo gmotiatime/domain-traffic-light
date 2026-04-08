@@ -1,49 +1,48 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect } from "vitest";
 import { routeHref, normalizeHashRoute } from './site-router.ts';
 
 describe('site-router', () => {
   describe('routeHref', () => {
     it('should prefix path with #', () => {
       // @ts-ignore
-      assert.strictEqual(routeHref('/analyzer'), '#/analyzer');
+      expect(routeHref('/analyzer')).toBe('#/analyzer');
       // @ts-ignore
-      assert.strictEqual(routeHref('/'), '#/');
+      expect(routeHref('/')).toBe('#/');
     });
   });
 
   describe('normalizeHashRoute', () => {
     it('should normalize standard hash routes', () => {
-      assert.strictEqual(normalizeHashRoute('#/analyzer'), '/analyzer');
-      assert.strictEqual(normalizeHashRoute('#/method'), '/method');
+      expect(normalizeHashRoute('#/analyzer')).toBe('/analyzer');
+      expect(normalizeHashRoute('#/method')).toBe('/method');
     });
 
     it('should handle routes without hash prefix', () => {
-      assert.strictEqual(normalizeHashRoute('/safety'), '/safety');
-      assert.strictEqual(normalizeHashRoute('/admin'), '/admin');
+      expect(normalizeHashRoute('/safety')).toBe('/safety');
+      expect(normalizeHashRoute('/admin')).toBe('/admin');
     });
 
     it('should handle root routes', () => {
-      assert.strictEqual(normalizeHashRoute('#'), '/');
-      assert.strictEqual(normalizeHashRoute('#/'), '/');
-      assert.strictEqual(normalizeHashRoute(''), '/');
+      expect(normalizeHashRoute('#')).toBe('/');
+      expect(normalizeHashRoute('#/')).toBe('/');
+      expect(normalizeHashRoute('')).toBe('/');
     });
 
     it('should fallback to /404 for unknown routes', () => {
-      assert.strictEqual(normalizeHashRoute('#/unknown'), '/404');
-      assert.strictEqual(normalizeHashRoute('random'), '/404');
+      expect(normalizeHashRoute('#/unknown')).toBe('/404');
+      expect(normalizeHashRoute('random')).toBe('/404');
     });
 
     it('should handle edge cases like whitespace, casing, query parameters, multiple hashes, and single slashes', () => {
       // Whitespace
-      assert.strictEqual(normalizeHashRoute(' #/analyzer '), '/analyzer');
+      expect(normalizeHashRoute(' #/analyzer ')).toBe('/analyzer');
       // Case variations - should be normalized to lowercase
-      assert.strictEqual(normalizeHashRoute('#/ANALYZER'), '/analyzer');
-      assert.strictEqual(normalizeHashRoute(''), '/');
-      assert.strictEqual(normalizeHashRoute(' '), '/');
-      assert.strictEqual(normalizeHashRoute('/'), '/');
-      assert.strictEqual(normalizeHashRoute('##/analyzer'), '/analyzer');
-      assert.strictEqual(normalizeHashRoute('#/analyzer?q=1'), '/analyzer');
+      expect(normalizeHashRoute('#/ANALYZER')).toBe('/analyzer');
+      expect(normalizeHashRoute('')).toBe('/');
+      expect(normalizeHashRoute(' ')).toBe('/');
+      expect(normalizeHashRoute('/')).toBe('/');
+      expect(normalizeHashRoute('##/analyzer')).toBe('/analyzer');
+      expect(normalizeHashRoute('#/analyzer?q=1')).toBe('/analyzer');
     });
   });
 });

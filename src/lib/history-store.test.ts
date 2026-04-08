@@ -1,5 +1,4 @@
-import { test, describe, beforeEach, afterEach } from "node:test";
-import assert from "node:assert";
+import { test, describe, beforeEach, afterEach, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { JSDOM } from "jsdom";
 
@@ -40,7 +39,7 @@ describe("useHistory", () => {
 
     // Should not throw, should fall back to empty array
     const { result } = renderHook(() => useHistory());
-    assert.strictEqual(result.current.history.length, 0);
+    expect(result.current.history.length).toBe(0);
   });
 
   test("handles localStorage.setItem error on addHistory", () => {
@@ -62,9 +61,9 @@ describe("useHistory", () => {
       result.current.addHistory("example.com", "high");
     });
 
-    assert.strictEqual(result.current.history.length, 1);
-    assert.strictEqual(result.current.history[0].domain, "example.com");
-    assert.strictEqual(result.current.history[0].verdict, "high");
+    expect(result.current.history.length).toBe(1);
+    expect(result.current.history[0].domain).toBe("example.com");
+    expect(result.current.history[0].verdict).toBe("high");
   });
 
   test("loads from and saves to localStorage successfully", () => {
@@ -86,8 +85,8 @@ describe("useHistory", () => {
     const { result } = renderHook(() => useHistory());
 
     // Check it loaded correctly
-    assert.strictEqual(result.current.history.length, 1);
-    assert.strictEqual(result.current.history[0].domain, "existing.com");
+    expect(result.current.history.length).toBe(1);
+    expect(result.current.history[0].domain).toBe("existing.com");
 
     // Add a new item
     act(() => {
@@ -95,13 +94,13 @@ describe("useHistory", () => {
     });
 
     // Check memory state
-    assert.strictEqual(result.current.history.length, 2);
-    assert.strictEqual(result.current.history[0].domain, "new-domain.com");
-    assert.strictEqual(result.current.history[1].domain, "existing.com");
+    expect(result.current.history.length).toBe(2);
+    expect(result.current.history[0].domain).toBe("new-domain.com");
+    expect(result.current.history[1].domain).toBe("existing.com");
 
     // Check localStorage state
     const saved = JSON.parse(storedData);
-    assert.strictEqual(saved.length, 2);
-    assert.strictEqual(saved[0].domain, "new-domain.com");
+    expect(saved.length).toBe(2);
+    expect(saved[0].domain).toBe("new-domain.com");
   });
 });
