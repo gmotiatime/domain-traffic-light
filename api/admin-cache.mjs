@@ -4,6 +4,7 @@ import {
   adminCacheUpdateResponse,
   standardHeaders,
 } from "../server/openrouter-proxy.mjs";
+import { adminCacheGetSchema, adminCachePatchSchema, adminCacheDeleteSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
   const headers = standardHeaders();
@@ -18,7 +19,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const response = await adminCacheGetResponse(req.query || {}, req.headers || {});
+    const parsedQuery = adminCacheGetSchema.safeParse(req.query || {});
+    if (!parsedQuery.success) {
+      res.status(400).json({
+        error: "Ошибка валидации входных данных",
+        details: parsedQuery.error.errors,
+      });
+      return;
+    }
+    const response = await adminCacheGetResponse(parsedQuery.data, req.headers || {});
     res.status(response.status).json(response.body);
     return;
   }
@@ -34,18 +43,30 @@ export default async function handler(req, res) {
       }
     }
 
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      res.status(400).json({ error: "Invalid JSON payload: expected an object" });
+    const parsedBody = adminCachePatchSchema.safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        error: "Ошибка валидации входных данных",
+        details: parsedBody.error.errors,
+      });
       return;
     }
 
-    const response = await adminCacheUpdateResponse(body, req.headers || {});
+    const response = await adminCacheUpdateResponse(parsedBody.data, req.headers || {});
     res.status(response.status).json(response.body);
     return;
   }
 
   if (req.method === "DELETE") {
-    const response = await adminCacheDeleteResponse(req.query || {}, req.headers || {});
+    const parsedQuery = adminCacheDeleteSchema.safeParse(req.query || {});
+    if (!parsedQuery.success) {
+      res.status(400).json({
+        error: "Ошибка валидации входных данных",
+        details: parsedQuery.error.errors,
+      });
+      return;
+    }
+    const response = await adminCacheDeleteResponse(parsedQuery.data, req.headers || {});
     res.status(response.status).json(response.body);
     return;
   }

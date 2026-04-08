@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { createHash } from "crypto";
+import { reportPostSchema, reportDeleteSchema } from "./schemas.mjs";
 
 function normalizeHost(host) {
   let normalized = String(host || "").toLowerCase().trim();
@@ -87,13 +88,16 @@ export default async function handler(req, res) {
     // DELETE METHOD
     // ═══════════════════════════════════════════════════════════════════════════
     if (req.method === "DELETE") {
-      const host = String(req.query?.host || "").trim();
-      const reportId = String(req.query?.reportId || "").trim();
-
-      if (!host || !reportId) {
-        res.status(400).json({ error: "Параметры host и reportId обязательны." });
+      const parsedQuery = reportDeleteSchema.safeParse(req.query || {});
+      if (!parsedQuery.success) {
+        res.status(400).json({
+          error: "Ошибка валидации входных данных",
+          details: parsedQuery.error.errors,
+        });
         return;
       }
+
+      const { host, reportId } = parsedQuery.data;
 
       const normalized = normalizeHost(host);
       const data = await getRecordAndKey(normalized);
@@ -154,13 +158,17 @@ export default async function handler(req, res) {
       res.status(400).json({ error: "Неверный формат JSON в теле запроса." });
       return;
     }
-    
-    const { host, verdict, score, reportText } = body;
 
-    if (!host || !reportText) {
-      res.status(400).json({ error: "Поля host и reportText обязательны." });
+    const parsedBody = reportPostSchema.safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        error: "Ошибка валидации входных данных",
+        details: parsedBody.error.errors,
+      });
       return;
     }
+
+    const { host, verdict, score, reportText } = parsedBody.data;
 
     const normalized = normalizeHost(host);
     const data = await getRecordAndKey(normalized);
