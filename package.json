@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "start": "node server/openrouter-proxy.mjs",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts"
+    "test": "vitest run src/lib/domain-analyzer.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.1",
@@ -50,6 +50,7 @@
     "tailwindcss": "^3.4.16",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.2",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^4.1.3"
   }
 }
