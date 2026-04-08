@@ -315,7 +315,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Защита от фишинга"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/shield-protection.svg?v=4"
                 />
               </div>
@@ -334,7 +334,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Сканирование базы данных"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/database-scan.svg?v=4"
                 />
               </div>
@@ -353,7 +353,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="AI анализ"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/ai-analysis.svg?v=4"
                 />
               </div>
@@ -461,13 +461,13 @@ export function HomePage() {
                   </div>
                   <div className="px-8 pb-8 pt-4">
                     {index === 0 && (
-                      <img alt="Быстрый старт" className="h-48 w-full object-contain mix-blend-screen" src="/speed-fast.svg?v=4" />
+                      <img alt="Быстрый старт" className="h-48 w-full object-contain theme-svg-blend" src="/speed-fast.svg?v=4" />
                     )}
                     {index === 1 && (
-                      <img alt="Объяснимый результат" className="h-48 w-full object-contain mix-blend-screen" src="/verified-check.svg?v=4" />
+                      <img alt="Объяснимый результат" className="h-48 w-full object-contain theme-svg-blend" src="/verified-check.svg?v=4" />
                     )}
                     {index === 2 && (
-                      <img alt="Безопасная публикация" className="h-48 w-full object-contain mix-blend-screen" src="/global-network.svg?v=4" />
+                      <img alt="Безопасная публикация" className="h-48 w-full object-contain theme-svg-blend" src="/global-network.svg?v=4" />
                     )}
                   </div>
                 </GlassCard>

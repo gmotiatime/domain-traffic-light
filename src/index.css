@@ -151,6 +151,13 @@
 }
 
 @layer utilities {
+  .theme-svg-blend {
+    mix-blend-mode: screen;
+  }
+  .white-theme .theme-svg-blend {
+    mix-blend-mode: multiply;
+  }
+
   /* Specific fix for liquid-glass effect in light mode to make it visible */
   .white-theme .liquid-glass {
     background: hsl(var(--color-black)/0.03);
