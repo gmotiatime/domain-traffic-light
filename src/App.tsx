@@ -7,6 +7,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { normalizeHashRoute, routeHref, type SitePath } from "@/lib/site-router";
 import { AdminPage } from "@/pages/AdminPage";
 import { AnalyzerPage } from "@/pages/AnalyzerPage";
+import { BrandKitPage } from "@/pages/BrandKitPage";
+import { ChangelogPage } from "@/pages/ChangelogPage";
 import { HomePage } from "@/pages/HomePage";
 import { MethodPage } from "@/pages/MethodPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
@@ -18,7 +20,7 @@ function readRoute(): SitePath | "404" {
   }
 
   const hash = window.location.hash.replace(/^#/, "") || "/";
-  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin"];
+  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog"];
   if (sitePaths.includes(hash)) {
     return hash as SitePath;
   }
@@ -31,6 +33,8 @@ const routeTitles: Record<SitePath | "404", string> = {
   "/method": "Методика | Доменный светофор",
   "/safety": "Безопасность | Доменный светофор",
   "/admin": "Админка кэша | Доменный светофор",
+  "/brand": "Бренд-кит | Доменный светофор",
+  "/changelog": "Что нового | Доменный светофор",
   "404": "Красный свет | Тупик",
   "/404": "Красный свет | Тупик",
 };
@@ -45,6 +49,10 @@ function renderPage(path: SitePath | "404") {
       return <SafetyPage />;
     case "/admin":
       return <AdminPage />;
+    case "/brand":
+      return <BrandKitPage />;
+    case "/changelog":
+      return <ChangelogPage />;
     case "404":
       return <NotFoundPage />;
     case "/":

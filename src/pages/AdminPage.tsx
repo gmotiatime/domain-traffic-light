@@ -94,6 +94,7 @@ export function AdminPage() {
   const [recent, setRecent] = useState<AdminCacheEntry[]>([]);
   const [allRecent, setAllRecent] = useState<AdminCacheEntry[]>([]);
   const [verdictFilter, setVerdictFilter] = useState<"all" | "low" | "medium" | "high">("all");
+  const [sortOrder, setSortOrder] = useState<"date" | "score">("date");
   const [stats, setStats] = useState<CacheStats | null>(null);
   const [status, setStatus] = useState("Введите пароль администратора.");
   const [isLoading, setIsLoading] = useState(false);
@@ -119,12 +120,21 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (verdictFilter === "all") {
-      setRecent(allRecent);
-    } else {
-      setRecent(allRecent.filter(item => item.preview?.verdict === verdictFilter));
+    let filtered = allRecent;
+    if (verdictFilter !== "all") {
+      filtered = allRecent.filter((item) => item.preview?.verdict === verdictFilter);
     }
-  }, [verdictFilter, allRecent]);
+
+    // Create a copy to sort
+    const sorted = [...filtered];
+    if (sortOrder === "date") {
+      sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } else if (sortOrder === "score") {
+      sorted.sort((a, b) => (b.preview?.score || 0) - (a.preview?.score || 0));
+    }
+
+    setRecent(sorted);
+  }, [verdictFilter, sortOrder, allRecent]);
 
   const authHeaders = useMemo(
     () => ({
@@ -512,8 +522,32 @@ export function AdminPage() {
                 Последние записи
               </div>
               
-              {/* Фильтр по вердиктам */}
+              {/* Сортировка */}
               <div className="mb-3 flex gap-2">
+                <button
+                  onClick={() => setSortOrder("date")}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    sortOrder === "date"
+                      ? "bg-white/10 text-white"
+                      : "bg-white/[0.02] text-white/50 hover:bg-white/[0.05]"
+                  }`}
+                >
+                  По дате
+                </button>
+                <button
+                  onClick={() => setSortOrder("score")}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    sortOrder === "score"
+                      ? "bg-white/10 text-white"
+                      : "bg-white/[0.02] text-white/50 hover:bg-white/[0.05]"
+                  }`}
+                >
+                  По скору
+                </button>
+              </div>
+
+              {/* Фильтр по вердиктам */}
+              <div className="mb-4 flex gap-2">
                 <button
                   onClick={() => setVerdictFilter("all")}
                   className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
