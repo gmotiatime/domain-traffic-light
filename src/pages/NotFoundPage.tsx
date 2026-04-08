@@ -48,7 +48,7 @@ export function NotFoundPage() {
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mt-10 flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
-          <Button asChild className="h-12 w-full sm:w-auto rounded-xl bg-white text-black px-8 text-base font-semibold shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:bg-white/90 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-95 group">
+          <Button asChild className="h-12 w-full sm:w-auto rounded-xl bg-white text-black px-8 text-base font-semibold shadow-[0_0_20px_hsl(var(--color-white)/0.1)] transition-all hover:bg-white/90 hover:shadow-[0_0_30px_hsl(var(--color-white)/0.2)] hover:scale-[1.02] active:scale-95 group">
             <a href={routeHref("/")}>
               <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
               Вернуться на главную

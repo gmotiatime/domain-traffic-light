@@ -221,7 +221,7 @@ export function HomePage() {
                 </motion.span>
               </span>
               <br />
-              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(var(--color-white)/0.2)]">
                 до ввода данных
               </span>
             </motion.h1>
@@ -234,7 +234,7 @@ export function HomePage() {
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
               <form
-                className="relative flex flex-col items-center gap-3 sm:flex-row sm:gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all duration-300 hover:bg-foreground/[0.05] focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_rgba(255,255,255,0.07)]"
+                className="relative flex flex-col items-center gap-3 sm:flex-row sm:gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all duration-300 hover:bg-foreground/[0.05] focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_hsl(var(--color-white)/0.07)]"
                 onSubmit={(event) => {
                   event.preventDefault();
                   openAnalyzerWithInput(heroInput);
@@ -257,13 +257,13 @@ export function HomePage() {
                     </AnimatePresence>
                     <input
                       id="domain-input"
-                      className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+                      className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_hsl(var(--color-white)/0.15)]"
                       onChange={(event) => setHeroInput(event.target.value)}
                       value={heroInput}
                     />
                   </div>
                 </div>
-                <Button className="h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95" type="submit">
+                <Button className="h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_hsl(var(--color-white)/0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_hsl(var(--color-white)/0.3)] hover:scale-[1.02] active:scale-95" type="submit">
                   Анализ
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -391,7 +391,7 @@ export function HomePage() {
                       
                       <div className="flex-1 p-8 relative z-10 lg:min-h-[220px]">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-xs font-bold text-foreground shadow-[0_0_15px_rgba(255,255,255,0.08)]">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-xs font-bold text-foreground shadow-[0_0_15px_hsl(var(--color-white)/0.08)]">
                             {i + 1}
                           </span>
                           <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">{item.step}</p>
@@ -549,13 +549,13 @@ export function HomePage() {
       {/* ══════════ CTA SECTION ══════════ */}
       <section className="relative w-full bg-background py-16 pb-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <GlassCard className="flex flex-col items-center justify-center p-12 text-center sm:p-20" glow="radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.05) 0%, transparent 70%)">
+          <GlassCard className="flex flex-col items-center justify-center p-12 text-center sm:p-20" glow="radial-gradient(ellipse at 50% 100%, hsl(var(--color-white)/0.05) 0%, transparent 70%)">
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Готовы проверить ссылку?</h2>
             <p className="mt-5 max-w-xl text-lg text-foreground/50">
               Вставьте любой подозрительный домен и посмотрите, как работает алгоритм в реальном времени.
             </p>
             <Button 
-              className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-95"
+              className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_hsl(var(--color-white)/0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_hsl(var(--color-white)/0.3)] hover:scale-[1.05] active:scale-95"
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
                 document.getElementById('domain-input')?.focus();

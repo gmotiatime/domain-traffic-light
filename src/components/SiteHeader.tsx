@@ -63,7 +63,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                     {active && (
                       <motion.div
                         layoutId="active-nav-indicator"
-                        className="absolute inset-x-2 -bottom-1 h-0.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                        className="absolute inset-x-2 -bottom-1 h-0.5 rounded-full bg-white shadow-[0_0_10px_hsl(var(--color-white)/0.8)]"
                         transition={{ type: "spring", stiffness: 450, damping: 30 }}
                       />
                     )}
@@ -81,7 +81,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
               >
                 {theme === "dark" ? <Sun className="h-4 w-4 text-white/70" /> : <Moon className="h-4 w-4 text-white/70" />}
               </button>
-              <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-bold tracking-tight transition-all duration-300 hover:bg-white hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]">
+              <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-bold tracking-tight transition-all duration-300 hover:bg-white hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_hsl(var(--color-white)/0.15)] hover:shadow-[0_0_25px_hsl(var(--color-white)/0.3)]">
                 <a href={routeHref("/analyzer")}>
                   Открыть анализатор
                 </a>
@@ -132,7 +132,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                 })}
               </nav>
               <div className="mt-3">
-                <Button asChild className="w-full rounded-xl bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.15)]">
+                <Button asChild className="w-full rounded-xl bg-white text-black font-bold shadow-[0_0_15px_hsl(var(--color-white)/0.15)]">
                   <a href={routeHref("/analyzer")} onClick={() => setIsMenuOpen(false)}>
                     Открыть анализатор
                   </a>

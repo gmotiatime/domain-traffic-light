@@ -97,7 +97,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_hsl(var(--color-white)/0.03)] hover:border-foreground/[0.1] ${className}`}
       variants={fadeUp}
       whileHover={{ y: -4, scale: 1.005 }}
       style={glow ? { background: glow } : undefined}
@@ -415,7 +415,7 @@ export function AnalyzerPage() {
             <h1 className="mx-auto mt-8 max-w-3xl text-5xl font-bold leading-[1.1] tracking-[-0.04em] sm:text-6xl md:text-7xl">
               Проверьте домен
               <br />
-              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(var(--color-white)/0.2)]">
                 за секунды.
               </span>
             </h1>
@@ -433,12 +433,12 @@ export function AnalyzerPage() {
             className="mx-auto mt-10 max-w-2xl"
             onSubmit={(e) => { e.preventDefault(); runAnalysis(draft); }}
           >
-            <div className="relative flex items-center gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_rgba(255,255,255,0.07)] hover:bg-foreground/[0.05]">
+            <div className="relative flex items-center gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_hsl(var(--color-white)/0.07)] hover:bg-foreground/[0.05]">
               <div className="flex flex-1 items-center gap-3 px-4 z-20">
                 <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
                 <input
                   ref={inputRef}
-                  className="w-full bg-transparent py-3.5 text-xl font-medium text-foreground outline-none placeholder:text-foreground/30 placeholder:font-normal transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+                  className="w-full bg-transparent py-3.5 text-xl font-medium text-foreground outline-none placeholder:text-foreground/30 placeholder:font-normal transition-shadow focus:drop-shadow-[0_0_15px_hsl(var(--color-white)/0.15)]"
                   id="domain-input"
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Домен или ссылка..."
@@ -448,7 +448,7 @@ export function AnalyzerPage() {
               </div>
               
               <Button
-                className="h-14 shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95"
+                className="h-14 shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_hsl(var(--color-white)/0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_hsl(var(--color-white)/0.3)] hover:scale-[1.02] active:scale-95"
                 type="submit"
               >
                 Анализ

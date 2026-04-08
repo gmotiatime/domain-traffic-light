@@ -71,7 +71,7 @@ export function ChangelogPage() {
             return (
               <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                 {/* Timeline Marker */}
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full border ${release.borderColor} ${release.bgColor} shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-[0_0_15px_rgba(0,0,0,0.2)] z-10 relative`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full border ${release.borderColor} ${release.bgColor} shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-[0_0_15px_hsl(var(--color-black)/0.2)] z-10 relative`}>
                   <Icon className={`w-5 h-5 ${release.color}`} />
                 </div>
 
