@@ -102,19 +102,22 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
+      className={`relative transition-all duration-300 hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${containerClassName}`}
       variants={fadeUp}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -4, scale: 1.005 }}
     >
       <BorderGlow
-        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
+        className={`w-full h-full rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-colors hover:bg-foreground/[0.04] flex flex-col ${className}`}
         borderRadius={32}
         glowRadius={30}
         fillOpacity={0}
-        backgroundColor="#000000"
+        backgroundColor="transparent"
       >
-        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
+        {/* top edge highlight */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50 transition-opacity duration-300 group-hover:opacity-100 z-10" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100 z-10" />
+        <div className="flex-1 flex flex-col h-full" style={glow ? { background: glow } : undefined}>
           {children}
         </div>
       </BorderGlow>
@@ -526,13 +529,13 @@ export function AnalyzerPage() {
 
         {/* ══════════ RESULTS BENTO GRID ══════════ */}
         <motion.div
-          className="mt-14 grid gap-4 lg:grid-cols-12"
+          className="mt-14 grid gap-4 lg:grid-cols-12 items-stretch"
           initial="initial"
           animate="animate"
           variants={stagger}
         >
           {/* ── Verdict card (main, large) ── */}
-          <GlassCard containerClassName="lg:col-span-7 flex flex-col" className="p-8 flex-1" glow={cfg.bgGlow}>
+          <GlassCard containerClassName="lg:col-span-7 flex flex-col h-full" className="p-8 flex-1 h-full" glow={cfg.bgGlow}>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.15em] ${cfg.pillBg}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} />
@@ -632,7 +635,7 @@ export function AnalyzerPage() {
           </GlassCard>
 
           {/* ── Side column ── */}
-          <div className="flex flex-col gap-4 lg:col-span-5">
+          <div className="flex flex-col gap-4 lg:col-span-5 h-full">
             {/* Primary action */}
             <GlassCard containerClassName="flex flex-col" className="p-6">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
@@ -645,7 +648,7 @@ export function AnalyzerPage() {
             </GlassCard>
 
             {/* Quick actions */}
-            <GlassCard containerClassName="flex-1 flex flex-col" className="p-5 flex-1">
+            <GlassCard containerClassName="flex-1 flex flex-col h-full" className="p-5 flex-1 h-full">
               <p className="text-[11px] uppercase tracking-[0.2em] text-foreground/40">Рекомендации</p>
               <div className="mt-4 space-y-1">
                 {quickActions.map((action, i) => {
@@ -664,7 +667,7 @@ export function AnalyzerPage() {
           </div>
 
           {/* ── Signals row ── */}
-          <GlassCard containerClassName="lg:col-span-8 flex flex-col" className="p-6 flex-1">
+          <GlassCard containerClassName="lg:col-span-8 flex flex-col h-full" className="p-6 flex-1 h-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TriangleAlert className="h-4 w-4 text-foreground/40" />
@@ -717,7 +720,7 @@ export function AnalyzerPage() {
           </GlassCard>
 
           {/* ── AI insights ── */}
-          <GlassCard containerClassName="lg:col-span-4 flex flex-col" className="p-6 flex-1">
+          <GlassCard containerClassName="lg:col-span-4 flex flex-col h-full" className="p-6 flex-1 h-full">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
               <Sparkles className="h-3.5 w-3.5 text-violet-400" />
               AI-слой
@@ -766,7 +769,7 @@ export function AnalyzerPage() {
           </GlassCard>
 
           {/* ── Reference sections ── */}
-          <GlassCard containerClassName="lg:col-span-6 flex flex-col" className="p-6 flex-1">
+          <GlassCard containerClassName="lg:col-span-6" className="p-6">
             <details className="group">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
                 <span>Что учитывает модель</span>
@@ -783,7 +786,7 @@ export function AnalyzerPage() {
             </details>
           </GlassCard>
 
-          <GlassCard className="lg:col-span-6 p-6">
+          <GlassCard containerClassName="lg:col-span-6" className="p-6">
             <details className="group">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
                 <span>Справочные домены</span>
