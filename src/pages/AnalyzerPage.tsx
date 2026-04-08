@@ -97,7 +97,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
+      className={`group relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
       variants={fadeUp}
       whileHover={{ y: -4, scale: 1.005 }}
       style={glow ? { background: glow } : undefined}

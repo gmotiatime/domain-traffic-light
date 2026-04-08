@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, ChevronDown, Scale } from "lucide-react";
 
 import { faqItems, officialRoutes, safetyPrinciples } from "@/lib/site-content";
+import BorderGlow from "@/components/BorderGlow";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -19,22 +20,35 @@ const stagger = {
 function GlassCard({
   children,
   className = "",
+  containerClassName = "",
   delay = 0,
+  glow,
 }: {
   children: React.ReactNode;
   className?: string;
+  containerClassName?: string;
   delay?: number;
+  glow?: string;
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl ${className}`}
+      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      {children}
+      <BorderGlow
+        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
+        borderRadius={32}
+        glowRadius={30}
+        fillOpacity={0}
+        backgroundColor="#000000"
+      >
+        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
+          {children}
+        </div>
+      </BorderGlow>
     </motion.div>
   );
 }
@@ -64,7 +78,7 @@ export function SafetyPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-foreground/40">
             Безопасность
           </p>
-          <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl text-foreground">
+          <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-5xl md:text-6xl text-foreground">
             Приватность и границы <span className="text-foreground/40">инструмента.</span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-foreground/50 sm:text-lg">
@@ -76,8 +90,8 @@ export function SafetyPage() {
         {/* Safety Principles */}
         <section className="mt-16 sm:mt-24 grid gap-5 sm:gap-6 lg:grid-cols-2">
           {safetyPrinciples.map((item, index) => (
-            <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0">
-              <div className="p-8">
+            <GlassCard key={item.title} delay={index * 0.1} containerClassName="flex flex-col h-full" className="overflow-hidden p-0 h-full">
+              <div className="p-8 flex-1">
                 <h2 className="text-2xl font-semibold text-foreground">{item.title}</h2>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
                   {item.text}
@@ -169,7 +183,7 @@ export function SafetyPage() {
 
           <div className="flex flex-col gap-4">
             {officialRoutes.map((route, index) => (
-              <GlassCard key={route.title} delay={index * 0.1} className="p-5 sm:p-6 transition-colors hover:bg-foreground/[0.04] group">
+              <GlassCard key={route.title} delay={index * 0.1} containerClassName="flex w-full" className="p-5 sm:p-6 transition-colors hover:bg-foreground/[0.04] group w-full">
                 <a
                   className="flex items-start justify-between gap-4 outline-none"
                   href={route.href}
@@ -211,14 +225,14 @@ export function SafetyPage() {
           </motion.div>
 
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            <GlassCard delay={0.1} className="p-8 border-violet-500/10 bg-violet-500/[0.02]">
+            <GlassCard delay={0.1} containerClassName="flex flex-col h-full" className="p-8 border-violet-500/10 bg-violet-500/[0.02] h-full flex flex-col">
               <h3 className="text-2xl font-semibold text-foreground">Закон о защите персональных данных</h3>
-              <p className="mt-4 text-base leading-relaxed text-foreground/50">
+              <p className="mt-4 text-base leading-relaxed text-foreground/50 flex-1">
                 В соответствии с Законом Республики Беларусь «О защите персональных данных», вы являетесь полноправным субъектом персональных данных. Никто не имеет права собирать, обрабатывать и использовать ваши данные (включая связки логин-пароль, ФИО, телефон) без вашего явного и осознанного согласия. Фишинговые ресурсы грубо нарушают этот закон, собирая данные неправомерно.
               </p>
             </GlassCard>
 
-            <GlassCard delay={0.2} className="p-8 border-rose-500/10 bg-rose-500/[0.02]">
+            <GlassCard delay={0.2} containerClassName="flex flex-col h-full" className="p-8 border-rose-500/10 bg-rose-500/[0.02] h-full flex flex-col">
               <h3 className="text-2xl font-semibold text-foreground">Куда обращаться пострадавшему?</h3>
               <p className="mt-4 text-base leading-relaxed text-foreground/50">
                 Юридическая фиксация инцидента критически важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
@@ -248,7 +262,7 @@ export function SafetyPage() {
           </motion.p>
           <div className="mt-6 space-y-4">
             {faqItems.map((item, index) => (
-              <GlassCard key={item.title} delay={index * 0.1} className="p-6">
+              <GlassCard key={item.title} delay={index * 0.1} containerClassName="w-full" className="p-6 w-full">
                 <details className="group marker:content-['']">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium text-foreground/90 outline-none">
                     <span>{item.title}</span>
