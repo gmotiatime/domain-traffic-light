@@ -76,6 +76,7 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              aria-label="Закрыть"
               onClick={onClose}
               className="absolute right-4 top-4 rounded-lg p-2 text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground/80"
             >
@@ -93,10 +94,11 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
             </div>
 
             <div className="mt-6">
-              <label className="mb-2 block text-sm text-foreground/60">
+              <label htmlFor="report-text" className="mb-2 block text-sm text-foreground/60">
                 Опишите проблему с результатом анализа:
               </label>
               <textarea
+                id="report-text"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 placeholder="Например: результат неверный, домен безопасный..."
