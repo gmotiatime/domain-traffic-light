@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 
 import { methodBlocks, ruleReference } from "@/lib/site-content";
+import BorderGlow from "@/components/BorderGlow";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -18,22 +19,35 @@ const stagger = {
 function GlassCard({
   children,
   className = "",
+  containerClassName = "",
   delay = 0,
+  glow,
 }: {
   children: React.ReactNode;
   className?: string;
+  containerClassName?: string;
   delay?: number;
+  glow?: string;
 }) {
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl ${className}`}
+      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true, amount: 0.1 }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      {children}
+      <BorderGlow
+        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
+        borderRadius={32}
+        glowRadius={30}
+        fillOpacity={0}
+        backgroundColor="#000000"
+      >
+        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
+          {children}
+        </div>
+      </BorderGlow>
     </motion.div>
   );
 }
@@ -63,7 +77,7 @@ export function MethodPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-foreground/40">
               Методика
             </p>
-            <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl text-foreground">
+            <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-5xl md:text-6xl text-foreground">
               Защита, а не просто <span className="text-foreground/40">интерфейс.</span>
             </h1>
           </motion.div>
@@ -77,7 +91,7 @@ export function MethodPage() {
         {/* Bento Grid Logic */}
         <div className="mt-16 grid gap-5 sm:mt-20 sm:gap-6 md:grid-cols-2">
           {methodBlocks.map((item, index) => (
-            <GlassCard key={item.title} delay={index * 0.1} className="p-7 sm:p-8 flex flex-col">
+            <GlassCard key={item.title} delay={index * 0.1} containerClassName="flex flex-col h-full" className="p-7 sm:p-8 flex flex-col h-full">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground/[0.04] text-xs font-bold text-foreground/60">
                 0{index + 1}
               </span>
@@ -90,7 +104,7 @@ export function MethodPage() {
         </div>
 
         <div className="mt-8 grid gap-5 sm:gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <GlassCard className="overflow-hidden p-0" delay={0.25}>
+          <GlassCard containerClassName="flex h-full" className="overflow-hidden p-0 h-full" delay={0.25}>
             <div className="flex h-full flex-col">
               <div className="p-8 sm:p-10">
                 <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Визуальный образ</p>
@@ -110,7 +124,7 @@ export function MethodPage() {
             </div>
           </GlassCard>
 
-          <GlassCard className="overflow-hidden p-0" delay={0.35}>
+          <GlassCard containerClassName="flex h-full" className="overflow-hidden p-0 h-full" delay={0.35}>
             <div className="flex h-full flex-col">
               <div className="p-8 sm:p-10">
                 <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Просветительский акцент</p>
@@ -148,7 +162,7 @@ export function MethodPage() {
 
           <div className="mt-12 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {ruleReference.map((rule, idx) => (
-              <GlassCard key={rule.title} delay={idx * 0.1} className="p-6">
+              <GlassCard key={rule.title} delay={idx * 0.1} containerClassName="flex flex-col h-full" className="p-6 h-full flex flex-col">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground/[0.04] text-foreground">
                   {idx === 0 ? "🔍" : idx === 1 ? "🎭" : idx === 2 ? "🪤" : "🧩"}
                 </div>
