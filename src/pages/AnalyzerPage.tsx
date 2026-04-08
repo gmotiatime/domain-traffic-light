@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ChevronDown,
   ExternalLink,
+  Loader2,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -448,11 +449,17 @@ export function AnalyzerPage() {
               </div>
               
               <Button
-                className="h-14 shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95"
+                className="h-14 shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95 disabled:hover:scale-100 disabled:shadow-none"
                 type="submit"
+                disabled={isAiEnriching}
+                aria-label="Запустить анализ домена"
               >
-                Анализ
-                <ArrowRight className="ml-2 h-5 w-5" />
+                {isAiEnriching ? "Анализируем..." : "Анализ"}
+                {isAiEnriching ? (
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                )}
               </Button>
             </div>
 
