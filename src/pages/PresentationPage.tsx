@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, ShieldAlert, Sparkles, Database, Search, ArrowRight, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Database, Search, ArrowRight, ChevronLeft, ChevronRight, Play, Cpu, Globe, Lock } from "lucide-react";
 import { ParticleBackground } from "@/components/ParticleBackground";
-import Dither from "@/components/Dither";
-import Beams from "@/components/Beams";
 import { routeHref } from "@/lib/site-router";
 
 const slides = [
@@ -120,28 +118,77 @@ const slides = [
     )
   },
   {
+    id: "tech",
+    title: "Стек технологий",
+    subtitle: "Что под капотом",
+    content: (
+      <div className="grid md:grid-cols-2 gap-8 w-full max-w-5xl">
+        <motion.div whileHover={{ scale: 1.02 }} className="flex gap-6 items-center rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/10">
+            <Globe className="h-8 w-8 text-blue-400" />
+          </div>
+          <div>
+            <h4 className="text-2xl font-semibold text-white mb-2">Frontend</h4>
+            <p className="text-white/60">React 18 + Vite, TypeScript, Tailwind CSS, Framer Motion для плавных UI/UX анимаций.</p>
+          </div>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.02 }} className="flex gap-6 items-center rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10">
+            <Database className="h-8 w-8 text-emerald-400" />
+          </div>
+          <div>
+            <h4 className="text-2xl font-semibold text-white mb-2">Backend & База</h4>
+            <p className="text-white/60">Node.js (Express) + Vercel Serverless, Upstash Redis для Threat Cache базы и статистики.</p>
+          </div>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.02 }} className="flex gap-6 items-center rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/10">
+            <Cpu className="h-8 w-8 text-violet-400" />
+          </div>
+          <div>
+            <h4 className="text-2xl font-semibold text-white mb-2">AI-Провайдер</h4>
+            <p className="text-white/60">Groq API с моделями LLaMA 3.3 (70B), оптимизированными для сверхбыстрого вывода.</p>
+          </div>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.02 }} className="flex gap-6 items-center rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10">
+            <Lock className="h-8 w-8 text-amber-400" />
+          </div>
+          <div>
+            <h4 className="text-2xl font-semibold text-white mb-2">Кибербезопасность</h4>
+            <p className="text-white/60">Интеграция с комьюнити фидами OpenPhish и локальный TLD/Punycode эвристический анализ.</p>
+          </div>
+        </motion.div>
+      </div>
+    )
+  },
+  {
     id: "demo",
     title: "Демонстрация",
     subtitle: "Работа в реальном времени",
     content: (
       <div className="w-full max-w-3xl text-center space-y-12">
-        <div className="p-8 rounded-[3rem] border border-white/10 bg-white/5 backdrop-blur-2xl">
+        <div className="p-10 rounded-[3rem] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent backdrop-blur-2xl shadow-[0_0_80px_rgba(16,185,129,0.1)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-50" />
           <div className="flex items-center justify-center mb-8">
             <div className="relative">
-              <div className="absolute inset-0 bg-emerald-500/30 blur-[40px] rounded-full" />
-              <ShieldCheck className="h-24 w-24 text-emerald-400 relative z-10" />
+              <div className="absolute inset-0 bg-emerald-500/40 blur-[50px] rounded-full" />
+              <ShieldCheck className="h-28 w-28 text-emerald-400 relative z-10" />
             </div>
           </div>
-          <p className="text-2xl text-white/80 mb-10 font-light">
-            Проверьте подозрительную ссылку и посмотрите, как AI объясняет свое решение простым языком.
+          <p className="text-2xl text-emerald-100/90 mb-10 font-light leading-relaxed">
+            Проверьте подозрительную ссылку и посмотрите, как AI объясняет свое решение <span className="font-semibold text-white">простым языком</span>.
           </p>
           <a
             href={routeHref("/analyzer")}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-4 rounded-full bg-white text-black px-10 py-5 text-xl font-bold transition-all hover:scale-105 hover:bg-emerald-400 hover:text-emerald-950 hover:shadow-[0_0_40px_rgba(52,211,153,0.4)]"
+            className="inline-flex items-center gap-4 rounded-full bg-emerald-400 text-emerald-950 px-12 py-5 text-xl font-bold transition-all hover:scale-105 hover:bg-emerald-300 hover:shadow-[0_0_50px_rgba(52,211,153,0.6)]"
           >
-            <Play className="h-6 w-6" />
+            <Play className="h-6 w-6 fill-current" />
             Запустить анализатор
           </a>
         </div>
@@ -214,14 +261,15 @@ export function PresentationPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="fixed inset-0 bg-[#050505] overflow-hidden flex flex-col">
-      <div className="absolute inset-0 z-0">
+    <div className="fixed inset-0 bg-[#020202] text-white overflow-hidden flex flex-col font-sans">
+      <div className="absolute inset-0 z-0 opacity-40">
         <ParticleBackground />
-        <Dither />
-        <Beams />
       </div>
 
-      <header className="relative z-10 flex justify-between items-center p-8">
+      <div className="absolute top-1/4 left-1/4 w-[50vw] h-[50vh] bg-emerald-500/10 blur-[120px] rounded-full z-0 pointer-events-none mix-blend-screen" />
+      <div className="absolute bottom-1/4 right-1/4 w-[40vw] h-[40vh] bg-violet-500/10 blur-[100px] rounded-full z-0 pointer-events-none mix-blend-screen" />
+
+      <header className="relative z-10 flex justify-between items-center px-12 py-8">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg">
             <div className="h-3 w-3 rounded-full bg-white shadow-inner" />
@@ -233,31 +281,48 @@ export function PresentationPage() {
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 md:p-16">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 md:px-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full flex flex-col items-center"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full flex flex-col items-center max-w-7xl mx-auto"
           >
-            <div className="text-center mb-12">
-              <span className="inline-block mb-4 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-sm text-white/60 uppercase tracking-widest">
+            <div className="text-center mb-14">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="inline-block mb-6 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-5 py-2 text-sm text-emerald-300 font-medium uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+              >
                 {slide.subtitle}
-              </span>
-              <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
+              </motion.span>
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-5xl md:text-7xl font-bold text-white tracking-tight"
+              >
                 {slide.title}
-              </h2>
+              </motion.h2>
             </div>
 
-            {slide.content}
+            <motion.div
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.4 }}
+               className="w-full flex justify-center"
+            >
+              {slide.content}
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </main>
 
-      <footer className="relative z-10 p-8 flex justify-between items-center">
+      <footer className="relative z-10 px-12 py-8 flex justify-between items-center">
         <button
           onClick={() => setCurrentSlide(prev => Math.max(prev - 1, 0))}
           disabled={currentSlide === 0}
