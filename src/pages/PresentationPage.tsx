@@ -9,121 +9,186 @@ import { routeHref } from "@/lib/site-router";
 const slides = [
   {
     id: "intro",
-    title: "Доменный светофор",
+    title: "Доменный светофор.AI",
     subtitle: "Проверка ссылок перед кликом",
     content: (
-      <div className="flex flex-col items-center text-center space-y-6">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <div className="h-16 w-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <ShieldCheck className="h-8 w-8 text-emerald-400" />
-          </div>
-          <div className="h-16 w-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <Search className="h-8 w-8 text-amber-400" />
-          </div>
-          <div className="h-16 w-16 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-            <ShieldAlert className="h-8 w-8 text-rose-400" />
-          </div>
+      <div className="flex flex-col items-center text-center space-y-8">
+        <div className="flex items-center justify-center gap-6 mb-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5, type: "spring" }}
+            className="h-20 w-20 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+          >
+            <ShieldCheck className="h-10 w-10 text-emerald-400" />
+          </motion.div>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+            className="h-20 w-20 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.2)]"
+          >
+            <Search className="h-10 w-10 text-amber-400" />
+          </motion.div>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5, type: "spring" }}
+            className="h-20 w-20 rounded-[2rem] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(244,63,94,0.2)]"
+          >
+            <ShieldAlert className="h-10 w-10 text-rose-400" />
+          </motion.div>
         </div>
-        <p className="text-xl md:text-3xl text-foreground/70 max-w-2xl font-light leading-relaxed">
-          Простой и понятный инструмент для подростков, который помогает распознать фишинг и мошеннические сайты.
-        </p>
+        <motion.p
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-2xl md:text-4xl text-foreground/80 max-w-3xl font-light leading-relaxed"
+        >
+          Умный AI-инструмент для подростков, помогающий <span className="text-emerald-400 font-medium">распознать фишинг</span> и избежать потери данных.
+        </motion.p>
       </div>
     )
   },
   {
     id: "problem",
-    title: "Проблема",
-    subtitle: "Почему это важно",
+    title: "Актуальность",
+    subtitle: "Почему это важно именно сейчас",
     content: (
-      <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl text-left">
-        <div className="rounded-[2rem] border border-rose-500/20 bg-rose-500/5 p-8 flex flex-col justify-center">
-          <ShieldAlert className="h-12 w-12 text-rose-400 mb-6" />
-          <h3 className="text-2xl font-semibold mb-4 text-foreground">Рост киберпреступности</h3>
-          <p className="text-foreground/70 text-lg leading-relaxed">
-            Подростки часто становятся жертвами скама в играх (Roblox, Steam), при покупке игровой валюты или переходе по ссылкам в мессенджерах.
+      <div className="grid md:grid-cols-2 gap-8 w-full max-w-5xl text-left">
+        <motion.div
+          whileHover={{ y: -5, scale: 1.02 }}
+          className="rounded-[2.5rem] border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-10 flex flex-col justify-center relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShieldAlert className="h-32 w-32 text-rose-500" />
+          </div>
+          <div className="h-16 w-16 rounded-2xl bg-rose-500/20 flex items-center justify-center mb-8 border border-rose-500/30">
+            <ShieldAlert className="h-8 w-8 text-rose-400" />
+          </div>
+          <h3 className="text-3xl font-semibold mb-4 text-white">Рост киберпреступности</h3>
+          <p className="text-white/70 text-xl leading-relaxed">
+            Подростки часто становятся жертвами скама в играх (Roblox, Steam), при покупке игровой валюты или переходе по ссылкам от "друзей" в мессенджерах.
           </p>
-        </div>
-        <div className="rounded-[2rem] border border-amber-500/20 bg-amber-500/5 p-8 flex flex-col justify-center">
-          <Search className="h-12 w-12 text-amber-400 mb-6" />
-          <h3 className="text-2xl font-semibold mb-4 text-foreground">Сложность анализа</h3>
-          <p className="text-foreground/70 text-lg leading-relaxed">
-            Обычные антивирусы не всегда успевают блокировать новые сайты (typo-squatting). Нужен быстрый анализ "на лету" понятным языком.
+        </motion.div>
+        <motion.div
+          whileHover={{ y: -5, scale: 1.02 }}
+          className="rounded-[2.5rem] border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-10 flex flex-col justify-center relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Search className="h-32 w-32 text-amber-500" />
+          </div>
+          <div className="h-16 w-16 rounded-2xl bg-amber-500/20 flex items-center justify-center mb-8 border border-amber-500/30">
+            <Search className="h-8 w-8 text-amber-400" />
+          </div>
+          <h3 className="text-3xl font-semibold mb-4 text-white">Сложность анализа</h3>
+          <p className="text-white/70 text-xl leading-relaxed">
+            Антивирусы не всегда успевают блокировать свежие сайты (typo-squatting). Сложный технический язык отчетов отталкивает молодых пользователей.
           </p>
-        </div>
+        </motion.div>
       </div>
     )
   },
   {
     id: "solution",
     title: "Наше решение",
-    subtitle: "Как работает система",
+    subtitle: "Архитектура проекта",
     content: (
-      <div className="grid md:grid-cols-3 gap-6 w-full max-w-5xl">
-        <div className="rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] p-6 text-center flex flex-col items-center">
-          <div className="h-14 w-14 rounded-2xl bg-foreground/5 flex items-center justify-center mb-4">
-            <Search className="h-6 w-6 text-foreground/60" />
+      <div className="grid md:grid-cols-3 gap-8 w-full max-w-6xl">
+        <motion.div whileHover={{ y: -5 }} className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center flex flex-col items-center backdrop-blur-xl">
+          <div className="h-20 w-20 rounded-3xl bg-white/10 flex items-center justify-center mb-6 shadow-inner border border-white/20">
+            <Search className="h-10 w-10 text-white/80" />
           </div>
-          <h4 className="text-xl font-medium mb-3">Локальный анализ</h4>
-          <p className="text-sm text-foreground/60">Быстрая проверка по правилам: TLD, длина, цифры, опечатки брендов.</p>
-        </div>
-        <div className="rounded-[2rem] border border-violet-500/20 bg-violet-500/5 p-6 text-center flex flex-col items-center">
-          <div className="h-14 w-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4">
-            <Sparkles className="h-6 w-6 text-violet-400" />
+          <h4 className="text-2xl font-semibold mb-4 text-white">Мгновенный чек</h4>
+          <p className="text-lg text-white/60 leading-relaxed">Мгновенная локальная проверка эвристикой: подозрительные TLD, длина домена, опечатки брендов (typo-squatting).</p>
+        </motion.div>
+        <motion.div whileHover={{ y: -5 }} className="rounded-[2rem] border border-violet-500/30 bg-violet-500/10 p-8 text-center flex flex-col items-center backdrop-blur-xl shadow-[0_0_40px_rgba(139,92,246,0.15)]">
+          <div className="h-20 w-20 rounded-3xl bg-violet-500/20 flex items-center justify-center mb-6 shadow-inner border border-violet-500/30">
+            <Sparkles className="h-10 w-10 text-violet-300" />
           </div>
-          <h4 className="text-xl font-medium mb-3 text-violet-100">AI Модели</h4>
-          <p className="text-sm text-violet-200/60">Нейросети LLaMA и Groq анализируют контекст и выдают простое объяснение.</p>
-        </div>
-        <div className="rounded-[2rem] border border-emerald-500/20 bg-emerald-500/5 p-6 text-center flex flex-col items-center">
-          <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4">
-            <Database className="h-6 w-6 text-emerald-400" />
+          <h4 className="text-2xl font-semibold mb-4 text-violet-100">AI-Анализ</h4>
+          <p className="text-lg text-violet-200/70 leading-relaxed">Нейросети LLaMA 3.3 через Groq API анализируют сложные паттерны и формируют простые объяснения для пользователя.</p>
+        </motion.div>
+        <motion.div whileHover={{ y: -5 }} className="rounded-[2rem] border border-emerald-500/30 bg-emerald-500/10 p-8 text-center flex flex-col items-center backdrop-blur-xl shadow-[0_0_40px_rgba(16,185,129,0.15)]">
+          <div className="h-20 w-20 rounded-3xl bg-emerald-500/20 flex items-center justify-center mb-6 shadow-inner border border-emerald-500/30">
+            <Database className="h-10 w-10 text-emerald-400" />
           </div>
-          <h4 className="text-xl font-medium mb-3 text-emerald-100">База знаний</h4>
-          <p className="text-sm text-emerald-200/60">Общий кэш результатов (Upstash Redis) и данные OpenPhish.</p>
-        </div>
+          <h4 className="text-2xl font-semibold mb-4 text-emerald-100">Глобальная база</h4>
+          <p className="text-lg text-emerald-200/70 leading-relaxed">Redis кэширование на Upstash для моментальных ответов, проверка по OpenPhish и сбор обратной связи.</p>
+        </motion.div>
       </div>
     )
   },
   {
     id: "demo",
     title: "Демонстрация",
-    subtitle: "Попробуйте сами",
+    subtitle: "Работа в реальном времени",
     content: (
-      <div className="w-full max-w-2xl text-center space-y-8">
-        <p className="text-xl text-foreground/70">
-          Давайте проверим подозрительный домен в реальном времени.
-        </p>
-        <a
-          href={routeHref("/analyzer")}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-3 rounded-full bg-foreground text-background px-8 py-4 text-lg font-medium transition-transform hover:scale-105"
-        >
-          <Play className="h-5 w-5" />
-          Открыть анализатор
-        </a>
+      <div className="w-full max-w-3xl text-center space-y-12">
+        <div className="p-8 rounded-[3rem] border border-white/10 bg-white/5 backdrop-blur-2xl">
+          <div className="flex items-center justify-center mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-emerald-500/30 blur-[40px] rounded-full" />
+              <ShieldCheck className="h-24 w-24 text-emerald-400 relative z-10" />
+            </div>
+          </div>
+          <p className="text-2xl text-white/80 mb-10 font-light">
+            Проверьте подозрительную ссылку и посмотрите, как AI объясняет свое решение простым языком.
+          </p>
+          <a
+            href={routeHref("/analyzer")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-4 rounded-full bg-white text-black px-10 py-5 text-xl font-bold transition-all hover:scale-105 hover:bg-emerald-400 hover:text-emerald-950 hover:shadow-[0_0_40px_rgba(52,211,153,0.4)]"
+          >
+            <Play className="h-6 w-6" />
+            Запустить анализатор
+          </a>
+        </div>
       </div>
     )
   },
   {
     id: "future",
-    title: "Планы развития",
-    subtitle: "Что дальше",
+    title: "Развитие & Улучшения",
+    subtitle: "Что мы внедрили к конкурсу",
     content: (
-      <div className="w-full max-w-3xl text-left space-y-6">
+      <div className="w-full max-w-4xl text-left space-y-6">
         {[
-          { title: "Обучение на Feedback", text: "Сбор жалоб пользователей для улучшения алгоритмов предсказания новых паттернов." },
-          { title: "Браузерное расширение", text: "Автоматическое предупреждение при переходе на опасный сайт." },
-          { title: "Интеграция с мессенджерами", text: "Telegram-бот для быстрой проверки ссылок прямо в чате." }
+          {
+            title: "Улучшенные AI-объяснения",
+            text: "Нейросеть теперь выдает 3-5 четких причин вердикта на понятном подросткам языке с подсветкой критичных угроз.",
+            icon: Sparkles,
+            color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20"
+          },
+          {
+            title: "Система жалоб и Feedback",
+            text: "Добавлена кнопка «Неверный вердикт?». Пользователи помогают обучать систему, сообщая об ошибках.",
+            icon: ArrowRight,
+            color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20"
+          },
+          {
+            title: "Предсказание новых угроз",
+            text: "Мощная админ-панель автоматически выявляет «Подозрительные паттерны», анализируя жалобы на безопасные домены.",
+            icon: Search,
+            color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20"
+          }
         ].map((item, i) => (
-          <div key={i} className="flex gap-4 items-start rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-foreground/10 bg-foreground/5 text-sm font-medium">
-              {i + 1}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.15 + 0.3 }}
+            key={i}
+            className="flex gap-6 items-center rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/20"
+          >
+            <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border ${item.border} ${item.bg}`}>
+              <item.icon className={`h-8 w-8 ${item.color}`} />
             </div>
             <div>
-              <h4 className="text-lg font-medium text-foreground">{item.title}</h4>
-              <p className="mt-1 text-foreground/60">{item.text}</p>
+              <h4 className="text-2xl font-semibold text-white mb-2">{item.title}</h4>
+              <p className="text-lg text-white/60 leading-relaxed">{item.text}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     )

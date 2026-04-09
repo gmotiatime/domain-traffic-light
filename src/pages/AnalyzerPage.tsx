@@ -595,27 +595,6 @@ export function AnalyzerPage() {
                 ))}
               </div>
               
-              {result.host !== "—" && (
-                <div className="relative group">
-                  <button
-                    onClick={() => telemetryConsent ? setShowReportModal(true) : null}
-                    disabled={!telemetryConsent}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
-                      telemetryConsent
-                        ? "border-foreground/10 bg-foreground/[0.03] text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground/80"
-                        : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
-                    }`}
-                  >
-                    <Flag className="h-3 w-3" />
-                    Пожаловаться
-                  </button>
-                  {!telemetryConsent && (
-                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm">
-                      Включите "Анонимно сохранять результат в общую базу" и повторите попытку
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </GlassCard>
 
@@ -630,13 +609,25 @@ export function AnalyzerPage() {
                 </div>
 
                 {result.host !== "—" && (
-                  <button
-                    onClick={() => setShowReportModal(true)}
-                    className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs text-rose-400 transition-colors hover:bg-rose-500/20"
-                  >
-                    <Flag className="h-3 w-3" />
-                    Неверный вердикт?
-                  </button>
+                  <div className="relative group">
+                    <button
+                      onClick={() => telemetryConsent ? setShowReportModal(true) : null}
+                      disabled={!telemetryConsent}
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                        telemetryConsent
+                          ? "border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                          : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
+                      }`}
+                    >
+                      <Flag className="h-3 w-3" />
+                      Неверный вердикт?
+                    </button>
+                    {!telemetryConsent && (
+                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm z-10">
+                        Включите "Анонимно сохранять результат в общую базу" (в настройках) и повторите попытку
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
