@@ -21,11 +21,11 @@ const fadeUp = {
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.1 },
-  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] }, // Stronger ease-out
 };
 
 const stagger = {
-  whileInView: { transition: { staggerChildren: 0.1 } },
+  whileInView: { transition: { staggerChildren: 0.06 } }, // Faster stagger
   viewport: { once: true },
 };
 
@@ -45,10 +45,10 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={`relative transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 ${containerClassName}`}
+      initial={{ opacity: 0, y: 30, scale: 0.95 }} // Start from scale 0.95, not 0
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
       viewport={{ once: true, amount: 0.1 }}
     >
       <BorderGlow
@@ -227,9 +227,7 @@ export function HomePage() {
             </motion.h1>
             
             <motion.p variants={fadeUp} className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-foreground/60 sm:text-lg">
-              Сервис помогает быстро оценить риск ссылки, понять причину сигнала и
-              перейти к безопасному действию до того, как пользователь введёт
-              данные.
+              Проверяйте ссылки до ввода паролей. Сервис показывает уровень риска и объясняет, почему домен подозрительный.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
@@ -297,7 +295,7 @@ export function HomePage() {
           <div className="max-w-3xl">
             <p className="text-xs uppercase tracking-[0.26em] text-foreground/40">Подкапотная магия</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-              Множественный <span className="text-foreground/50">анализ в реальном времени</span>
+              Три проверки <span className="text-foreground/50">одновременно</span>
             </h2>
           </div>
 
@@ -309,7 +307,7 @@ export function HomePage() {
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
-                  Моментальная сверка с актуальными базами OpenPhish и URLAbuse. Если домен уже засветился в малвари — вы узнаете об этом первыми.
+                  Сверка с базами OpenPhish и URLAbuse. Если домен уже в списках фишинга, вы увидите это сразу.
                 </p>
               </div>
               <div className="px-8 pb-8 pt-0">
@@ -328,7 +326,7 @@ export function HomePage() {
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
                 <p className="mt-3 text-base leading-relaxed text-foreground/50">
-                  Быстрый разбор структуры URL, проверка на опечатки популярных брендов и подозрительные TLD-зоны. Срабатывает мгновенно.
+                  Разбор структуры URL, проверка на опечатки брендов и подозрительные зоны. Работает мгновенно.
                 </p>
               </div>
               <div className="px-8 pb-8 pt-0">
@@ -345,9 +343,9 @@ export function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Zap className="h-8 w-8 text-violet-400" strokeWidth={1.5} />
                 </div>
-                <h3 className="mt-6 text-2xl font-semibold text-foreground">Умный AI-слой</h3>
+                <h3 className="mt-6 text-2xl font-semibold text-foreground">AI-слой</h3>
                 <p className="mt-3 text-base leading-relaxed text-violet-100/60">
-                  После быстрой проверки языковая модель сводит все сигналы воедино, объясняет причину риска простым языком и даёт чёткую рекомендацию.
+                  AI собирает результаты всех проверок и объясняет, что именно не так с доменом.
                 </p>
               </div>
               <div className="px-8 pb-8 pt-0">
@@ -369,7 +367,7 @@ export function HomePage() {
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Логика сервиса</p>
               <h2 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                Пауза, проверка и действие <span className="text-foreground/50">— в одном сценарии</span>
+                Три шага: <span className="text-foreground/50">остановка, проверка, решение</span>
               </h2>
             </div>
 
@@ -440,7 +438,7 @@ export function HomePage() {
           <div className="mb-14">
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Что даёт сервис</p>
             <h2 className="mt-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
-              Понятный вход в реальный инструмент
+              Простой интерфейс, рабочий инструмент
             </h2>
           </div>
           
@@ -550,9 +548,9 @@ export function HomePage() {
       <section className="relative w-full bg-background py-16 pb-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <GlassCard className="flex flex-col items-center justify-center p-12 text-center sm:p-20" glow="radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.05) 0%, transparent 70%)">
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Готовы проверить ссылку?</h2>
+            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Есть подозрительная ссылка?</h2>
             <p className="mt-5 max-w-xl text-lg text-foreground/50">
-              Вставьте любой подозрительный домен и посмотрите, как работает алгоритм в реальном времени.
+              Вставьте её и посмотрите, что найдет анализатор.
             </p>
             <Button 
               className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-95"

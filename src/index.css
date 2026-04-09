@@ -34,6 +34,11 @@
     --font-body: "Inter", sans-serif;
     --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.3),
       0 0 0 1px rgba(255, 255, 255, 0.08);
+
+    /* Emil Kowalski easing curves */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   * {
@@ -107,5 +112,26 @@
 
   .animate-spin-slow {
     animation: spin 8s linear infinite;
+  }
+
+  /* Hover effects only on desktop (Emil Kowalski principle) */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-lift {
+      transition: transform 200ms var(--ease-out);
+    }
+    .hover-lift:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

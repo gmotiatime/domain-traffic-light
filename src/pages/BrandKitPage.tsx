@@ -10,7 +10,7 @@ export function BrandKitPage() {
             Brand Kit
           </h1>
           <p className="mt-4 text-lg text-foreground/60">
-            Визуальный стиль, типографика и компоненты проекта «Доменный светофор.AI».
+            Визуальный стиль, типографика и компоненты проекта.
           </p>
         </div>
 

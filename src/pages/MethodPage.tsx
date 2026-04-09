@@ -78,13 +78,11 @@ export function MethodPage() {
               Методика
             </p>
             <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-5xl md:text-6xl text-foreground">
-              Защита, а не просто <span className="text-foreground/40">интерфейс.</span>
+              Защита, а не <span className="text-foreground/40">просто интерфейс</span>
             </h1>
           </motion.div>
           <motion.p variants={fadeUp} className="max-w-xl text-base leading-relaxed text-foreground/50 sm:text-lg">
-            Здесь собрана короткая логика проекта: что он решает, как работает
-            и почему это уже выглядит как готовый инструмент, а не просто как
-            презентация идеи.
+            Что решает проект, как работает и почему это рабочий инструмент, а не презентация идеи.
           </motion.p>
         </motion.div>
 
@@ -110,8 +108,7 @@ export function MethodPage() {
                 <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Визуальный образ</p>
                 <h2 className="mt-5 text-3xl font-semibold text-foreground sm:text-4xl">Доменный светофор</h2>
                 <p className="mt-4 text-base leading-relaxed text-foreground/55">
-                  Главная метафора проекта: зелёный, жёлтый и красный сигналы
-                  помогают быстро понять риск ещё до ввода данных.
+                  Зелёный, жёлтый и красный сигналы показывают риск до ввода данных.
                 </p>
               </div>
               <div className="flex-1 p-4 sm:p-6">
@@ -130,8 +127,7 @@ export function MethodPage() {
                 <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Просветительский акцент</p>
                 <h2 className="mt-5 text-3xl font-semibold text-foreground sm:text-4xl">#КиберПраво</h2>
                 <p className="mt-4 text-base leading-relaxed text-foreground/55">
-                  Отдельный визуальный маркер для темы цифровой безопасности,
-                  прав пользователя и официальных маршрутов помощи.
+                  Визуальный маркер для темы цифровой безопасности и официальных маршрутов помощи.
                 </p>
               </div>
               <div className="flex-1 p-4 sm:p-6">
@@ -152,11 +148,10 @@ export function MethodPage() {
               Эвристический анализ
             </p>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground/90 sm:text-4xl">
-              На что мы <span className="text-foreground/40">обращаем внимание</span>
+              На что обращаем <span className="text-foreground/40">внимание</span>
             </h2>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-foreground/50">
-              Встроенный локальный набор правил (Ruleset) не обращается к базам данных, 
-              а оценивает паттерны и слова-маркеры в доменном имени.
+              Локальный набор правил оценивает паттерны и слова-маркеры в доменном имени без обращения к базам данных.
             </p>
           </motion.div>
 

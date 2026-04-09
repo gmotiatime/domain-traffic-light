@@ -79,11 +79,10 @@ export function SafetyPage() {
             Безопасность
           </p>
           <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-5xl md:text-6xl text-foreground">
-            Приватность и границы <span className="text-foreground/40">инструмента.</span>
+            Приватность и границы <span className="text-foreground/40">инструмента</span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-foreground/50 sm:text-lg">
-            Отдельный экран, чтобы прояснить официальные маршруты помощи и
-            гарантировать, что анализатор не хранит ваши данные.
+            Официальные маршруты помощи и гарантия, что анализатор не хранит ваши данные.
           </p>
         </motion.div>
 
@@ -148,9 +147,7 @@ export function SafetyPage() {
                 Меньше секунды <span className="text-foreground/40">на ошибку</span>
               </h2>
               <p className="mt-6 text-base leading-relaxed text-foreground/50">
-                Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение
-                о взломе, переходит по ссылке и сразу вводит код. Анализатор проектировался
-                с единственной целью — прервать этот автоматизм.
+                Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение о взломе, переходит по ссылке и сразу вводит код. Анализатор прерывает этот автоматизм.
               </p>
             </div>
             <div className="flex gap-4 sm:flex-row flex-col">
@@ -173,11 +170,10 @@ export function SafetyPage() {
               Куда направлять пользователя
             </p>
             <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
-              После сигнала риска нужен <span className="text-foreground/40">следующий шаг.</span>
+              После сигнала риска нужен <span className="text-foreground/40">следующий шаг</span>
             </h2>
             <p className="mt-6 text-base leading-relaxed text-foreground/50">
-              Мы не банк и не полиция. Наша цель — быстро указать на опасность и
-              маршрутизировать юзера туда, где ему окажут компетентную помощь.
+              Мы не банк и не полиция. Наша цель — указать на опасность и направить туда, где окажут компетентную помощь.
             </p>
           </motion.div>
 
@@ -217,10 +213,10 @@ export function SafetyPage() {
               </p>
             </div>
             <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
-              Правовой контекст <span className="text-foreground/40">и защита.</span>
+              Правовой контекст <span className="text-foreground/40">и защита</span>
             </h2>
             <p className="mt-6 text-base leading-relaxed text-foreground/50">
-              Фишинг — это не просто вид мошенничества, это уголовно наказуемое деяние по законодательству Республики Беларусь. Каждый пользователь сети обладает неотъемлемым правом на тайну, защиту своих данных и правовую помощь.
+              Фишинг — уголовно наказуемое деяние по законодательству Республики Беларусь. Каждый пользователь сети имеет право на тайну, защиту своих данных и правовую помощь.
             </p>
           </motion.div>
 
@@ -228,14 +224,14 @@ export function SafetyPage() {
             <GlassCard delay={0.1} containerClassName="flex flex-col h-full" className="p-8 border-violet-500/10 bg-violet-500/[0.02] h-full flex flex-col">
               <h3 className="text-2xl font-semibold text-foreground">Закон о защите персональных данных</h3>
               <p className="mt-4 text-base leading-relaxed text-foreground/50 flex-1">
-                В соответствии с Законом Республики Беларусь «О защите персональных данных», вы являетесь полноправным субъектом персональных данных. Никто не имеет права собирать, обрабатывать и использовать ваши данные (включая связки логин-пароль, ФИО, телефон) без вашего явного и осознанного согласия. Фишинговые ресурсы грубо нарушают этот закон, собирая данные неправомерно.
+                По Закону РБ «О защите персональных данных» вы — субъект персональных данных. Никто не может собирать, обрабатывать и использовать ваши данные (логин-пароль, ФИО, телефон) без вашего явного согласия. Фишинговые ресурсы нарушают этот закон, собирая данные неправомерно.
               </p>
             </GlassCard>
 
             <GlassCard delay={0.2} containerClassName="flex flex-col h-full" className="p-8 border-rose-500/10 bg-rose-500/[0.02] h-full flex flex-col">
               <h3 className="text-2xl font-semibold text-foreground">Куда обращаться пострадавшему?</h3>
               <p className="mt-4 text-base leading-relaxed text-foreground/50">
-                Юридическая фиксация инцидента критически важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
+                Юридическая фиксация инцидента важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
               </p>
               <ul className="mt-5 space-y-4">
                 <li className="flex items-start gap-4">
