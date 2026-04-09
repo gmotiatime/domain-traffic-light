@@ -1,4 +1,4 @@
-export const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog", "/404"] as const;
+export const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog", "/presentation", "/404"] as const;
 
 export type SitePath = (typeof sitePaths)[number];
 
