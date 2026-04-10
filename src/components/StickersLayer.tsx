@@ -19,17 +19,17 @@ const Sticker = ({ src, side, top, rotation = 0, index }: StickerProps) => {
     offset: ["start end", "end start"]
   });
 
-  // Мягкий параллакс остается, он добавляет глубины
-  const yOffset = useTransform(scrollYProgress, [0, 1], [index % 2 === 0 ? -20 : 20, index % 2 === 0 ? 20 : -20]);
+  // Параллакс для ощущения глубины
+  const yOffset = useTransform(scrollYProgress, [0, 1], [index % 2 === 0 ? -40 : 40, index % 2 === 0 ? 40 : -40]);
 
   return (
     <motion.div
       ref={ref}
       initial={{ 
         opacity: 0, 
-        scale: 3, 
-        rotate: rotation + (side === "left" ? -40 : 40),
-        filter: "blur(15px)",
+        scale: 2, 
+        rotate: rotation + (side === "left" ? -20 : 20),
+        filter: "blur(10px)",
       }}
       whileInView={{ 
         opacity: 1, 
@@ -40,25 +40,24 @@ const Sticker = ({ src, side, top, rotation = 0, index }: StickerProps) => {
       viewport={{ once: true, amount: 0.1 }}
       transition={{ 
         type: "spring",
-        damping: 12,
-        stiffness: 90, 
-        delay: 0.1 + (index * 0.05),
-        duration: 0.7
+        damping: 15,
+        stiffness: 70, 
+        delay: 0.05 * index,
+        duration: 0.8
       }}
       style={{
         position: "absolute",
         top,
         y: yOffset,
-        zIndex: 10, // Ниже основного контента
+        zIndex: 30,
         pointerEvents: "none",
         userSelect: "none",
       }}
-      // Адаптивные стили через Tailwind классы
       className={`
-        ${side === "left" ? "left-[-10vw] md:left-[4vw]" : "right-[-10vw] md:right-[4vw]"}
-        w-[70px] md:w-[clamp(100px,12vw,170px)]
-        opacity-30 md:opacity-100
-        drop-shadow-lg md:drop-shadow-2xl
+        ${side === "left" ? "left-0 md:left-4 xl:left-8" : "right-0 md:right-4 xl:right-8"}
+        w-16 sm:w-20 md:w-28 lg:w-36 xl:w-40
+        opacity-20 sm:opacity-50 md:opacity-80 xl:opacity-100
+        drop-shadow-md md:drop-shadow-2xl
       `}
     >
       <img 
@@ -75,7 +74,7 @@ export const StickersLayer = ({ items }: { items?: StickerData[] }) => {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-10">
+    <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-30">
       <div className="relative w-full h-full">
         {items.map((sticker, index) => (
           <Sticker
