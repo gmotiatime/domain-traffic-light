@@ -52,9 +52,18 @@ function GlassCard({
   );
 }
 
+import { StickersLayer, StickerData } from "@/components/StickersLayer";
+
+const methodStickers: StickerData[] = [
+  { src: "/sticker/1-19657-256b.png", side: "left", top: "15%", rotation: -10 },
+  { src: "/sticker/1-82-256b.png", side: "right", top: "45%", rotation: 15 },
+  { src: "/sticker/1-64-256b.png", side: "left", top: "75%", rotation: -12 },
+];
+
 export function MethodPage() {
   return (
     <div className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden bg-background text-foreground selection:bg-foreground/20">
+      <StickersLayer items={methodStickers} />
       
       {/* Animated Mesh Orbs */}
       <div className="pointer-events-none absolute inset-0 -z-[5] overflow-hidden">

@@ -78,6 +78,16 @@ type CacheStats = {
   newestRecord?: string | null;
 };
 
+import { StickersLayer, StickerData } from "@/components/StickersLayer";
+
+const homeStickers: StickerData[] = [
+  { src: "/sticker/1-61-256b.png", side: "left", top: "18%", rotation: -12 },
+  { src: "/sticker/1-67-256b.png", side: "right", top: "35%", rotation: 10 },
+  { src: "/sticker/1-86-256b.png", side: "left", top: "55%", rotation: 8 },
+  { src: "/sticker/1-71-256b.png", side: "right", top: "72%", rotation: -10 },
+  { src: "/sticker/1-54-256b.png", side: "left", top: "85%", rotation: 15 },
+];
+
 export function HomePage() {
   const [heroInput, setHeroInput] = useState("");
   const [stats, setStats] = useState<CacheStats | null>(null);
@@ -150,7 +160,8 @@ export function HomePage() {
   }
 
   return (
-    <div className="bg-background text-foreground selection:bg-foreground/20">
+    <div className="relative bg-background text-foreground selection:bg-foreground/20">
+      <StickersLayer items={homeStickers} />
       {/* ══════════ HERO SECTION ══════════ */}
       <section className="relative isolate min-h-[90svh] overflow-hidden">
         {/* Background Video & Overlays */}

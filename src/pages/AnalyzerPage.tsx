@@ -199,6 +199,13 @@ function sameReason(left: AnalyzerReason, right: AnalyzerReason) {
   );
 }
 
+import { StickersLayer, StickerData } from "@/components/StickersLayer";
+const analyzerStickers: StickerData[] = [
+  { src: "/sticker/1-64-256b.png", side: "left", top: "25%", rotation: -12 },
+  { src: "/sticker/1-54-256b.png", side: "right", top: "55%", rotation: 10 },
+  { src: "/sticker/1-60-256b.png", side: "left", top: "85%", rotation: 15 },
+];
+
 /* ════════════════════════════════════════════════ */
 /*  MAIN ANALYZER PAGE                             */
 /* ════════════════════════════════════════════════ */
@@ -369,6 +376,7 @@ export function AnalyzerPage() {
   /* ════════════════════════════════════════════════ */
   return (
     <section className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden text-foreground bg-background">
+      <StickersLayer items={analyzerStickers} />
       {/* ── Background layers ── */}
       <video
         autoPlay loop muted playsInline

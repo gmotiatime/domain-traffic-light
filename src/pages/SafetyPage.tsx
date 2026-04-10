@@ -53,10 +53,18 @@ function GlassCard({
   );
 }
 
+import { StickersLayer, StickerData } from "@/components/StickersLayer";
+const safetyStickers: StickerData[] = [
+  { src: "/sticker/1-56-256b.png", side: "left", top: "20%", rotation: -10 },
+  { src: "/sticker/1-67-256b.png", side: "right", top: "50%", rotation: 12 },
+  { src: "/sticker/1-82-256b.png", side: "left", top: "80%", rotation: 5 },
+];
+
 export function SafetyPage() {
   return (
     <div className="relative isolate min-h-[calc(100vh-6rem)] w-full overflow-hidden bg-background text-foreground selection:bg-foreground/20">
-      
+      <StickersLayer items={safetyStickers} />
+
       {/* Animated Mesh Orbs */}
       <div className="pointer-events-none absolute inset-0 -z-[5] overflow-hidden">
         <motion.div
