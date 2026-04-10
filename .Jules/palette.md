@@ -1,0 +1,3 @@
+## 2025-04-10 - Add ARIA Labels to Icon Buttons
+**Learning:** This application extensively uses icon-only buttons for actions like closing modals, navigating slides, and deleting items. A recurring pattern is missing aria-labels on these buttons, which significantly degrades the screen reader experience. It is a common oversight in React/Tailwind setups where the visual clarity of the icon masks the underlying accessibility gap.
+**Action:** Always proactively scan for <button> elements containing only lucide-react icons (like <X />, <Trash2 />, <ChevronLeft />) and ensure they have a localized, descriptive aria-label.
