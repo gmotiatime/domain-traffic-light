@@ -602,27 +602,6 @@ export function AnalyzerPage() {
                 ))}
               </div>
               
-              {result.host !== "—" && (
-                <div className="relative group">
-                  <button
-                    onClick={() => telemetryConsent ? setShowReportModal(true) : null}
-                    disabled={!telemetryConsent}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
-                      telemetryConsent
-                        ? "border-foreground/10 bg-foreground/[0.03] text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground/80"
-                        : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
-                    }`}
-                  >
-                    <Flag className="h-3 w-3" />
-                    Пожаловаться
-                  </button>
-                  {!telemetryConsent && (
-                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm">
-                      Включите "Анонимно сохранять результат в общую базу" и повторите попытку
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </GlassCard>
 
@@ -630,9 +609,33 @@ export function AnalyzerPage() {
           <div className="flex flex-col gap-4 lg:col-span-5">
             {/* Primary action */}
             <GlassCard className="p-6">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Действие
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Действие
+                </div>
+
+                {result.host !== "—" && (
+                  <div className="relative group">
+                    <button
+                      onClick={() => telemetryConsent ? setShowReportModal(true) : null}
+                      disabled={!telemetryConsent}
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                        telemetryConsent
+                          ? "border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                          : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
+                      }`}
+                    >
+                      <Flag className="h-3 w-3" />
+                      Неверный вердикт?
+                    </button>
+                    {!telemetryConsent && (
+                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm z-10">
+                        Включите "Анонимно сохранять результат в общую базу" (в настройках) и повторите попытку
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
                 {primaryAction(result.verdict)}
@@ -669,44 +672,52 @@ export function AnalyzerPage() {
               </div>
             </div>
 
-            {leadReason && (
-              <div className="mt-5 rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/30">Главный сигнал</span>
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground/90">{leadReason.title}</p>
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[leadReason.tone].pill}`}>
-                        {toneStyles[leadReason.tone].label}
-                      </span>
+            {leadReason && (() => {
+              const isCritical = leadReason.tone === "critical";
+              return (
+                <div className={`mt-5 rounded-2xl border p-5 ${isCritical ? "border-rose-500/20 bg-rose-500/5" : "border-foreground/[0.06] bg-foreground/[0.02]"}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <span className={`text-[10px] uppercase tracking-[0.2em] ${isCritical ? "text-rose-400/80" : "text-foreground/30"}`}>Главный сигнал</span>
+                      <div className="mt-2 flex items-center gap-2">
+                        {isCritical && <ShieldAlert className="h-4 w-4 text-rose-400" />}
+                        <p className={`text-sm font-medium ${isCritical ? "text-rose-400" : "text-foreground/90"}`}>{leadReason.title}</p>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[leadReason.tone].pill}`}>
+                          {toneStyles[leadReason.tone].label}
+                        </span>
+                      </div>
+                      <p className={`mt-2 text-sm leading-relaxed ${isCritical ? "text-rose-400/80" : "text-foreground/50"}`}>{leadReason.detail}</p>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-foreground/50">{leadReason.detail}</p>
+                    <span className="shrink-0 text-sm font-medium text-foreground/70">
+                      {leadReason.scoreDelta > 0 ? `+${leadReason.scoreDelta}` : leadReason.scoreDelta}
+                    </span>
                   </div>
-                  <span className="shrink-0 text-sm font-medium text-foreground/70">
-                    {leadReason.scoreDelta > 0 ? `+${leadReason.scoreDelta}` : leadReason.scoreDelta}
-                  </span>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {visibleReasons.length > 0 && (
               <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
-                {visibleReasons.map((reason, i) => (
-                  <div key={`${reason.title}-${i}`} className="flex items-start justify-between gap-4 px-5 py-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-foreground/80">{reason.title}</p>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone].pill}`}>
-                          {toneStyles[reason.tone].label}
-                        </span>
+                {visibleReasons.map((reason, i) => {
+                  const isCritical = reason.tone === "critical";
+                  return (
+                    <div key={`${reason.title}-${i}`} className={`flex items-start justify-between gap-4 px-5 py-4 ${isCritical ? "bg-rose-500/5" : ""}`}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isCritical && <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />}
+                          <p className={`text-sm ${isCritical ? "font-medium text-rose-400" : "text-foreground/80"}`}>{reason.title}</p>
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone].pill}`}>
+                            {toneStyles[reason.tone].label}
+                          </span>
+                        </div>
+                        <p className={`mt-1 text-sm leading-relaxed ${isCritical ? "text-foreground/60" : "text-foreground/40"}`}>{reason.detail}</p>
                       </div>
-                      <p className="mt-1 text-sm leading-relaxed text-foreground/40">{reason.detail}</p>
+                      <span className="shrink-0 text-sm text-foreground/60">
+                        {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
+                      </span>
                     </div>
-                    <span className="shrink-0 text-sm text-foreground/60">
-                      {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </GlassCard>
@@ -721,19 +732,25 @@ export function AnalyzerPage() {
             {aiExplanation ? (
               <div className="mt-4">
                 <p className="text-sm leading-relaxed text-foreground/60">{aiExplanation.summary}</p>
-                {aiSignals.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {aiSignals.map((reason, i) => (
-                      <div key={`ai-${i}`} className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                           <p className="text-sm text-foreground/70">{aiReasonTitle(reason, i)}</p>
-                           <span className="text-xs text-foreground/40">
-                             {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
-                           </span>
+                {aiExplanation.reasons && aiExplanation.reasons.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    {aiExplanation.reasons.map((reason, i) => {
+                      const isCritical = reason.tone === "critical";
+                      return (
+                        <div key={`ai-${i}`} className={`rounded-xl border px-4 py-3 ${isCritical ? "border-rose-500/20 bg-rose-500/5" : "border-foreground/[0.06] bg-foreground/[0.02]"}`}>
+                          <div className="flex items-center justify-between gap-2">
+                             <div className="flex items-center gap-2">
+                               {isCritical && <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />}
+                               <p className={`text-sm font-medium ${isCritical ? "text-rose-400" : "text-foreground/80"}`}>{reason.title}</p>
+                             </div>
+                             <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone]?.pill || toneStyles.warning.pill}`}>
+                               {toneStyles[reason.tone]?.label || "Сигнал"}
+                             </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-foreground/60">{reason.detail}</p>
                         </div>
-                        <p className="mt-1 text-xs leading-relaxed text-foreground/40">{reason.detail}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

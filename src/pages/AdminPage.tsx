@@ -442,39 +442,56 @@ export function AdminPage() {
 
           {/* Статистика БД */}
           {token && stats && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-wider text-white/50">Всего записей</div>
-                <div className="mt-2 text-2xl font-semibold">{stats.total || stats.size || 0}</div>
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Database className="h-24 w-24 text-white" />
+                </div>
+                <div className="text-sm font-medium uppercase tracking-widest text-white/40 mb-2">Всего записей в кэше</div>
+                <div className="mt-1 text-4xl font-bold text-white">{stats.total || stats.size || 0}</div>
                 {stats.active && stats.active !== stats.total ? (
-                  <div className="mt-1 text-xs text-green-400">{stats.active} активных</div>
+                  <div className="mt-2 text-sm text-emerald-400/80 font-medium">{stats.active} активных</div>
                 ) : null}
               </div>
               
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-wider text-white/50">Размер БД</div>
-                <div className="mt-2 text-2xl font-semibold">
-                  {stats.dbSize ? `${(stats.dbSize / 1024).toFixed(1)} KB` : '—'}
+              <div className="rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent p-6 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Flag className="h-24 w-24 text-rose-500" />
                 </div>
-                <div className="mt-1 text-xs text-white/40">{stats.storage || 'local-db-v2'}</div>
+                <div className="text-sm font-medium uppercase tracking-widest text-rose-400/60 mb-2">Жалобы пользователей</div>
+                <div className="mt-1 text-4xl font-bold text-rose-400">
+                  {reportsWithComplaints.reduce((acc, curr) => acc + (curr.reports?.length || 0), 0)}
+                </div>
+                <div className="mt-2 text-sm text-rose-400/60 font-medium">отмечено на {reportsWithComplaints.length} доменах</div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-wider text-white/50">Вердикты</div>
-                <div className="mt-2 space-y-1 text-sm">
+              <div className="rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-6 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <KeyRound className="h-24 w-24 text-blue-500" />
+                </div>
+                <div className="text-sm font-medium uppercase tracking-widest text-blue-400/60 mb-2">Объем хранилища</div>
+                <div className="mt-1 text-4xl font-bold text-blue-400">
+                  {stats.dbSize ? `${(stats.dbSize / 1024).toFixed(1)}` : '—'} <span className="text-2xl">KB</span>
+                </div>
+                <div className="mt-2 text-sm text-blue-400/60 font-medium">{stats.storage || 'local-db'}</div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6">
+                <div className="text-sm font-medium uppercase tracking-widest text-white/40 mb-4">Вердикты</div>
+                <div className="space-y-3 text-sm font-medium">
                   {stats.verdicts ? (
                     <>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Low:</span>
-                        <span className="font-medium text-green-400">{stats.verdicts.low || 0}</span>
+                      <div className="flex justify-between items-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-emerald-400">
+                        <span>Low (Безопасно):</span>
+                        <span className="text-lg">{stats.verdicts.low || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Medium:</span>
-                        <span className="font-medium text-yellow-400">{stats.verdicts.medium || 0}</span>
+                      <div className="flex justify-between items-center rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-amber-400">
+                        <span>Medium (Риск):</span>
+                        <span className="text-lg">{stats.verdicts.medium || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">High:</span>
-                        <span className="font-medium text-red-400">{stats.verdicts.high || 0}</span>
+                      <div className="flex justify-between items-center rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2 text-rose-400">
+                        <span>High (Опасно):</span>
+                        <span className="text-lg">{stats.verdicts.high || 0}</span>
                       </div>
                     </>
                   ) : (
@@ -509,6 +526,49 @@ export function AdminPage() {
                   <div className="mb-1">✓ Убирается протокол</div>
                   <div>✓ Убирается путь</div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Подозрительные паттерны */}
+          {token && reportsWithComplaints.filter(item => item.preview?.verdict === "low" && (item.reports?.length || 0) >= 3).length > 0 && (
+            <div className="mt-6 rounded-[2rem] border border-amber-500/20 bg-amber-500/5 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10">
+                  <ShieldAlert className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-amber-400">Подозрительные паттерны</h3>
+                  <p className="text-sm text-amber-400/60">Домены с вердиктом "Безопасно" и множеством жалоб (&gt;= 3). Требуется пересмотр ruleset.</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {reportsWithComplaints
+                  .filter(item => item.preview?.verdict === "low" && (item.reports?.length || 0) >= 3)
+                  .map(item => {
+                    const hostParts = item.host?.split('.') || [];
+                    const tld = hostParts.length > 1 ? `.${hostParts.slice(-1)[0]}` : "—";
+                    return (
+                      <div key={`pattern-${item.host}`} className="rounded-xl border border-amber-500/10 bg-black/20 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-white">{item.host}</span>
+                          <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs text-red-400">{item.reports?.length} жалоб</span>
+                        </div>
+                        <div className="text-xs text-white/50">
+                          <span className="mr-3">TLD: <span className="text-white/80">{tld}</span></span>
+                          <span>Score: {item.preview?.score || 0}</span>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="mt-3 w-full border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                          onClick={() => loadEntry(item.host || "")}
+                        >
+                          Изучить запись
+                        </Button>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

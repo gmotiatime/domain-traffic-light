@@ -12,6 +12,7 @@ import { ChangelogPage } from "@/pages/ChangelogPage";
 import { HomePage } from "@/pages/HomePage";
 import { MethodPage } from "@/pages/MethodPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { PresentationPage } from "@/pages/PresentationPage";
 import { SafetyPage } from "@/pages/SafetyPage";
 
 function readRoute(): SitePath | "404" {
@@ -20,7 +21,7 @@ function readRoute(): SitePath | "404" {
   }
 
   const hash = window.location.hash.replace(/^#/, "") || "/";
-  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog"];
+  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog", "/presentation"];
   if (sitePaths.includes(hash)) {
     return hash as SitePath;
   }
@@ -35,6 +36,7 @@ const routeTitles: Record<SitePath | "404", string> = {
   "/admin": "Админка кэша | Доменный светофор",
   "/brand": "Бренд-кит | Доменный светофор",
   "/changelog": "Что нового | Доменный светофор",
+  "/presentation": "Презентация | Доменный светофор",
   "404": "Красный свет | Тупик",
   "/404": "Красный свет | Тупик",
 };
@@ -53,6 +55,8 @@ function renderPage(path: SitePath | "404") {
       return <BrandKitPage />;
     case "/changelog":
       return <ChangelogPage />;
+    case "/presentation":
+      return <PresentationPage />;
     case "404":
       return <NotFoundPage />;
     case "/":
@@ -99,12 +103,14 @@ export default function App() {
     };
   }, []);
 
+  const isPresentation = path === "/presentation";
+
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <SiteHeader activePath={path === "404" ? "/" : path} />
+      {!isPresentation && <SiteHeader activePath={path === "404" ? "/" : path} />}
       <AnimatePresence mode="wait">
         <motion.main
-          className={path === "/" ? "relative z-10" : "relative z-10 pt-24"}
+          className={isPresentation ? "relative z-10" : path === "/" ? "relative z-10" : "relative z-10 pt-24"}
           key={path}
           animate={{ opacity: 1, y: 0 }}
           initial={{ opacity: 0, y: 12 }}
@@ -114,7 +120,7 @@ export default function App() {
           {renderPage(path)}
         </motion.main>
       </AnimatePresence>
-      <SiteFooter />
+      {!isPresentation && <SiteFooter />}
     </div>
   );
 }
