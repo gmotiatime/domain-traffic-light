@@ -682,7 +682,7 @@ export function AnalyzerPage() {
             })()}
 
             {visibleReasons.length > 0 && (
-              <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
+              <div className="mt-3 divide-y divide-foreground/[0.04] rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
                 {visibleReasons.map((reason, i) => {
                   const isCritical = reason.tone === "critical";
                   return (
