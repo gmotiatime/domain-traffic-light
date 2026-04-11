@@ -15,6 +15,7 @@ import {
 import { routeHref } from "@/lib/site-router";
 
 import BorderGlow from "@/components/BorderGlow";
+import { GlassCard } from "@/components/GlassCard";
 
 /* ─── animation presets ─── */
 const fadeUp = {
@@ -29,42 +30,6 @@ const stagger = {
   viewport: { once: true },
 };
 
-/* ─── glass card wrapper ─── */
-function GlassCard({
-  children,
-  className = "",
-  containerClassName = "",
-  delay = 0,
-  glow,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  containerClassName?: string;
-  delay?: number;
-  glow?: string;
-}) {
-  return (
-    <motion.div
-      className={`relative transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 ${containerClassName}`}
-      initial={{ opacity: 0, y: 30, scale: 0.95 }} // Start from scale 0.95, not 0
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
-      viewport={{ once: true, amount: 0.1 }}
-    >
-      <BorderGlow
-        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
-        borderRadius={32}
-        glowRadius={30}
-        fillOpacity={0}
-        backgroundColor="#000000"
-      >
-        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
-          {children}
-        </div>
-      </BorderGlow>
-    </motion.div>
-  );
-}
 
 type CacheStats = {
   size?: number;
@@ -199,7 +164,7 @@ export function HomePage() {
             whileInView="whileInView"
             className="max-w-5xl"
           >
-            <motion.p variants={fadeUp} className="text-xs font-medium uppercase tracking-[0.26em] text-foreground/50 sm:text-sm">
+            <motion.p variants={fadeUp} className="text-xs font-medium uppercase tracking-[0.26em] text-foreground/70 sm:text-sm">
               Мгновенный AI Анализатор Доменов
             </motion.p>
             
@@ -250,7 +215,7 @@ export function HomePage() {
                 }}
               >
                 <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative z-20">
-                  <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
+                  <Globe className="h-6 w-6 shrink-0 text-foreground/70 transition-colors group-focus-within:text-foreground/70" />
                   <div className="relative w-full">
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -283,7 +248,7 @@ export function HomePage() {
                   {homeManifest.map((item) => (
                     <span
                       key={item}
-                      className="inline-flex items-center gap-2 text-sm text-foreground/50"
+                      className="inline-flex items-center gap-2 text-sm text-foreground/70"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-foreground/40" />
                       {item}
@@ -291,7 +256,7 @@ export function HomePage() {
                   ))}
                 </div>
 
-                <Button asChild className="h-10 px-0 text-sm text-foreground/50 hover:text-foreground hover:bg-transparent" variant="ghost">
+                <Button asChild className="h-10 px-0 text-sm text-foreground/70 hover:text-foreground hover:bg-transparent" variant="ghost">
                   <a href={routeHref("/method")}>Как работает проверка</a>
                 </Button>
               </div>
@@ -304,9 +269,9 @@ export function HomePage() {
       <section className="relative w-full bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <div className="max-w-3xl">
-            <p className="text-xs uppercase tracking-[0.26em] text-foreground/40">Подкапотная магия</p>
+            <p className="text-xs uppercase tracking-[0.26em] text-foreground/70">Подкапотная магия</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-              Три проверки <span className="text-foreground/50">одновременно</span>
+              Три проверки <span className="text-foreground/70">одновременно</span>
             </h2>
           </div>
 
@@ -317,7 +282,7 @@ export function HomePage() {
                   <Shield className="h-8 w-8 text-green-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Фиды фишинга</h3>
-                <p className="mt-3 text-base leading-relaxed text-foreground/50">
+                <p className="mt-3 text-base leading-relaxed text-foreground/70">
                   Сверка с базами OpenPhish и URLAbuse. Если домен уже в списках фишинга, вы увидите это сразу.
                 </p>
               </div>
@@ -336,7 +301,7 @@ export function HomePage() {
                   <Cpu className="h-8 w-8 text-blue-400" strokeWidth={1.5} />
                 </div>
                 <h3 className="mt-6 text-2xl font-semibold">Локальный Ruleset</h3>
-                <p className="mt-3 text-base leading-relaxed text-foreground/50">
+                <p className="mt-3 text-base leading-relaxed text-foreground/70">
                   Разбор структуры URL, проверка на опечатки брендов и подозрительные зоны. Работает мгновенно.
                 </p>
               </div>
@@ -376,9 +341,9 @@ export function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 relative z-10">
           <GlassCard className="p-8 sm:p-12 md:p-14">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Логика сервиса</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-foreground/70">Логика сервиса</p>
               <h2 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                Три шага: <span className="text-foreground/50">остановка, проверка, решение</span>
+                Три шага: <span className="text-foreground/70">остановка, проверка, решение</span>
               </h2>
             </div>
 
@@ -390,7 +355,7 @@ export function HomePage() {
                     borderRadius={32}
                     glowRadius={30}
                     fillOpacity={0}
-                    backgroundColor="#000000"
+                    backgroundColor="hsl(var(--background))"
                   >
                     <div className="relative flex flex-col justify-between h-full w-full">
                       {/* Big glowing background number */}
@@ -403,10 +368,10 @@ export function HomePage() {
                           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-xs font-bold text-foreground shadow-[0_0_15px_rgba(255,255,255,0.08)]">
                             {i + 1}
                           </span>
-                          <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">{item.step}</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-foreground/70">{item.step}</p>
                         </div>
-                        <h3 className="mt-6 text-2xl font-semibold text-foreground/90">{item.title}</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-foreground/50 sm:text-base">
+                        <h3 className="mt-6 text-2xl font-semibold text-foreground/90 text-soft-balance">{item.title}</h3>
+                        <p className="mt-3 text-sm leading-relaxed text-foreground/70 sm:text-base">
                           {item.text}
                         </p>
                       </div>
@@ -447,7 +412,7 @@ export function HomePage() {
       <section className="relative w-full bg-background pb-16 sm:pb-20 pt-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <div className="mb-14">
-            <p className="text-xs uppercase tracking-[0.24em] text-foreground/40">Что даёт сервис</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-foreground/70">Что даёт сервис</p>
             <h2 className="mt-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
               Простой интерфейс, рабочий инструмент
             </h2>
@@ -463,8 +428,8 @@ export function HomePage() {
               return (
                 <GlassCard key={item.title} delay={index * 0.1} className="overflow-hidden p-0" glow={`radial-gradient(circle at 50% 100%, ${cardColors[index]}, transparent 60%)`}>
                   <div className="p-8 pb-2">
-                    <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
-                    <p className="mt-3 text-base leading-relaxed text-foreground/50">
+                    <h3 className="text-xl font-semibold text-foreground text-soft-balance">{item.title}</h3>
+                    <p className="mt-3 text-base leading-relaxed text-foreground/70">
                       {item.text}
                     </p>
                   </div>
@@ -491,7 +456,7 @@ export function HomePage() {
         <section className="relative w-full bg-background py-16 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
             <div className="text-center mb-14">
-              <p className="text-xs uppercase tracking-[0.26em] text-foreground/40">Статистика в реальном времени</p>
+              <p className="text-xs uppercase tracking-[0.26em] text-foreground/70">Статистика в реальном времени</p>
               <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
                 Проверено доменов: <AnimatedCounter end={stats.total || stats.size || 0} className="inline-block bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent" />
               </h2>
@@ -502,49 +467,49 @@ export function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Shield className="h-8 w-8 text-green-400" strokeWidth={1.5} />
                 </div>
-                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Безопасные</div>
+                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/70">Безопасные</div>
                 <AnimatedCounter end={stats.verdicts?.low || 0} className="mt-2 text-3xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]" duration={1500} />
-                <p className="mt-2 text-sm text-foreground/40">Домены с низким риском</p>
+                <p className="mt-2 text-sm text-foreground/70">Домены с низким риском</p>
               </GlassCard>
 
               <GlassCard delay={0.2} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(250,204,21,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Search className="h-8 w-8 text-yellow-400" strokeWidth={1.5} />
                 </div>
-                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Подозрительные</div>
+                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/70">Подозрительные</div>
                 <AnimatedCounter end={stats.verdicts?.medium || 0} className="mt-2 text-3xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]" duration={1500} />
-                <p className="mt-2 text-sm text-foreground/40">Требуют внимания</p>
+                <p className="mt-2 text-sm text-foreground/70">Требуют внимания</p>
               </GlassCard>
 
               <GlassCard delay={0.3} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(248,113,113,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <TrendingUp className="h-8 w-8 text-red-400" strokeWidth={1.5} />
                 </div>
-                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">Опасные</div>
+                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/70">Опасные</div>
                 <AnimatedCounter end={stats.verdicts?.high || 0} className="mt-2 text-3xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.3)]" duration={1500} />
-                <p className="mt-2 text-sm text-foreground/40">Высокий риск фишинга</p>
+                <p className="mt-2 text-sm text-foreground/70">Высокий риск фишинга</p>
               </GlassCard>
 
               <GlassCard delay={0.4} className="p-6" glow="radial-gradient(circle at 100% 100%, rgba(167,139,250,0.06), transparent 70%)">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-transparent">
                   <Database className="h-8 w-8 text-violet-400" strokeWidth={1.5} />
                 </div>
-                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/50">База данных</div>
+                <div className="mt-4 text-xs uppercase tracking-wider text-foreground/70">База данных</div>
                 <div className="mt-2 text-3xl font-bold text-violet-400">
                   {stats.dbSize ? (
                     <>
                       <AnimatedCounter end={Math.floor(stats.dbSize / 1024)} className="inline-block" duration={1500} />
-                      <span className="text-lg text-foreground/40 ml-1">KB</span>
+                      <span className="text-lg text-foreground/70 ml-1">KB</span>
                     </>
                   ) : '—'}
                 </div>
-                <p className="mt-2 text-sm text-foreground/40">Размер кэша</p>
+                <p className="mt-2 text-sm text-foreground/70">Размер кэша</p>
               </GlassCard>
             </div>
 
             {(stats.oldestRecord || stats.newestRecord) && (
               <div className="mt-8 text-center">
-                <p className="text-sm text-foreground/40">
+                <p className="text-sm text-foreground/70">
                   {stats.oldestRecord && `Первая проверка: ${new Date(stats.oldestRecord).toLocaleDateString('ru-RU')}`}
                   {stats.oldestRecord && stats.newestRecord && ' • '}
                   {stats.newestRecord && `Последняя: ${new Date(stats.newestRecord).toLocaleDateString('ru-RU')}`}
@@ -560,7 +525,7 @@ export function HomePage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <GlassCard className="flex flex-col items-center justify-center p-12 text-center sm:p-20" glow="radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.05) 0%, transparent 70%)">
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Есть подозрительная ссылка?</h2>
-            <p className="mt-5 max-w-xl text-lg text-foreground/50">
+            <p className="mt-5 max-w-xl text-lg text-foreground/70">
               Вставьте её и посмотрите, что найдет анализатор.
             </p>
             <Button 

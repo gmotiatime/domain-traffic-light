@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 
 import { methodBlocks, ruleReference } from "@/lib/site-content";
 import BorderGlow from "@/components/BorderGlow";
+import { GlassCard } from "@/components/GlassCard";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -15,42 +16,6 @@ const stagger = {
   viewport: { once: true },
 };
 
-/* ─── glass card wrapper ─── */
-function GlassCard({
-  children,
-  className = "",
-  containerClassName = "",
-  delay = 0,
-  glow,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  containerClassName?: string;
-  delay?: number;
-  glow?: string;
-}) {
-  return (
-    <motion.div
-      className={`relative transition-all hover:-translate-y-1 ${containerClassName}`}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      viewport={{ once: true, amount: 0.1 }}
-    >
-      <BorderGlow
-        className={`w-full h-full rounded-[2rem] border-white/5 shadow-2xl flex flex-col ${className}`}
-        borderRadius={32}
-        glowRadius={30}
-        fillOpacity={0}
-        backgroundColor="#000000"
-      >
-        <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
-          {children}
-        </div>
-      </BorderGlow>
-    </motion.div>
-  );
-}
 
 import { StickersLayer, StickerData } from "@/components/StickersLayer";
 
