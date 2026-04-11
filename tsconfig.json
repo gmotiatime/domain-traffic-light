@@ -18,6 +18,13 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "src/pages/**/*.ts",
+    "src/pages/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "presentation-remotion", "video-remotion", "scripts", "server", "api"]
 }
