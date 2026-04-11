@@ -325,6 +325,7 @@ export function PresentationPage() {
       <footer className="relative z-10 px-12 py-8 flex justify-between items-center">
         <button
           onClick={() => setCurrentSlide(prev => Math.max(prev - 1, 0))}
+          aria-label="Предыдущий слайд"
           disabled={currentSlide === 0}
           className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
         >
@@ -336,6 +337,7 @@ export function PresentationPage() {
             <button
               key={i}
               onClick={() => setCurrentSlide(i)}
+              aria-label={`Перейти к слайду ${i + 1}`}
               className={`h-2 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-emerald-500' : 'w-2 bg-white/20'}`}
             />
           ))}
@@ -343,6 +345,7 @@ export function PresentationPage() {
 
         <button
           onClick={() => setCurrentSlide(prev => Math.min(prev + 1, slides.length - 1))}
+          aria-label="Следующий слайд"
           disabled={currentSlide === slides.length - 1}
           className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
         >

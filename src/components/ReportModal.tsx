@@ -77,6 +77,7 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
           >
             <button
               onClick={onClose}
+              aria-label="Закрыть"
               className="absolute right-4 top-4 rounded-lg p-2 text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground/80"
             >
               <X className="h-4 w-4" />
