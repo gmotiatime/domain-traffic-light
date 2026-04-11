@@ -798,6 +798,7 @@ export function AdminPage() {
                                 )}
                                 <button
                                   onClick={() => handleDeleteReport(report.id)}
+                                  aria-label="Удалить жалобу"
                                   disabled={isSaving}
                                   className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
                                 >
@@ -850,6 +851,7 @@ export function AdminPage() {
           >
             <button
               onClick={() => setShowReportsModal(false)}
+              aria-label="Закрыть"
               className="absolute right-4 top-4 rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
             >
               <X className="h-4 w-4" />

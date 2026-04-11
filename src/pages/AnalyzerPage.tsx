@@ -447,6 +447,7 @@ export function AnalyzerPage() {
                 <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
                 <input
                   ref={inputRef}
+                  aria-label="Введите домен или ссылку для проверки"
                   className="w-full bg-transparent py-3.5 text-xl font-medium text-foreground outline-none placeholder:text-foreground/30 placeholder:font-normal transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                   id="domain-input"
                   onChange={(e) => setDraft(e.target.value)}
