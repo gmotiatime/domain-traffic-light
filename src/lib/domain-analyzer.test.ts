@@ -1,7 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeDomainInput } from './domain-analyzer';
+import { analyzeDomainInput, isIpAddress } from './domain-analyzer';
 
 describe('domain-analyzer', () => {
+  it('isIpAddress should correctly validate IP addresses', () => {
+    expect(isIpAddress('192.168.1.1')).toBe(true);
+    expect(isIpAddress('0.0.0.0')).toBe(true);
+    expect(isIpAddress('255.255.255.255')).toBe(true);
+
+    // Invalid ranges
+    expect(isIpAddress('999.999.999.999')).toBe(false);
+    expect(isIpAddress('256.256.256.256')).toBe(false);
+
+    // Invalid formats
+    expect(isIpAddress('1.2.3')).toBe(false);
+    expect(isIpAddress('1.2.3.4.5')).toBe(false);
+    expect(isIpAddress('not.an.ip')).toBe(false);
+  });
+
   it('should return low risk for official domains', () => {
     const result = analyzeDomainInput('cert.by');
     expect(result.verdict).toBe('low');

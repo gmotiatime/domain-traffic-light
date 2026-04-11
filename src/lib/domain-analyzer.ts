@@ -386,8 +386,14 @@ const knownPhishingPatterns = [
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
-function isIpAddress(host: string): boolean {
-  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+export function isIpAddress(host: string): boolean {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false;
+  const parts = host.split('.');
+  for (const part of parts) {
+    const num = parseInt(part, 10);
+    if (num < 0 || num > 255) return false;
+  }
+  return true;
 }
 
 function hasMixedScripts(value: string): boolean {
