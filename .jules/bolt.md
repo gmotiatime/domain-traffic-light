@@ -1,0 +1,3 @@
+## 2025-04-08 - Framer Motion Scroll Utilities
+**Learning:** Attaching a scroll listener to `window` and saving `window.scrollY` into React state causes the entire component to re-render constantly (e.g. 60 FPS) while scrolling. For large or complex components like a full-page layout, this causes significant jank and CPU usage.
+**Action:** Use Framer Motion's `useScroll` and `useTransform` hooks instead. These values can be passed directly to a `motion.div`'s `style` prop, bypassing React's render phase entirely and updating the DOM node directly during scroll. When combining this with an existing `animate` prop on the same element, wrap it in a parent `motion.div` that handles the scroll translation to avoid conflicts.

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,6 @@ export function HomePage() {
   const [currentVerb, setCurrentVerb] = useState(0);
   const [currentWord, setCurrentWord] = useState(0);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
 
   const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
   const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
@@ -119,15 +118,6 @@ export function HomePage() {
       }
     }
     loadStats();
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -159,6 +149,10 @@ export function HomePage() {
     window.location.hash = routeHref("/analyzer");
   }
 
+  const { scrollY } = useScroll();
+  const orb1Y = useTransform(scrollY, value => value * 0.3);
+  const orb2Y = useTransform(scrollY, value => value * 0.2);
+
   return (
     <div className="relative bg-background text-foreground selection:bg-foreground/20">
       <StickersLayer items={homeStickers} />
@@ -178,18 +172,20 @@ export function HomePage() {
 
         {/* Animated Mesh Orbs (Hero Only) */}
         <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
-          <motion.div
-            animate={{ x: [0, 40, -30, 0], y: [0, -50, 30, 0] }}
-            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-[10%] left-[10%] h-[700px] w-[700px] rounded-full bg-blue-500/10 opacity-40 blur-[150px]"
-            style={{ transform: `translateY(${scrollY * 0.3}px)` }}
-          />
-          <motion.div
-            animate={{ x: [0, -40, 30, 0], y: [0, 50, -30, 0] }}
-            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-0 right-[5%] h-[600px] w-[600px] rounded-full bg-violet-500/10 opacity-30 blur-[120px]"
-            style={{ transform: `translateY(${scrollY * 0.2}px)` }}
-          />
+          <motion.div style={{ y: orb1Y }} className="absolute -top-[10%] left-[10%] h-[700px] w-[700px]">
+            <motion.div
+              animate={{ x: [0, 40, -30, 0], y: [0, -50, 30, 0] }}
+              transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+              className="h-full w-full rounded-full bg-blue-500/10 opacity-40 blur-[150px]"
+            />
+          </motion.div>
+          <motion.div style={{ y: orb2Y }} className="absolute bottom-0 right-[5%] h-[600px] w-[600px]">
+            <motion.div
+              animate={{ x: [0, -40, 30, 0], y: [0, 50, -30, 0] }}
+              transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+              className="h-full w-full rounded-full bg-violet-500/10 opacity-30 blur-[120px]"
+            />
+          </motion.div>
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[90svh] w-full max-w-7xl flex-col items-center justify-center px-4 pb-20 pt-32 text-center sm:px-6">
