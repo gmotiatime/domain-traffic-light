@@ -110,6 +110,56 @@ export function AdminPage() {
     note: "",
   });
 
+  const [activeTab, setActiveTab] = useState<"cache" | "content">("cache");
+  const [articleTopic, setArticleTopic] = useState("");
+  const [articleContent, setArticleContent] = useState("");
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [isPublishingArticle, setIsPublishingArticle] = useState(false);
+  const [articleStatus, setArticleStatus] = useState("");
+
+  async function handleGenerateArticle() {
+    if (!articleTopic) return;
+    setIsGeneratingArticle(true);
+    setArticleStatus("Генерация...");
+    try {
+      const response = await fetch(getApiUrl(`/api/articles?action=generate`), {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ topic: articleTopic }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Ошибка генерации");
+      setArticleContent(data.content || "");
+      setArticleStatus("Сгенерировано успешно.");
+    } catch (err: any) {
+      setArticleStatus(err.message);
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  }
+
+  async function handlePublishArticle() {
+    if (!articleTopic || !articleContent) return;
+    setIsPublishingArticle(true);
+    setArticleStatus("Публикация...");
+    try {
+      const response = await fetch(getApiUrl(`/api/articles`), {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ topic: articleTopic, content: articleContent }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Ошибка публикации");
+      setArticleStatus("Опубликовано успешно!");
+      setArticleTopic("");
+      setArticleContent("");
+    } catch (err: any) {
+      setArticleStatus(err.message);
+    } finally {
+      setIsPublishingArticle(false);
+    }
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
@@ -361,19 +411,35 @@ export function AdminPage() {
     <section className="relative min-h-[calc(100vh-6rem)] w-full bg-background px-4 pb-16 pt-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/60">
-                <Database className="h-3.5 w-3.5" />
-                Админка кэша
+          <div className="flex gap-4 border-b border-white/10 mb-6 pb-2">
+            <button
+              className={`px-4 py-2 font-medium transition-colors ${activeTab === "cache" ? "border-b-2 border-white text-white" : "text-white/50 hover:text-white"}`}
+              onClick={() => setActiveTab("cache")}
+            >
+              Управление кэшем
+            </button>
+            <button
+              className={`px-4 py-2 font-medium transition-colors ${activeTab === "content" ? "border-b-2 border-white text-white" : "text-white/50 hover:text-white"}`}
+              onClick={() => setActiveTab("content")}
+            >
+              Управление контентом
+            </button>
+          </div>
+
+          <div className={`transition-opacity duration-300 ${activeTab === "cache" ? "block" : "hidden"}`}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/60">
+                  <Database className="h-3.5 w-3.5" />
+                  Админка кэша
+                </div>
+                <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+                  Просмотр и ручная правка общей базы
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/60">
+                  Здесь можно найти запись по домену, посмотреть сохранённый AI-ответ и вручную исправить verdict, summary, reasons и actions.
+                </p>
               </div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-                Просмотр и ручная правка общей базы
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/60">
-                Здесь можно найти запись по домену, посмотреть сохранённый AI-ответ и вручную исправить verdict, summary, reasons и actions.
-              </p>
-            </div>
 
             {!token ? (
               <div className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
@@ -837,6 +903,55 @@ export function AdminPage() {
             </div>
           </div>
         )}
+          </div>
+
+          <div className={`transition-opacity duration-300 mt-4 ${activeTab === "content" ? "block" : "hidden"}`}>
+            {token && (
+              <div className="flex flex-col gap-6">
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60 mb-4 flex justify-between items-center max-w-xl">
+                  <span>Активный провайдер ИИ: <span className="font-semibold text-white/80">Fireworks AI</span></span>
+                  <span className="text-xs uppercase tracking-widest px-2 py-1 bg-white/[0.05] rounded-lg">Kimi K2P5 Turbo</span>
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-semibold mb-2">Генерация ИИ-статей</h2>
+                  <p className="text-sm text-white/60 mb-4">
+                    Введите тему статьи. Fireworks AI сгенерирует полноценный текст в формате Markdown.
+                  </p>
+                  <div className="flex gap-2 max-w-xl">
+                    <input
+                      value={articleTopic}
+                      onChange={(e) => setArticleTopic(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
+                      placeholder="Тема статьи, например: Опасность публичных Wi-Fi"
+                    />
+                    <Button type="button" onClick={handleGenerateArticle} disabled={isGeneratingArticle || !articleTopic}>
+                      {isGeneratingArticle ? "Генерируем..." : "Сгенерировать"}
+                    </Button>
+                  </div>
+                  {articleStatus && <p className="mt-2 text-sm text-amber-400">{articleStatus}</p>}
+                </div>
+
+                {articleContent && (
+                  <div className="mt-4">
+                    <h3 className="text-lg font-medium mb-2">Предпросмотр и редактирование</h3>
+                    <textarea
+                      value={articleContent}
+                      onChange={(e) => setArticleContent(e.target.value)}
+                      className="h-[400px] w-full rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none font-mono"
+                    />
+                    <div className="mt-4">
+                      <Button type="button" onClick={handlePublishArticle} disabled={isPublishingArticle}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {isPublishingArticle ? "Публикация..." : "Опубликовать"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
       </div>
 
       {/* ══════════ REPORTS MODAL ══════════ */}
