@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { reportPostSchema, reportDeleteSchema } from "./schemas.mjs";
+import { assertAdminAccess } from "../server/openrouter-proxy.mjs";
 
 function normalizeHost(host) {
   let normalized = String(host || "").toLowerCase().trim();
@@ -15,7 +16,7 @@ function normalizeHost(host) {
 
 function generateId(host) {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 10);
+  const random = randomBytes(4).toString("hex");
   const payload = `${host}-${timestamp}-${random}`;
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }
@@ -88,6 +89,12 @@ export default async function handler(req, res) {
     // DELETE METHOD
     // ═══════════════════════════════════════════════════════════════════════════
     if (req.method === "DELETE") {
+      const authError = assertAdminAccess(req.headers);
+      if (authError) {
+        res.status(authError.status).json(authError.body);
+        return;
+      }
+
       const parsedQuery = reportDeleteSchema.safeParse(req.query || {});
       if (!parsedQuery.success) {
         res.status(400).json({
