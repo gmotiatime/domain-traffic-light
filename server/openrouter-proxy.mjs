@@ -1798,8 +1798,8 @@ app.use((req, _res, next) => {
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 const configuredModels = (
-  process.env.GROQ_MODELS ||
-  process.env.GROQ_MODEL ||
+  process.env.FIREWORKS_MODELS ||
+  process.env.FIREWORKS_MODEL ||
   "llama-3.3-70b-versatile,llama-3.1-8b-instant"
 )
   .split(",")
@@ -1817,7 +1817,7 @@ const compoundSuffixes = [
   "org.by",
 ];
 
-function buildGroqRequest(model, prompt) {
+function buildFireworksRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
@@ -2620,8 +2620,8 @@ ${whoisSummary}
 {"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }
 
-// ─── Groq request with retry ──────────────────────────────────────────────────
-async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
+// ─── Fireworks request with retry ──────────────────────────────────────────────────
+async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -2631,9 +2631,9 @@ async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const requestBody = buildGroqRequest(model, prompt);
+        const requestBody = buildFireworksRequest(model, prompt);
         const response = await fetch(
-          "https://api.groq.com/openai/v1/chat/completions",
+          "https://api.fireworks.ai/inference/v1/chat/completions",
           {
             method: "POST",
             headers: {
@@ -2730,9 +2730,9 @@ export function standardHeaders() {
 export function healthResponse() {
   return {
     ok: true,
-    aiConfigured: Boolean(process.env.GROQ_API_KEY),
+    aiConfigured: Boolean(process.env.FIREWORKS_API_KEY),
     hasLocalEnvFile: fs.existsSync(envLocalFile),
-    provider: "groq",
+    provider: "fireworks",
     models: modelCandidates,
     openPhishEnabled: true,
     openPhishFeedUrl,
@@ -2996,7 +2996,7 @@ export async function adminCacheDeleteResponse(query = {}, headers = {}) {
 
 export async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.FIREWORKS_API_KEY;
   const input = String(body?.input || "");
   const localAnalysis = body?.localAnalysis || null;
   const skipCache = body?.skipCache === true;
@@ -3121,8 +3121,8 @@ export async function analyzeResponse(body = {}, meta = {}) {
     return {
       status: 503,
       body: {
-        error: "GROQ_API_KEY не настроен. Создайте .env.local на основе .env.example.",
-        detail: "AI backend поднят, но без ключа Groq.",
+        error: "FIREWORKS_API_KEY не настроен. Создайте .env.local на основе .env.example.",
+        detail: "AI backend поднят, но без ключа Fireworks.",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3155,7 +3155,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   for (const model of modelCandidates) {
     try {
-      const parsed = await requestGroq({
+      const parsed = await requestFireworks({
         apiKey,
         model,
         prompt,
@@ -3171,7 +3171,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         analysis,
         aiAdjustedResult,
         model,
-        source: "groq",
+        source: "fireworks",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3208,7 +3208,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
   return {
     status: 502,
       body: {
-        error: "Groq request failed.",
+        error: "Fireworks request failed.",
         detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
         attempts: attempts.slice(0, 5),
         threatIntel,
@@ -3220,7 +3220,175 @@ export async function analyzeResponse(body = {}, meta = {}) {
     };
 }
 
+// ─── Articles API Functions ───────────────────────────────────────────────────
+export async function getArticlesResponse() {
+  if (redisCache) {
+    try {
+      const articlesList = await redisCache.lrange("articles:list", 0, -1);
+      const articles = articlesList.map(a => {
+        try { return typeof a === 'string' ? JSON.parse(a) : a; } catch (e) { return a; }
+      });
+      return { status: 200, body: { articles } };
+    } catch (e) {
+      return { status: 500, body: { error: "Failed to fetch articles from Redis" } };
+    }
+  } else {
+    // In memory mock
+    if (!global.mockArticles) global.mockArticles = [];
+    return { status: 200, body: { articles: global.mockArticles } };
+  }
+}
+
+export async function saveArticleResponse(articleBody, headers) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const article = {
+    id: Date.now().toString(),
+    topic: articleBody.topic,
+    content: articleBody.content,
+    createdAt: Date.now()
+  };
+
+  if (redisCache) {
+    try {
+      await redisCache.lpush("articles:list", JSON.stringify(article));
+      return { status: 200, body: { success: true, article } };
+    } catch (e) {
+      return { status: 500, body: { error: "Failed to save article to Redis" } };
+    }
+  } else {
+    if (!global.mockArticles) global.mockArticles = [];
+    global.mockArticles.unshift(article);
+    return { status: 200, body: { success: true, article } };
+  }
+}
+
+export async function generateArticleResponse(topic, headers) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const apiKey = process.env.FIREWORKS_API_KEY;
+  if (!apiKey) {
+    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+  }
+
+  const prompt = `Напиши подробную, профессиональную статью об интернет-безопасности на тему: "${topic}". Статья должна быть в стиле дорогого лендинга: с заголовками, списками и абзацами. Ответь только текстом статьи, без дополнительных комментариев. Статья должна быть в формате Markdown.`;
+
+  for (const model of modelCandidates) {
+    try {
+      const requestBody = buildFireworksRequest(model, prompt);
+      requestBody.response_format = { type: "text" };
+      requestBody.max_tokens = 2000;
+
+      const response = await fetch(
+        "https://api.fireworks.ai/inference/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const responseText = await response.text();
+      let data = null;
+      try { data = JSON.parse(responseText); } catch {}
+
+      if (!response.ok || !data) {
+        throw new Error("Failed to generate article");
+      }
+
+      const content = data?.choices?.[0]?.message?.content;
+      return { status: 200, body: { content } };
+    } catch (error) {
+      log("warn", "Model failed to generate article", { model, error: error.message });
+    }
+  }
+
+  return { status: 502, body: { error: "Failed to generate article with all models." } };
+}
+
+export async function generateQuizScenarioResponse() {
+  const apiKey = process.env.FIREWORKS_API_KEY;
+  if (!apiKey) {
+    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+  }
+
+  const prompt = `Сгенерируй один интересный сценарий для квиза "Не дай себя развести" по кибербезопасности. Верни ответ в формате JSON:
+{
+  "scenario": "Текст ситуации (например: Вам пришло сообщение от 'Службы безопасности банка'...)",
+  "options": [
+    { "text": "Игнорировать", "isCorrect": true, "explanation": "Банки не пишут первыми с подозрительных номеров." },
+    { "text": "Перейти по ссылке", "isCorrect": false, "explanation": "Это фишинговая ссылка." }
+  ]
+}
+Верни строго валидный JSON без дополнительных комментариев.`;
+
+  for (const model of modelCandidates) {
+    try {
+      const requestBody = buildFireworksRequest(model, prompt);
+      requestBody.response_format = { type: "json_object" };
+
+      const response = await fetch(
+        "https://api.fireworks.ai/inference/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const responseText = await response.text();
+      let data = null;
+      try { data = JSON.parse(responseText); } catch {}
+
+      if (!response.ok || !data) {
+        throw new Error("Failed to generate quiz");
+      }
+
+      const contentStr = data?.choices?.[0]?.message?.content;
+      if (!contentStr) throw new Error("Empty content");
+
+      const contentJson = JSON.parse(contentStr);
+      return { status: 200, body: contentJson };
+    } catch (error) {
+      log("warn", "Model failed to generate quiz", { model, error: error.message });
+    }
+  }
+
+  return { status: 502, body: { error: "Failed to generate quiz with all models." } };
+}
+
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
+import articlesHandler from "../api/articles.mjs";
+import quizHandler from "../api/quiz.mjs";
+
+app.all("/api/articles", async (req, res) => {
+  try {
+    await articlesHandler(req, res);
+  } catch (error) {
+    log("error", "Articles API error", { error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: "Внутренняя ошибка сервера." });
+  }
+});
+
+app.all("/api/quiz", async (req, res) => {
+  try {
+    await quizHandler(req, res);
+  } catch (error) {
+    log("error", "Quiz API error", { error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: "Внутренняя ошибка сервера." });
+  }
+});
+
+
 app.get("/api/health", (_req, res) => {
   res.json(healthResponse());
 });
@@ -3347,9 +3515,9 @@ export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawC
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
-    log("info", "Groq proxy listening", {
+    log("info", "Fireworks proxy listening", {
       port,
-      provider: "groq",
+      provider: "fireworks",
       models: modelCandidates,
       cacheEnabled,
       corsOrigin,

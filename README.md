@@ -7,7 +7,7 @@
 - отдельная главная страница с видео-hero
 - рабочий экран анализа домена
 - локальный fallback-анализатор
-- AI-анализ через Groq backend proxy
+- AI-анализ через Fireworks backend proxy
 - проверка по OpenPhish community feed
 - глобальный threat-cache через Vercel Redis / local fallback
 - страницы методики и безопасности
@@ -17,7 +17,7 @@
 - React + Vite + TypeScript
 - Tailwind CSS
 - Framer Motion
-- Groq + OpenPhish threat-intel
+- Fireworks + OpenPhish threat-intel
 - Upstash Redis / Vercel Redis для общей базы результатов
 - Express для локальной разработки
 - Vercel Functions для продакшена
@@ -33,8 +33,8 @@ npm install
 2. Создайте `.env.local` на основе `.env.example` и добавьте:
 
 ```env
-GROQ_API_KEY=...
-GROQ_MODELS=openai/gpt-oss-120b,llama-3.3-70b-versatile,llama-3.1-8b-instant
+FIREWORKS_API_KEY=...
+FIREWORKS_MODELS=openai/gpt-oss-120b,accounts/fireworks/routers/kimi-k2p5-turbo
 ADMIN_TOKEN=...
 KV_REST_API_URL=
 KV_REST_API_TOKEN=
@@ -70,8 +70,8 @@ npm run dev
 Добавить Environment Variables:
 
 ```env
-GROQ_API_KEY=...
-GROQ_MODELS=openai/gpt-oss-120b,llama-3.3-70b-versatile,llama-3.1-8b-instant
+FIREWORKS_API_KEY=...
+FIREWORKS_MODELS=openai/gpt-oss-120b,accounts/fireworks/routers/kimi-k2p5-turbo
 ADMIN_TOKEN=...
 KV_REST_API_URL=...
 KV_REST_API_TOKEN=...
@@ -121,7 +121,7 @@ OPENPHISH_REFRESH_MS=1800000
 
 ### Важно
 
-Без `GROQ_API_KEY` Vercel всё равно поднимет сайт, но AI-часть не заработает.
+Без `FIREWORKS_API_KEY` Vercel всё равно поднимет сайт, но AI-часть не заработает.
 Секрет нельзя безопасно зашить в git — его нужно хранить в Vercel env.
 
 ## Отдельный фронтенд + отдельный backend
@@ -143,14 +143,14 @@ npm run start
 
 ## Безопасность
 
-- ключ Groq храните только в `.env.local`
+- ключ Fireworks храните только в `.env.local`
 - `.env.local` не должен попадать в git
-- клиент не обращается к Groq напрямую
+- клиент не обращается к Fireworks напрямую
 
 ## Диагностика AI
 
 - `AI proxy выключен` — backend не поднят, нужен `npm run dev` или `npm run start`
-- `Нужен API ключ` — нет `.env.local` или в нём пустой `GROQ_API_KEY`
+- `Нужен API ключ` — нет `.env.local` или в нём пустой `FIREWORKS_API_KEY`
 - `Local fallback` — AI сейчас недоступен, поэтому сработал локальный ruleset
 
 ## Структура

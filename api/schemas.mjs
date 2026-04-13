@@ -39,3 +39,8 @@ export const adminCachePatchSchema = z.object({
 export const adminCacheDeleteSchema = z.object({
   host: z.string().min(1, "Параметр host обязателен."),
 });
+
+export const articlePostSchema = z.object({
+  topic: z.string().min(1, "Параметр topic обязателен."),
+  content: z.string().min(1, "Параметр content обязателен."),
+});
