@@ -73,7 +73,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
             <div className="hidden lg:flex lg:items-center lg:gap-2">
               <Button asChild className="h-10 rounded-xl bg-white text-black px-5 text-sm font-bold tracking-tight transition-all duration-300 hover:bg-white hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]">
                 <a href={routeHref("/analyzer")}>
-                  Открыть анализатор
+                  Открыть Анализатор
                 </a>
               </Button>
             </div>
@@ -114,7 +114,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
               <div className="mt-3">
                 <Button asChild className="w-full rounded-xl bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.15)]">
                   <a href={routeHref("/analyzer")} onClick={() => setIsMenuOpen(false)}>
-                    Открыть анализатор
+                    Открыть Анализатор
                   </a>
                 </Button>
               </div>

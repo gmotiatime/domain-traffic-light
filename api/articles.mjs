@@ -1,4 +1,4 @@
-import { getArticlesResponse, saveArticleResponse, generateArticleResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { getArticlesResponse, saveArticleResponse, generateArticleResponse, deleteArticleResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
 import { articlePostSchema } from "./schemas.mjs";
 import { z } from "zod";
 
@@ -16,6 +16,35 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     const response = await getArticlesResponse();
+    res.status(response.status).json(response.body);
+    return;
+  }
+
+  if (req.method === "DELETE") {
+    const idFromQuery = typeof req.query?.id === "string" ? req.query.id.trim() : "";
+    let body = req.body || {};
+    if (typeof req.body === "string") {
+      try {
+        body = JSON.parse(req.body || "{}");
+      } catch {
+        res.status(400).json({ error: "Invalid JSON payload" });
+        return;
+      }
+    }
+
+    const parsedBody = z.object({ id: z.string().trim().min(1).optional() }).safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({ error: "Invalid article id" });
+      return;
+    }
+
+    const articleId = idFromQuery || parsedBody.data.id || "";
+    if (!articleId) {
+      res.status(400).json({ error: "Article id is required" });
+      return;
+    }
+
+    const response = await deleteArticleResponse(articleId, req.headers);
     res.status(response.status).json(response.body);
     return;
   }

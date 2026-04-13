@@ -8,7 +8,8 @@ import { getApiUrl } from "@/lib/api";
 
 type Article = {
   id: string;
-  topic: string;
+  title?: string;
+  topic?: string;
   content: string;
   createdAt: number;
 };
@@ -152,6 +153,8 @@ export function ArticlesPage() {
           ) : (
             articles.map((article) => {
               const isExpanded = expandedId === article.id;
+              const title = article.title?.trim() || article.topic?.trim() || "Без названия";
+              const topic = article.topic?.trim() || "";
               return (
                 <motion.div
                   key={article.id}
@@ -163,10 +166,11 @@ export function ArticlesPage() {
                     onClick={() => setExpandedId(isExpanded ? null : article.id)}
                   >
                     <div>
-                      <h3 className="text-xl font-semibold text-white/90">{article.topic}</h3>
-                      <p className="text-xs text-white/40 mt-1">
-                        {new Date(article.createdAt).toLocaleDateString("ru-RU")}
-                      </p>
+                      <h3 className="text-xl font-semibold text-white/90">{title}</h3>
+                      <div className="mt-1 space-y-1 text-xs text-white/40">
+                        {topic && topic !== title ? <p>Тема: {topic}</p> : null}
+                        <p>{new Date(article.createdAt).toLocaleDateString("ru-RU")}</p>
+                      </div>
                     </div>
                     {isExpanded ? (
                       <ChevronUp className="h-5 w-5 text-white/50" />
@@ -181,9 +185,7 @@ export function ArticlesPage() {
                       animate={{ opacity: 1 }}
                       className="px-6 pb-6 pt-2 border-t border-white/5 text-white/80 prose prose-invert max-w-none"
                     >
-                      <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                        <ReactMarkdown>{article.content}</ReactMarkdown>
-                      </div>
+                      <ReactMarkdown>{article.content}</ReactMarkdown>
                     </motion.div>
                   )}
                 </motion.div>

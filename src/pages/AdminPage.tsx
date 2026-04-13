@@ -86,6 +86,14 @@ type CacheStats = {
   newestRecord?: string | null;
 };
 
+type PublishedArticle = {
+  id: string;
+  title: string;
+  topic: string;
+  content: string;
+  createdAt: number;
+};
+
 export function AdminPage() {
   const [token, setToken] = useState("");
   const [draftToken, setDraftToken] = useState("");
@@ -112,13 +120,18 @@ export function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<"cache" | "content">("cache");
   const [articleTopic, setArticleTopic] = useState("");
+  const [articleTitle, setArticleTitle] = useState("");
   const [articleContent, setArticleContent] = useState("");
+  const [articles, setArticles] = useState<PublishedArticle[]>([]);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [isPublishingArticle, setIsPublishingArticle] = useState(false);
+  const [isLoadingArticles, setIsLoadingArticles] = useState(false);
+  const [deletingArticleId, setDeletingArticleId] = useState<string | null>(null);
   const [articleStatus, setArticleStatus] = useState("");
 
   async function handleGenerateArticle() {
     if (!articleTopic) return;
+    setArticleTitle("");
     setArticleContent("");
     setIsGeneratingArticle(true);
     setArticleStatus("Генерация...");
@@ -128,14 +141,53 @@ export function AdminPage() {
         headers: authHeaders,
         body: JSON.stringify({ topic: articleTopic }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Ошибка генерации");
+      setArticleTitle(data.title || articleTopic);
       setArticleContent(data.content || "");
       setArticleStatus("Сгенерировано успешно.");
     } catch (err: any) {
       setArticleStatus(err.message);
     } finally {
       setIsGeneratingArticle(false);
+    }
+  }
+
+  async function loadArticles() {
+    if (!token) return;
+    setIsLoadingArticles(true);
+    try {
+      const response = await fetch(getApiUrl(`/api/articles`), {
+        headers: authHeaders,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Ошибка загрузки статей");
+      const nextArticles = Array.isArray(data.articles) ? data.articles : [];
+      setArticles([...nextArticles].sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)));
+    } catch (err: any) {
+      setArticleStatus(err.message);
+    } finally {
+      setIsLoadingArticles(false);
+    }
+  }
+
+  async function handleDeleteArticle(articleId: string) {
+    if (!token) return;
+    setDeletingArticleId(articleId);
+    setArticleStatus("Удаляем статью...");
+    try {
+      const response = await fetch(getApiUrl(`/api/articles?id=${encodeURIComponent(articleId)}`), {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Ошибка удаления статьи");
+      await loadArticles();
+      setArticleStatus("Статья удалена.");
+    } catch (err: any) {
+      setArticleStatus(err.message);
+    } finally {
+      setDeletingArticleId(null);
     }
   }
 
@@ -147,13 +199,19 @@ export function AdminPage() {
       const response = await fetch(getApiUrl(`/api/articles`), {
         method: "POST",
         headers: authHeaders,
-        body: JSON.stringify({ topic: articleTopic, content: articleContent }),
+        body: JSON.stringify({
+          topic: articleTopic,
+          title: articleTitle.trim() || articleTopic.trim(),
+          content: articleContent,
+        }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Ошибка публикации");
       setArticleStatus("Опубликовано успешно!");
       setArticleTopic("");
+      setArticleTitle("");
       setArticleContent("");
+      await loadArticles();
     } catch (err: any) {
       setArticleStatus(err.message);
     } finally {
@@ -194,6 +252,12 @@ export function AdminPage() {
     }),
     [token],
   );
+
+  useEffect(() => {
+    if (token && activeTab === "content") {
+      void loadArticles();
+    }
+  }, [activeTab, token]);
 
   function syncForm(nextEntry: AdminCacheEntry | null) {
     if (!nextEntry) {
@@ -917,14 +981,20 @@ export function AdminPage() {
                 <div>
                   <h2 className="text-2xl font-semibold mb-2">Генерация ИИ-статей</h2>
                   <p className="text-sm text-white/60 mb-4">
-                    Введите тему статьи. Fireworks AI сгенерирует полноценный текст в формате Markdown.
+                    Введите тему статьи. Fireworks AI сгенерирует черновик с заголовком и Markdown-текстом.
                   </p>
-                  <div className="flex gap-2 max-w-xl">
+                  <div className="grid gap-3 max-w-xl">
                     <input
                       value={articleTopic}
                       onChange={(e) => setArticleTopic(e.target.value)}
                       className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
                       placeholder="Тема статьи, например: Опасность публичных Wi-Fi"
+                    />
+                    <input
+                      value={articleTitle}
+                      onChange={(e) => setArticleTitle(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
+                      placeholder="Заголовок статьи (можно отредактировать)"
                     />
                     <Button type="button" onClick={handleGenerateArticle} disabled={isGeneratingArticle || !articleTopic}>
                       {isGeneratingArticle ? "Генерируем..." : "Сгенерировать"}
@@ -934,14 +1004,25 @@ export function AdminPage() {
                 </div>
 
                 {articleContent && (
-                  <div className="mt-4">
-                    <h3 className="text-lg font-medium mb-2">Предпросмотр и редактирование</h3>
-                    <textarea
-                      value={articleContent}
-                      onChange={(e) => setArticleContent(e.target.value)}
-                      className="h-[400px] w-full rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none font-mono"
-                    />
-                    <div className="mt-4">
+                  <div className="mt-4 grid gap-4">
+                    <label className="block">
+                      <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Заголовок</span>
+                      <input
+                        value={articleTitle}
+                        onChange={(e) => setArticleTitle(e.target.value)}
+                        className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
+                        placeholder="Короткий и цепляющий заголовок"
+                      />
+                    </label>
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Предпросмотр и редактирование</h3>
+                      <textarea
+                        value={articleContent}
+                        onChange={(e) => setArticleContent(e.target.value)}
+                        className="h-[400px] w-full rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none font-mono"
+                      />
+                    </div>
+                    <div className="mt-2">
                       <Button type="button" onClick={handlePublishArticle} disabled={isPublishingArticle}>
                         <Save className="mr-2 h-4 w-4" />
                         {isPublishingArticle ? "Публикация..." : "Опубликовать"}
@@ -949,6 +1030,60 @@ export function AdminPage() {
                     </div>
                   </div>
                 )}
+
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white/90">Опубликованные статьи</h3>
+                      <p className="text-sm text-white/50">Здесь можно удалить неудачные публикации из Redis.</p>
+                    </div>
+                    <Button type="button" variant="secondary" onClick={() => loadArticles()} disabled={isLoadingArticles}>
+                      <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingArticles ? "animate-spin" : ""}`} />
+                      {isLoadingArticles ? "Обновляем..." : "Обновить список"}
+                    </Button>
+                  </div>
+
+                  {isLoadingArticles ? (
+                    <p className="text-sm text-white/50">Загружаем статьи...</p>
+                  ) : articles.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-white/50">
+                      Пока нет опубликованных статей.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {articles.map((article) => {
+                        const title = article.title || article.topic || "Без названия";
+                        const topic = article.topic || "";
+                        return (
+                          <div key={article.id} className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <h4 className="truncate text-base font-semibold text-white">{title}</h4>
+                                <div className="mt-1 space-y-1 text-xs text-white/45">
+                                  {topic && topic !== title ? <p>Тема: {topic}</p> : null}
+                                  <p>{formatTimestamp(article.createdAt)}</p>
+                                </div>
+                                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-white/60">
+                                  {article.content.slice(0, 220)}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => handleDeleteArticle(article.id)}
+                                disabled={deletingArticleId === article.id}
+                                className="shrink-0 border-red-500/20 bg-red-500/10 text-red-200 hover:bg-red-500/20"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {deletingArticleId === article.id ? "Удаляем..." : "Удалить"}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

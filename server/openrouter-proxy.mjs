@@ -1502,7 +1502,7 @@ function applyThreatIntelToAnalysis(localAnalysis, threatIntel, normalized) {
     const actions = [
       "Не открывайте этот адрес. Не вводите данные.",
       "Откройте официальный сайт вручную через поисковик или закладки.",
-      "Если ссылка пришла в сообщении, покажите её взрослому или специалисту.",
+      "Если ссылка пришла в сообщении, покажите её взр��слому или специалисту.",
     ];
 
     return {
@@ -1737,7 +1737,7 @@ function applyNetworkSignalsToAnalysis(localAnalysis, networkSignals, normalized
     analyzedAt: new Date().toISOString(),
     score: normalizedScore,
     verdict,
-    verdictLabel: verdict === "high" ? "Высокий риск" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+    verdictLabel: verdict === "high" ? "Высокий рис��" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
     summary: localAnalysis.summary,
     reasons: sortReasons(baseReasons).slice(0, 10),
     actions: localAnalysis.actions,
@@ -1863,7 +1863,7 @@ function buildFireworksBaseRequest(model, messages, responseFormat) {
   };
 }
 
-// ─── Domain helpers ───────────────────────────────────────────────────────────
+// ─── Domain helpers ─────────��─────────────────────────────────────────────────
 function buildBreakdown(host) {
   const labels = host.split(".");
   const matchedSuffix = compoundSuffixes.find(
@@ -3231,21 +3231,41 @@ export async function analyzeResponse(body = {}, meta = {}) {
 }
 
 // ─── Articles API Functions ───────────────────────────────────────────────────
+function normalizeArticleRecord(article = {}) {
+  return {
+    id: String(article.id || Date.now()),
+    title: sanitizeString(article.title || article.topic || "Без названия", 180),
+    topic: sanitizeString(article.topic || article.title || "", 180),
+    content: sanitizeString(article.content || "", 20000),
+    createdAt: Number(article.createdAt) || Date.now(),
+  };
+}
+
+function parseStoredArticle(item) {
+  if (!item) return null;
+  try {
+    const parsed = typeof item === "string" ? JSON.parse(item) : item;
+    return normalizeArticleRecord(parsed);
+  } catch {
+    return null;
+  }
+}
+
 export async function getArticlesResponse() {
   if (redisCache) {
     try {
       const articlesList = await redisCache.lrange("articles:list", 0, -1);
-      const articles = articlesList.map(a => {
-        try { return typeof a === 'string' ? JSON.parse(a) : a; } catch (e) { return a; }
-      });
+      const articles = articlesList.map(parseStoredArticle).filter(Boolean);
       return { status: 200, body: { articles } };
     } catch (e) {
       return { status: 500, body: { error: "Failed to fetch articles from Redis" } };
     }
   } else {
-    // In memory mock
     if (!global.mockArticles) global.mockArticles = [];
-    return { status: 200, body: { articles: global.mockArticles } };
+    return {
+      status: 200,
+      body: { articles: global.mockArticles.map((article) => normalizeArticleRecord(article)) },
+    };
   }
 }
 
@@ -3253,12 +3273,13 @@ export async function saveArticleResponse(articleBody, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
-  const article = {
+  const article = normalizeArticleRecord({
     id: Date.now().toString(),
+    title: articleBody.title || articleBody.topic,
     topic: articleBody.topic,
     content: articleBody.content,
-    createdAt: Date.now()
-  };
+    createdAt: Date.now(),
+  });
 
   if (redisCache) {
     try {
@@ -3274,6 +3295,34 @@ export async function saveArticleResponse(articleBody, headers) {
   }
 }
 
+export async function deleteArticleResponse(articleId, headers) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  if (redisCache) {
+    try {
+      const articlesList = await redisCache.lrange("articles:list", 0, -1);
+      const remaining = articlesList
+        .map(parseStoredArticle)
+        .filter(Boolean)
+        .filter((article) => article.id !== articleId);
+
+      await redisCache.del("articles:list");
+      for (const article of remaining.slice().reverse()) {
+        await redisCache.lpush("articles:list", JSON.stringify(article));
+      }
+
+      return { status: 200, body: { success: true } };
+    } catch (error) {
+      return { status: 500, body: { error: "Failed to delete article from Redis" } };
+    }
+  }
+
+  if (!global.mockArticles) global.mockArticles = [];
+  global.mockArticles = global.mockArticles.filter((article) => String(article.id) !== String(articleId));
+  return { status: 200, body: { success: true } };
+}
+
 export async function generateArticleResponse(topic, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
@@ -3283,15 +3332,28 @@ export async function generateArticleResponse(topic, headers) {
     return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
   }
 
-  const prompt = `Напиши подробную, профессиональную статью об интернет-безопасности на тему: "${topic}". Статья должна быть в стиле дорогого лендинга: с заголовками, списками и абзацами. Ответь только текстом статьи, без дополнительных комментариев. Статья должна быть в формате Markdown.`;
+  const prompt = `Ты готовишь статью для русскоязычной аудитории о кибербезопасности.
+Тема: "${topic}".
+
+Сначала придумай короткий, цепляющий и точный заголовок. Затем напиши саму статью в Markdown.
+Требования:
+- заголовок должен быть ясным, не кликбейтным и не длиннее 70 символов;
+- статья должна быть практичной, современной и полезной;
+- используй 4-6 содержательных разделов с подзаголовками;
+- добавь конкретные советы, короткие примеры и чек-лист;
+- избегай воды, повторов и общих фраз;
+- пиши простым, уверенным и экспертным тоном;
+- верни только JSON вида {"title":"...","content":"..."}.
+
+Content must be Markdown.`;
 
   for (const model of modelCandidates) {
     try {
       const requestBody = buildFireworksBaseRequest(model, [
-        { role: "system", content: "Ты — профессиональный копирайтер и эксперт по кибербезопасности." },
+        { role: "system", content: "Ты — опытный редактор и автор материалов по кибербезопасности. Возвращай только валидный JSON." },
         { role: "user", content: prompt }
-      ], { type: "text" });
-      requestBody.max_tokens = 2000;
+      ], { type: "json_object" });
+      requestBody.max_tokens = 2200;
 
       const response = await fetch(
         "https://api.fireworks.ai/inference/v1/chat/completions",
@@ -3314,7 +3376,19 @@ export async function generateArticleResponse(topic, headers) {
       }
 
       const content = data?.choices?.[0]?.message?.content;
-      return { status: 200, body: { content } };
+      if (!content) {
+        throw new Error("Empty article content");
+      }
+
+      const parsed = JSON.parse(content);
+      const title = sanitizeString(parsed?.title || topic, 180);
+      const articleContent = sanitizeString(parsed?.content || "", 20000);
+
+      if (!articleContent) {
+        throw new Error("Empty article body");
+      }
+
+      return { status: 200, body: { title, content: articleContent } };
     } catch (error) {
       log("warn", "Model failed to generate article", { model, error: error.message });
     }

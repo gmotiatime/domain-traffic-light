@@ -4,7 +4,6 @@ export const heroVideo = "/hero-home.mp4";
 
 export const navItems: Array<{ label: string; path: SitePath }> = [
   { label: "Главная", path: "/" },
-  { label: "Анализатор", path: "/analyzer" },
   { label: "Методика", path: "/method" },
   { label: "Безопасность", path: "/safety" },
   { label: "Статьи", path: "/articles" },
