@@ -1,7 +1,7 @@
 import { Redis } from "@upstash/redis";
 import { createHash, randomBytes } from "crypto";
 import { reportPostSchema, reportDeleteSchema } from "./schemas.mjs";
-import { assertAdminAccess } from "../server/openrouter-proxy.mjs";
+import { assertAdminAccess, standardHeaders, consumeRateLimit } from "../server/openrouter-proxy.mjs";
 
 function normalizeHost(host) {
   let normalized = String(host || "").toLowerCase().trim();
@@ -23,10 +23,30 @@ function generateId(host) {
 
 export default async function handler(req, res) {
   try {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
+    const headers = standardHeaders();
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+    // Add custom header for this specific endpoint
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token");
     res.setHeader("Content-Type", "application/json");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+
+    const forwardedFor = req.headers["x-forwarded-for"];
+    const ip =
+      typeof forwardedFor === "string"
+        ? forwardedFor.split(",")[0].trim()
+        : req.socket?.remoteAddress || "unknown";
+
+    const rateLimitHit = consumeRateLimit(ip);
+    if (rateLimitHit) {
+      res.status(429).json(rateLimitHit);
+      return;
+    }
     
     const cacheVersion = String(process.env.THREAT_CACHE_VERSION || "stable").trim();
     const configuredCachePrefix = String(process.env.THREAT_CACHE_PREFIX || "").trim();
@@ -46,11 +66,6 @@ export default async function handler(req, res) {
       url: redisRestUrl,
       token: redisRestToken,
     });
-    
-    if (req.method === "OPTIONS") {
-      res.status(204).end();
-      return;
-    }
 
     if (req.method !== "POST" && req.method !== "DELETE") {
       res.status(405).json({ error: "Method Not Allowed" });
