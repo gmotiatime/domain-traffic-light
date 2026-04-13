@@ -94,10 +94,11 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
             </div>
 
             <div className="mt-6">
-              <label className="mb-2 block text-sm text-foreground/60">
+              <label htmlFor="report-text" className="mb-2 block text-sm text-foreground/60">
                 Опишите проблему с результатом анализа:
               </label>
               <textarea
+                id="report-text"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 placeholder="Например: результат неверный, домен безопасный..."

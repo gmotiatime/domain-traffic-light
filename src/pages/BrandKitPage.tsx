@@ -139,16 +139,18 @@ export function BrandKitPage() {
                 <h3 className="mb-4 text-lg font-medium">Поля ввода</h3>
                 <div className="max-w-md space-y-4 rounded-3xl border border-white/10 bg-white/[0.02] p-8">
                   <div>
-                    <label className="mb-2 block text-sm font-medium">Стандартный инпут</label>
+                    <label htmlFor="standard-input" className="mb-2 block text-sm font-medium">Стандартный инпут</label>
                     <input
+                      id="standard-input"
                       type="text"
                       placeholder="Введите домен..."
                       className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none focus:border-white/30"
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/50">С ошибкой</label>
+                    <label htmlFor="error-input" className="mb-2 block text-sm font-medium text-white/50">С ошибкой</label>
                     <input
+                      id="error-input"
                       type="text"
                       defaultValue="неправильный формат"
                       className="w-full rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-100 outline-none"

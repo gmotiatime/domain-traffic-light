@@ -1,3 +1,6 @@
 ## 2024-04-11 - Add aria-labels to main inputs and icon-only buttons
 **Learning:** Found that multiple core components, including the main landing page input, the analyzer page input, and various icon-only buttons (like modal close buttons or navigation arrows), lacked proper ARIA labeling for accessibility, impacting screen readers.
 **Action:** Implemented `aria-label` attributes to these essential form fields and icon-only buttons, consistently using localized Russian strings (e.g. "Введите домен или ссылку для проверки", "Закрыть", "Удалить жалобу") to match the project's primary language context. Next time, always ensure icon buttons and form inputs missing `<label>`s are given an appropriate `aria-label`.
+## 2024-04-11 - Associating labels with inputs
+**Learning:** Found that multiple components (like AdminPage, BrandKitPage, ReportModal) had orphaned `<label>` tags that were visually associated with inputs but lacked `htmlFor` and `id` bindings. This breaks screen-reader context and prevents focusing the input by clicking the label.
+**Action:** Always link standard `<label>` tags to `<input>` or `<textarea>` tags explicitly using matching `htmlFor` and `id` properties, even in simple custom components.

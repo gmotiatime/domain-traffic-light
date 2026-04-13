@@ -508,12 +508,13 @@ export function AdminPage() {
 
             {!token ? (
               <div className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                <label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
+                <label htmlFor="admin-password" className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
                   <KeyRound className="h-3.5 w-3.5" />
                   Пароль администратора
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="admin-password"
                     type="password"
                     value={draftToken}
                     onChange={(e) => setDraftToken(e.target.value)}
@@ -525,7 +526,7 @@ export function AdminPage() {
               </div>
             ) : (
               <div className="w-full max-w-xl rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                <label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
+                <label htmlFor="search-host" className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
                   <Search className="h-3.5 w-3.5" />
                   Поиск по host (любой вариант)
                 </label>
@@ -534,6 +535,7 @@ export function AdminPage() {
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
+                    id="search-host"
                     value={searchHost}
                     onChange={(e) => setSearchHost(e.target.value)}
                     className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
