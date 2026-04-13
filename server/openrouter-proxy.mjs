@@ -1492,7 +1492,7 @@ function applyThreatIntelToAnalysis(localAnalysis, threatIntel, normalized) {
         ? "Точный URL найден в community feed OpenPhish. Это сильный сигнал реального фишинга."
         : threatIntel.hostMatches > 1
           ? `Для этого хоста в OpenPhish найдено ${threatIntel.hostMatches} phishing-URL.`
-          : "Для этого х��ста в OpenPhish найден phishing-URL.",
+          : "Для этого хоста в OpenPhish найден phishing-URL.",
       scoreDelta,
       tone: "critical",
     });
@@ -1880,10 +1880,10 @@ function buildOpenRouterRequest(model, prompt) {
 5. Не смягчать вердикт, если локальный анализ уже нашёл серьёзные риски (typo-squat, brand-spoof, punycode, OpenPhish hit).
 6. Анализировать корреляции между сигналами (например, новый домен + подозрительные слова + нестандартный TLD = высокий риск).
 
-Принципы:
+Пр��нципы:
 - Каждая причина (reason) должна ссылаться на КОНКРЕТНЫЙ сигнал: фрагмент домена, TLD, результат DNS/TLS, запись в OpenPhish, redirect-цепочку, и объяснять, чем это грозит (например, "домен новый, мошенники часто создают такие сайты на пару дней").
-- Не пиши общих фр��з вроде «домен выгл��дит подозрительно» или «есть отдельный по��домен».
-- Если DNS не резолвится — эт�� серьёзный warning. ��сли TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
+- Не пиши общих фраз вроде «домен выгл��дит подозрительно» или «есть отдельный по��домен».
+- Если DNS не резолвится — эт�� серьёзный warning. ��сли TLS subject не совпад��ет с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
 - Если данных мало, честно напиши об ограничении, но не выдумывай проверки.
 - Все тексты — на русском языке, в дружелюбном, но предостерегающем тоне. Формат — строго JSON.
 - Заголовок reason: 1–3 слова, без нумерации, без «Сигнал 1», должен звучать просто (например, "Странное окончание", "Нет защищенного замка").
@@ -1994,29 +1994,23 @@ function normalizeInput(input) {
 
 // ─── JSON extraction ──────────────────────────────────────────────────────────
 function extractJson(content) {
-  if (content == null) {
+  if (!content) {
     throw new Error("Empty AI response");
   }
 
-  const normalized = String(content).trim();
-  if (!normalized) {
-    throw new Error("Empty AI response");
-  }
-
-  const fencedMatch = normalized.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const fencedContent = fencedMatch?.[1]?.trim();
-  const candidateSource = fencedContent || normalized
+  const normalized = String(content)
+    .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "");
 
-  const start = candidateSource.indexOf("{");
-  const end = candidateSource.lastIndexOf("}");
+  const start = normalized.indexOf("{");
+  const end = normalized.lastIndexOf("}");
 
   if (start === -1 || end === -1 || end <= start) {
     throw new Error("No JSON object found in AI response");
   }
 
-  const candidate = candidateSource
+  const candidate = normalized
     .slice(start, end + 1)
     .replace(/,\s*([}\]])/g, "$1")
     .replace(/[\u201C\u201D]/g, '"')
@@ -2030,6 +2024,7 @@ function extractJson(content) {
     throw new Error(`JSON parse failed: ${parseError.message}`);
   }
 }
+
 // ─── Sanitizers ───────────────────────────────────────────────────────────────
 function sanitizeVerdict(verdict) {
   const normalized = String(verdict || "").toLowerCase().trim();
@@ -3420,7 +3415,7 @@ Content must be Markdown.`;
       }
 
       const content = parseOpenRouterChatContent(data, model);
-      const parsed = extractJson(content);
+      const parsed = JSON.parse(content);
       const title = sanitizeString(parsed?.title || topic, 180);
       const articleContent = sanitizeString(parsed?.content || "", 20000);
 
@@ -3479,7 +3474,7 @@ export async function generateQuizScenarioResponse() {
       }
 
       const contentStr = parseOpenRouterChatContent(data, model);
-      const contentJson = extractJson(contentStr);
+      const contentJson = JSON.parse(contentStr);
       return { status: 200, body: contentJson };
     } catch (error) {
       log("warn", "Model failed to generate quiz", { model, error: error.message });
@@ -3620,7 +3615,7 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Внутренняя ошибка сервера." });
 });
 
-// ─── Static files ───────────────────────────────────────────────────��─────────
+// ─── Static files ─────────────────────────────────────────────────────────────
 if (fs.existsSync(indexFile)) {
   app.use(express.static(distDir, { maxAge: "1h" }));
 
