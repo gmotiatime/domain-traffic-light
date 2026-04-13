@@ -1808,6 +1808,52 @@ const configuredModels = (
 
 const modelCandidates = [...new Set(configuredModels)];
 
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+const OPENROUTER_CHAT_COMPLETIONS_URL = OPENROUTER_BASE_URL + "/chat/completions";
+const OPENROUTER_REFERER = "https://gmotia.tech";
+const OPENROUTER_TITLE = "Domain Traffic Light";
+
+function buildOpenRouterHeaders(apiKey) {
+  return {
+    Authorization: "Bearer " + apiKey,
+    "Content-Type": "application/json",
+    "HTTP-Referer": OPENROUTER_REFERER,
+    "X-Title": OPENROUTER_TITLE,
+  };
+}
+
+function parseOpenRouterChatContent(data, model) {
+  if (!data) {
+    throw new Error(model + ": empty OpenRouter response.");
+  }
+
+  if (data.error) {
+    const errorMessage = typeof data.error === "string" ? data.error : data.error?.message || JSON.stringify(data.error);
+    throw new Error(model + ": OpenRouter error — " + sanitizeString(errorMessage, 200));
+  }
+
+  const choice = data?.choices?.[0];
+  if (!choice) {
+    throw new Error(model + ": OpenRouter response missing choices.");
+  }
+
+  let content = choice?.message?.content ?? choice?.delta?.content ?? choice?.text;
+
+  if (Array.isArray(content)) {
+    content = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        return part?.text ?? part?.content ?? "";
+      })
+      .join("");
+  }
+
+  if (content == null || String(content).trim().length === 0) {
+    throw new Error(model + ": OpenRouter response missing assistant content.");
+  }
+
+  return typeof content === "string" ? content : JSON.stringify(content);
+}
 const compoundSuffixes = [
   "edu.gov.by",
   "gov.by",
@@ -1839,7 +1885,7 @@ function buildOpenRouterRequest(model, prompt) {
 Принципы:
 - Каждая причина (reason) должна ссылаться на КОНКРЕТНЫЙ сигнал: фрагмент домена, TLD, результат DNS/TLS, запись в OpenPhish, redirect-цепочку, и объяснять, чем это грозит (например, "домен новый, мошенники часто создают такие сайты на пару дней").
 - Не пиши общих фраз вроде «домен выглядит подозрительно» или «есть отдельный поддомен».
-- Если DNS не резолвится — эт�� серьёзный warning. Если TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
+- Если DNS не резолвится — эт�� серьёзный warning. ��сли TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
 - Если данных мало, честно напиши об ограничении, но не выдумывай проверки.
 - Все тексты — на русском языке, в дружелюбном, но предостерегающем тоне. Формат — строго JSON.
 - Заголовок reason: 1–3 слова, без нумерации, без «Сигнал 1», должен звучать просто (например, "Странное окончание", "Нет защищенного замка").
@@ -2609,7 +2655,7 @@ ${whoisSummary}
 9. Если нет новых полезных причин — верни пустой массив reasons.
 10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
 11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
-12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), затем формулируй вердикт.
+12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), зате�� формулируй вердикт.
 13. Scoring guide: low=0-19 (безопасный), medium=20-49 (подозрительный), high=50-100 (опасный). Не ставь score=0 если есть хоть один сигнал.
 
 ## ПРИМЕРЫ ХОРОШЕГО И ПЛОХОГО СТИЛЯ
@@ -2643,13 +2689,10 @@ async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
       try {
         const requestBody = buildOpenRouterRequest(model, prompt);
         const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
+          OPENROUTER_CHAT_COMPLETIONS_URL,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
+            headers: buildOpenRouterHeaders(apiKey),
             signal: controller.signal,
             body: JSON.stringify(requestBody),
           },
@@ -2694,7 +2737,7 @@ async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
           throw new Error(`${model}: upstream returned non-JSON payload.`);
         }
 
-        const content = data?.choices?.[0]?.message?.content;
+        const content = parseOpenRouterChatContent(data, model);
         return extractJson(content);
       } finally {
         clearTimeout(timeoutId);
@@ -3356,13 +3399,10 @@ Content must be Markdown.`;
       requestBody.max_tokens = 2200;
 
       const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
+        OPENROUTER_CHAT_COMPLETIONS_URL,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: buildOpenRouterHeaders(apiKey),
           body: JSON.stringify(requestBody),
         }
       );
@@ -3372,14 +3412,11 @@ Content must be Markdown.`;
       try { data = JSON.parse(responseText); } catch {}
 
       if (!response.ok || !data) {
-        throw new Error("Failed to generate article");
+        const errorMessage = data?.error?.message || data?.error || response.statusText;
+        throw new Error("Failed to generate article: " + sanitizeString(String(errorMessage), 200));
       }
 
-      const content = data?.choices?.[0]?.message?.content;
-      if (!content) {
-        throw new Error("Empty article content");
-      }
-
+      const content = parseOpenRouterChatContent(data, model);
       const parsed = JSON.parse(content);
       const title = sanitizeString(parsed?.title || topic, 180);
       const articleContent = sanitizeString(parsed?.content || "", 20000);
@@ -3421,13 +3458,10 @@ export async function generateQuizScenarioResponse() {
       ], { type: "json_object" });
 
       const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
+        OPENROUTER_CHAT_COMPLETIONS_URL,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: buildOpenRouterHeaders(apiKey),
           body: JSON.stringify(requestBody),
         }
       );
@@ -3437,12 +3471,11 @@ export async function generateQuizScenarioResponse() {
       try { data = JSON.parse(responseText); } catch {}
 
       if (!response.ok || !data) {
-        throw new Error("Failed to generate quiz");
+        const errorMessage = data?.error?.message || data?.error || response.statusText;
+        throw new Error("Failed to generate quiz: " + sanitizeString(String(errorMessage), 200));
       }
 
-      const contentStr = data?.choices?.[0]?.message?.content;
-      if (!contentStr) throw new Error("Empty content");
-
+      const contentStr = parseOpenRouterChatContent(data, model);
       const contentJson = JSON.parse(contentStr);
       return { status: 200, body: contentJson };
     } catch (error) {
@@ -3593,7 +3626,7 @@ if (fs.existsSync(indexFile)) {
   });
 }
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Start ────────��───────────────────────────────────────────────────────────
 const port = Number(process.env.PORT || 8787);
 
 export default app;
