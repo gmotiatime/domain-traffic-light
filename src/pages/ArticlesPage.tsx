@@ -82,27 +82,27 @@ export function ArticlesPage() {
         </div>
 
         {/* Quiz Section */}
-        <div className="mb-16 rounded-[2rem] border border-amber-500/20 bg-amber-500/5 p-6 sm:p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
+        <div className="relative mb-16 overflow-hidden rounded-[2rem] border border-amber-500/20 bg-amber-500/5 p-6 sm:p-8">
+          <div className="absolute right-0 top-0 p-8 opacity-5">
             <Shield className="h-32 w-32" />
           </div>
-          <h2 className="text-2xl font-bold mb-6 text-amber-400">Квиз: Не дай себя развести</h2>
+          <h2 className="mb-6 text-2xl font-bold text-amber-400">Квиз: Не дай себя развести</h2>
 
           {quizLoading ? (
-            <p className="text-white/60 animate-pulse">Генерируем сценарий...</p>
+            <p className="animate-pulse text-white/60">Генерируем сценарий...</p>
           ) : quiz ? (
             <div className="relative z-10">
-              <p className="text-lg mb-6 leading-relaxed">{quiz.scenario}</p>
+              <p className="mb-6 text-lg leading-relaxed">{quiz.scenario}</p>
               <div className="space-y-3">
                 {quiz.options.map((option, idx) => {
                   const isSelected = selectedOption === idx;
                   const showResult = selectedOption !== null;
-                  let bgClass = "bg-white/[0.03] hover:bg-white/[0.08] border-white/10";
+                  let bgClass = "border-white/10 bg-white/[0.03] hover:bg-white/[0.08]";
 
                   if (showResult) {
-                    if (option.isCorrect) bgClass = "bg-green-500/10 border-green-500/30 text-green-400";
-                    else if (isSelected) bgClass = "bg-red-500/10 border-red-500/30 text-red-400";
-                    else bgClass = "bg-white/[0.01] border-white/5 opacity-50";
+                    if (option.isCorrect) bgClass = "border-green-500/30 bg-green-500/10 text-green-400";
+                    else if (isSelected) bgClass = "border-red-500/30 bg-red-500/10 text-red-400";
+                    else bgClass = "border-white/5 bg-white/[0.01] opacity-50";
                   }
 
                   return (
@@ -110,7 +110,7 @@ export function ArticlesPage() {
                       <button
                         onClick={() => !showResult && setSelectedOption(idx)}
                         disabled={showResult}
-                        className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${bgClass} flex items-center justify-between`}
+                        className={`flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all duration-300 ${bgClass}`}
                       >
                         <span>{option.text}</span>
                         {showResult && option.isCorrect && <CheckCircle className="h-5 w-5 text-green-400" />}
@@ -120,7 +120,7 @@ export function ArticlesPage() {
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
-                          className="mt-2 text-sm text-white/70 pl-4 border-l-2 border-white/20"
+                          className="mt-2 border-l-2 border-white/20 pl-4 text-sm text-white/70"
                         >
                           {option.explanation}
                         </motion.div>
@@ -132,7 +132,7 @@ export function ArticlesPage() {
 
               {selectedOption !== null && (
                 <div className="mt-8">
-                  <Button onClick={loadNewQuiz} className="bg-amber-500 text-black hover:bg-amber-400 font-semibold">
+                  <Button onClick={loadNewQuiz} className="bg-amber-500 font-semibold text-black hover:bg-amber-400">
                     Следующий сценарий
                   </Button>
                 </div>
@@ -145,9 +145,9 @@ export function ArticlesPage() {
 
         {/* Articles List */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold mb-6">Опубликованные статьи</h2>
+          <h2 className="mb-6 text-2xl font-bold">Опубликованные статьи</h2>
           {articles.length === 0 ? (
-            <p className="text-white/50 text-center py-12 border border-white/10 rounded-2xl border-dashed">
+            <p className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-white/50">
               Пока нет опубликованных статей.
             </p>
           ) : (
@@ -159,10 +159,10 @@ export function ArticlesPage() {
                 <motion.div
                   key={article.id}
                   layout
-                  className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden"
+                  className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
                 >
                   <button
-                    className="flex w-full items-center justify-between p-6 text-left hover:bg-white/[0.02] transition-colors"
+                    className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-white/[0.02]"
                     onClick={() => setExpandedId(isExpanded ? null : article.id)}
                   >
                     <div>
@@ -183,7 +183,7 @@ export function ArticlesPage() {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="px-6 pb-6 pt-2 border-t border-white/5 text-white/80 prose prose-invert max-w-none"
+                      className="article-markdown border-t border-white/5 px-6 pb-6 pt-2 text-white/80"
                     >
                       <ReactMarkdown>{article.content}</ReactMarkdown>
                     </motion.div>
