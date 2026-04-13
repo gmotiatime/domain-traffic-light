@@ -1,4 +1,4 @@
-import { generateQuizScenarioResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { generateQuizScenarioResponse, standardHeaders, consumeRateLimit } from "../server/openrouter-proxy.mjs";
 
 export default async function handler(req, res) {
   const headers = standardHeaders();
@@ -13,6 +13,18 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    const ip =
+      typeof forwardedFor === "string"
+        ? forwardedFor.split(",")[0].trim()
+        : req.socket?.remoteAddress || "unknown";
+
+    const rateLimitHit = consumeRateLimit(ip);
+    if (rateLimitHit) {
+      res.status(429).json(rateLimitHit);
+      return;
+    }
+
     const response = await generateQuizScenarioResponse(req.headers);
     res.status(response.status).json(response.body);
     return;

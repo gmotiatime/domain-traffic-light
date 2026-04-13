@@ -119,6 +119,7 @@ export function AdminPage() {
 
   async function handleGenerateArticle() {
     if (!articleTopic) return;
+    setArticleContent("");
     setIsGeneratingArticle(true);
     setArticleStatus("Генерация...");
     try {
