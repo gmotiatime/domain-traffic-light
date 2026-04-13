@@ -40,7 +40,7 @@ const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
 const rateLimitMax = Number(process.env.RATE_LIMIT_MAX) || 30;
 const rateBuckets = new Map();
 
-function consumeRateLimit(key) {
+export function consumeRateLimit(key) {
   const now = Date.now();
   const normalizedKey = key || "unknown";
   let bucket = rateBuckets.get(normalizedKey);
@@ -1800,7 +1800,7 @@ app.use((req, _res, next) => {
 const configuredModels = (
   process.env.FIREWORKS_MODELS ||
   process.env.FIREWORKS_MODEL ||
-  "llama-3.3-70b-versatile,llama-3.1-8b-instant"
+  "accounts/fireworks/routers/kimi-k2p5-turbo,llama-3.3-70b-versatile"
 )
   .split(",")
   .map((item) => item.trim())
@@ -1850,6 +1850,16 @@ function buildFireworksRequest(model, prompt) {
         content: prompt,
       },
     ],
+  };
+}
+
+function buildFireworksBaseRequest(model, messages, responseFormat) {
+  return {
+    model,
+    temperature: 0.08,
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
+    response_format: responseFormat,
+    messages: messages,
   };
 }
 
@@ -3277,8 +3287,10 @@ export async function generateArticleResponse(topic, headers) {
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksRequest(model, prompt);
-      requestBody.response_format = { type: "text" };
+      const requestBody = buildFireworksBaseRequest(model, [
+        { role: "system", content: "Ты — профессиональный копирайтер и эксперт по кибербезопасности." },
+        { role: "user", content: prompt }
+      ], { type: "text" });
       requestBody.max_tokens = 2000;
 
       const response = await fetch(
@@ -3329,8 +3341,10 @@ export async function generateQuizScenarioResponse() {
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksRequest(model, prompt);
-      requestBody.response_format = { type: "json_object" };
+      const requestBody = buildFireworksBaseRequest(model, [
+        { role: "system", content: "Ты — эксперт по кибербезопасности и создатель обучающих квизов. Твоя задача — генерировать только валидный JSON." },
+        { role: "user", content: prompt }
+      ], { type: "json_object" });
 
       const response = await fetch(
         "https://api.fireworks.ai/inference/v1/chat/completions",
