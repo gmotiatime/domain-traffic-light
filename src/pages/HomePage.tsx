@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, Search, Zap, Shield, Globe, Cpu, Database, TrendingUp } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, Search, Zap, Shield, Cpu, Database, TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
+import { HeroTitle } from "@/components/HeroTitle";
+import { HeroSearchForm } from "@/components/HeroSearchForm";
 import {
   behaviorSteps,
   heroVideo,
@@ -89,21 +90,7 @@ const homeStickers: StickerData[] = [
 ];
 
 export function HomePage() {
-  const [heroInput, setHeroInput] = useState("");
   const [stats, setStats] = useState<CacheStats | null>(null);
-  const [currentVerb, setCurrentVerb] = useState(0);
-  const [currentWord, setCurrentWord] = useState(0);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
-
-  const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
-  const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
-  const placeholders = [
-    "Вставьте домен или ссылку...",
-    "Например: example.com",
-    "Проверьте подозрительный URL",
-    "https://suspicious-site.com",
-    "Введите адрес для анализа"
-  ];
 
   useEffect(() => {
     async function loadStats() {
@@ -119,35 +106,6 @@ export function HomePage() {
     }
     loadStats();
   }, []);
-
-  useEffect(() => {
-    const verbInterval = setInterval(() => {
-      setCurrentVerb((prev) => (prev + 1) % verbs.length);
-    }, 3000);
-
-    return () => clearInterval(verbInterval);
-  }, []);
-
-  useEffect(() => {
-    const wordInterval = setInterval(() => {
-      setCurrentWord((prev) => (prev + 1) % words.length);
-    }, 3000);
-
-    return () => clearInterval(wordInterval);
-  }, []);
-
-  useEffect(() => {
-    const placeholderInterval = setInterval(() => {
-      setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
-    }, 4000);
-
-    return () => clearInterval(placeholderInterval);
-  }, []);
-
-  function openAnalyzerWithInput(input: string) {
-    writeAnalyzerPrefill(input);
-    window.location.hash = routeHref("/analyzer");
-  }
 
   const { scrollY } = useScroll();
   const orb1Y = useTransform(scrollY, value => value * 0.3);
@@ -203,34 +161,7 @@ export function HomePage() {
               variants={fadeUp}
               className="mt-6 text-5xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[84px]"
             >
-              <span className="relative inline-block">
-                <motion.span
-                  key={currentVerb}
-                  initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="inline-block"
-                >
-                  {verbs[currentVerb]}
-                </motion.span>
-              </span>{" "}
-              <span className="relative inline-block">
-                <motion.span
-                  key={currentWord}
-                  initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="inline-block bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 bg-clip-text text-transparent"
-                >
-                  {words[currentWord]}
-                </motion.span>
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/50 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                до ввода данных
-              </span>
+              <HeroTitle />
             </motion.h1>
             
             <motion.p variants={fadeUp} className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-foreground/60 sm:text-lg">
@@ -238,42 +169,7 @@ export function HomePage() {
             </motion.p>
 
             <motion.div variants={fadeUp} className="mx-auto mt-12 w-full max-w-3xl">
-              <form
-                className="relative flex flex-col items-center gap-3 sm:flex-row sm:gap-2 rounded-[2.5rem] border border-foreground/10 bg-foreground/[0.03] p-2.5 backdrop-blur-3xl transition-all duration-300 hover:bg-foreground/[0.05] focus-within:border-foreground/20 focus-within:bg-foreground/[0.06] focus-within:shadow-[0_0_50px_rgba(255,255,255,0.07)]"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  openAnalyzerWithInput(heroInput);
-                }}
-              >
-                <div className="flex flex-1 items-center gap-3 px-4 w-full h-14 relative z-20">
-                  <Globe className="h-6 w-6 shrink-0 text-foreground/40 transition-colors group-focus-within:text-foreground/70" />
-                  <div className="relative w-full">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentPlaceholder}
-                        initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                        className="pointer-events-none absolute inset-0 flex items-center text-xl text-foreground/30"
-                      >
-                        {!heroInput && placeholders[currentPlaceholder]}
-                      </motion.div>
-                    </AnimatePresence>
-                    <input
-                      id="domain-input"
-                      aria-label="Введите домен или ссылку для проверки"
-                      className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
-                      onChange={(event) => setHeroInput(event.target.value)}
-                      value={heroInput}
-                    />
-                  </div>
-                </div>
-                <Button className="h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-8 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95" type="submit">
-                  Анализ
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </form>
+              <HeroSearchForm />
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
                 <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:justify-start">
