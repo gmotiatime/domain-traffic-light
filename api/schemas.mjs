@@ -42,5 +42,6 @@ export const adminCacheDeleteSchema = z.object({
 
 export const articlePostSchema = z.object({
   topic: z.string().trim().min(1, "Параметр topic обязателен."),
+  title: z.string().trim().min(1, "Параметр title обязателен.").optional(),
   content: z.string().trim().min(1, "Параметр content обязателен."),
 });
