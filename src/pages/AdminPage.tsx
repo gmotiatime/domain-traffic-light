@@ -508,12 +508,13 @@ export function AdminPage() {
 
             {!token ? (
               <div className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                <label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
+                <label htmlFor="adminToken" className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
                   <KeyRound className="h-3.5 w-3.5" />
                   Пароль администратора
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="adminToken"
                     type="password"
                     value={draftToken}
                     onChange={(e) => setDraftToken(e.target.value)}
@@ -525,7 +526,7 @@ export function AdminPage() {
               </div>
             ) : (
               <div className="w-full max-w-xl rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                <label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
+                <label htmlFor="searchHost" className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/50">
                   <Search className="h-3.5 w-3.5" />
                   Поиск по host (любой вариант)
                 </label>
@@ -534,6 +535,7 @@ export function AdminPage() {
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
+                    id="searchHost"
                     value={searchHost}
                     onChange={(e) => setSearchHost(e.target.value)}
                     className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
@@ -829,9 +831,10 @@ export function AdminPage() {
                   </div>
 
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <label className="block">
+                    <label htmlFor="formVerdict" className="block">
                       <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Verdict</span>
                       <select
+                        id="formVerdict"
                         value={form.verdict}
                         onChange={(e) => setForm((prev) => ({ ...prev, verdict: e.target.value as "low" | "medium" | "high" }))}
                         className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
@@ -842,9 +845,10 @@ export function AdminPage() {
                       </select>
                     </label>
 
-                    <label className="block">
+                    <label htmlFor="formScore" className="block">
                       <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Score</span>
                       <input
+                        id="formScore"
                         value={form.score}
                         onChange={(e) => setForm((prev) => ({ ...prev, score: e.target.value }))}
                         className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
@@ -853,9 +857,10 @@ export function AdminPage() {
                     </label>
                   </div>
 
-                  <label className="mt-4 block">
+                  <label htmlFor="formSummary" className="mt-4 block">
                     <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Summary</span>
                     <textarea
+                      id="formSummary"
                       value={form.summary}
                       onChange={(e) => setForm((prev) => ({ ...prev, summary: e.target.value }))}
                       className="min-h-[110px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none"
@@ -863,18 +868,20 @@ export function AdminPage() {
                   </label>
 
                   <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                    <label className="block">
+                    <label htmlFor="formReasonsJson" className="block">
                       <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Reasons JSON</span>
                       <textarea
+                        id="formReasonsJson"
                         value={form.reasonsJson}
                         onChange={(e) => setForm((prev) => ({ ...prev, reasonsJson: e.target.value }))}
                         className="min-h-[280px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-xs text-white outline-none"
                       />
                     </label>
 
-                    <label className="block">
+                    <label htmlFor="formActionsJson" className="block">
                       <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Actions JSON</span>
                       <textarea
+                        id="formActionsJson"
                         value={form.actionsJson}
                         onChange={(e) => setForm((prev) => ({ ...prev, actionsJson: e.target.value }))}
                         className="min-h-[280px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-xs text-white outline-none"
@@ -882,9 +889,10 @@ export function AdminPage() {
                     </label>
                   </div>
 
-                  <label className="mt-4 block">
+                  <label htmlFor="formNote" className="mt-4 block">
                     <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Комментарий модерации</span>
                     <textarea
+                      id="formNote"
                       value={form.note}
                       onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
                       className="min-h-[90px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none"
@@ -984,13 +992,17 @@ export function AdminPage() {
                     Введите тему статьи. OpenRouter AI сгенерирует черновик с заголовком и Markdown-текстом.
                   </p>
                   <div className="grid gap-3 max-w-xl">
+                    <label htmlFor="articleTopic" className="sr-only">Тема статьи</label>
                     <input
+                      id="articleTopic"
                       value={articleTopic}
                       onChange={(e) => setArticleTopic(e.target.value)}
                       className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
                       placeholder="Тема статьи, например: Опасность публичных Wi-Fi"
                     />
+                    <label htmlFor="articleTitleDraft" className="sr-only">Заголовок статьи</label>
                     <input
+                      id="articleTitleDraft"
                       value={articleTitle}
                       onChange={(e) => setArticleTitle(e.target.value)}
                       className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
@@ -1005,9 +1017,10 @@ export function AdminPage() {
 
                 {articleContent && (
                   <div className="mt-4 grid gap-4">
-                    <label className="block">
+                    <label htmlFor="articleTitleEdit" className="block">
                       <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/45">Заголовок</span>
                       <input
+                        id="articleTitleEdit"
                         value={articleTitle}
                         onChange={(e) => setArticleTitle(e.target.value)}
                         className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none"
@@ -1016,7 +1029,9 @@ export function AdminPage() {
                     </label>
                     <div>
                       <h3 className="text-lg font-medium mb-2">Предпросмотр и редактирование</h3>
+                      <label htmlFor="articleContentEdit" className="sr-only">Текст статьи</label>
                       <textarea
+                        id="articleContentEdit"
                         value={articleContent}
                         onChange={(e) => setArticleContent(e.target.value)}
                         className="h-[400px] w-full rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none font-mono"
