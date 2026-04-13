@@ -974,14 +974,14 @@ export function AdminPage() {
             {token && (
               <div className="flex flex-col gap-6">
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60 mb-4 flex justify-between items-center max-w-xl">
-                  <span>Активный провайдер ИИ: <span className="font-semibold text-white/80">Fireworks AI</span></span>
-                  <span className="text-xs uppercase tracking-widest px-2 py-1 bg-white/[0.05] rounded-lg">Kimi K2P5 Turbo</span>
+                  <span>Активный провайдер ИИ: <span className="font-semibold text-white/80">OpenRouter AI</span></span>
+                  <span className="text-xs uppercase tracking-widest px-2 py-1 bg-white/[0.05] rounded-lg">DeepSeek V3</span>
                 </div>
 
                 <div>
                   <h2 className="text-2xl font-semibold mb-2">Генерация ИИ-статей</h2>
                   <p className="text-sm text-white/60 mb-4">
-                    Введите тему статьи. Fireworks AI сгенерирует черновик с заголовком и Markdown-текстом.
+                    Введите тему статьи. OpenRouter AI сгенерирует черновик с заголовком и Markdown-текстом.
                   </p>
                   <div className="grid gap-3 max-w-xl">
                     <input

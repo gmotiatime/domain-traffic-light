@@ -1798,9 +1798,9 @@ app.use((req, _res, next) => {
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 const configuredModels = (
-  process.env.FIREWORKS_MODELS ||
-  process.env.FIREWORKS_MODEL ||
-  "accounts/fireworks/routers/kimi-k2p5-turbo,llama-3.3-70b-versatile"
+  process.env.OPENROUTER_MODELS ||
+  process.env.OPENROUTER_MODEL ||
+  "deepseek/deepseek-v3.2"
 )
   .split(",")
   .map((item) => item.trim())
@@ -1808,29 +1808,31 @@ const configuredModels = (
 
 const modelCandidates = [...new Set(configuredModels)];
 
-const FIREWORKS_BASE_URL = process.env.FIREWORKS_BASE_URL || "https://api.fireworks.ai/inference/v1";
-const FIREWORKS_CHAT_COMPLETIONS_URL = FIREWORKS_BASE_URL + "/chat/completions";
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+const OPENROUTER_CHAT_COMPLETIONS_URL = OPENROUTER_BASE_URL + "/chat/completions";
 
-function buildFireworksHeaders(apiKey) {
+function buildOpenRouterHeaders(apiKey) {
   return {
     Authorization: "Bearer " + apiKey,
     "Content-Type": "application/json",
+    "HTTP-Referer": "https://domain-traffic-light.vercel.app",
+    "X-Title": "Domain Traffic Light",
   };
 }
 
-function parseFireworksChatContent(data, model) {
+function parseOpenRouterChatContent(data, model) {
   if (!data) {
-    throw new Error(model + ": empty Fireworks response.");
+    throw new Error(model + ": empty OpenRouter response.");
   }
 
   if (data.error) {
     const errorMessage = typeof data.error === "string" ? data.error : data.error?.message || JSON.stringify(data.error);
-    throw new Error(model + ": Fireworks error — " + sanitizeString(errorMessage, 200));
+    throw new Error(model + ": OpenRouter error — " + sanitizeString(errorMessage, 200));
   }
 
   const choice = data?.choices?.[0];
   if (!choice) {
-    throw new Error(model + ": Fireworks response missing choices.");
+    throw new Error(model + ": OpenRouter response missing choices.");
   }
 
   let content = choice?.message?.content ?? choice?.delta?.content ?? choice?.text;
@@ -1845,7 +1847,7 @@ function parseFireworksChatContent(data, model) {
   }
 
   if (content == null || String(content).trim().length === 0) {
-    throw new Error(model + ": Fireworks response missing assistant content.");
+    throw new Error(model + ": OpenRouter response missing assistant content.");
   }
 
   return typeof content === "string" ? content : JSON.stringify(content);
@@ -1859,7 +1861,7 @@ const compoundSuffixes = [
   "org.by",
 ];
 
-function buildFireworksRequest(model, prompt) {
+function buildOpenRouterRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
@@ -1895,7 +1897,7 @@ function buildFireworksRequest(model, prompt) {
   };
 }
 
-function buildFireworksBaseRequest(model, messages, responseFormat) {
+function buildOpenRouterBaseRequest(model, messages, responseFormat) {
   return {
     model,
     temperature: 0.08,
@@ -2672,8 +2674,8 @@ ${whoisSummary}
 {"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }
 
-// ─── Fireworks request with retry ──────────────────────────────────────────────────
-async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
+// ─── OpenRouter request with retry ──────────────────────────────────────────────────
+async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -2683,12 +2685,12 @@ async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const requestBody = buildFireworksRequest(model, prompt);
+        const requestBody = buildOpenRouterRequest(model, prompt);
         const response = await fetch(
-          FIREWORKS_CHAT_COMPLETIONS_URL,
+          OPENROUTER_CHAT_COMPLETIONS_URL,
           {
             method: "POST",
-            headers: buildFireworksHeaders(apiKey),
+            headers: buildOpenRouterHeaders(apiKey),
             signal: controller.signal,
             body: JSON.stringify(requestBody),
           },
@@ -2733,7 +2735,7 @@ async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
           throw new Error(`${model}: upstream returned non-JSON payload.`);
         }
 
-        const content = parseFireworksChatContent(data, model);
+        const content = parseOpenRouterChatContent(data, model);
         return extractJson(content);
       } finally {
         clearTimeout(timeoutId);
@@ -2779,9 +2781,9 @@ export function standardHeaders() {
 export function healthResponse() {
   return {
     ok: true,
-    aiConfigured: Boolean(process.env.FIREWORKS_API_KEY),
+    aiConfigured: Boolean(process.env.OPENROUTER_API_KEY),
     hasLocalEnvFile: fs.existsSync(envLocalFile),
-    provider: "fireworks",
+    provider: "openrouter",
     models: modelCandidates,
     openPhishEnabled: true,
     openPhishFeedUrl,
@@ -3045,7 +3047,7 @@ export async function adminCacheDeleteResponse(query = {}, headers = {}) {
 
 export async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   const input = String(body?.input || "");
   const localAnalysis = body?.localAnalysis || null;
   const skipCache = body?.skipCache === true;
@@ -3170,8 +3172,8 @@ export async function analyzeResponse(body = {}, meta = {}) {
     return {
       status: 503,
       body: {
-        error: "FIREWORKS_API_KEY не настроен. Создайте .env.local на основе .env.example.",
-        detail: "AI backend поднят, но без ключа Fireworks.",
+        error: "OPENROUTER_API_KEY не настроен. Создайте .env.local на основе .env.example.",
+        detail: "AI backend поднят, но без ключа OpenRouter.",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3204,7 +3206,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   for (const model of modelCandidates) {
     try {
-      const parsed = await requestFireworks({
+      const parsed = await requestOpenRouter({
         apiKey,
         model,
         prompt,
@@ -3220,7 +3222,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         analysis,
         aiAdjustedResult,
         model,
-        source: "fireworks",
+        source: "openrouter",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3257,7 +3259,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
   return {
     status: 502,
       body: {
-        error: "Fireworks request failed.",
+        error: "OpenRouter request failed.",
         detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
         attempts: attempts.slice(0, 5),
         threatIntel,
@@ -3366,9 +3368,9 @@ export async function generateArticleResponse(topic, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
   }
 
   const prompt = `Ты готовишь статью для русскоязычной аудитории о кибербезопасности.
@@ -3388,17 +3390,17 @@ Content must be Markdown.`;
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksBaseRequest(model, [
+      const requestBody = buildOpenRouterBaseRequest(model, [
         { role: "system", content: "Ты — опытный редактор и автор материалов по кибербезопасности. Возвращай только валидный JSON." },
         { role: "user", content: prompt }
       ], { type: "json_object" });
       requestBody.max_tokens = 2200;
 
       const response = await fetch(
-        FIREWORKS_CHAT_COMPLETIONS_URL,
+        OPENROUTER_CHAT_COMPLETIONS_URL,
         {
           method: "POST",
-          headers: buildFireworksHeaders(apiKey),
+          headers: buildOpenRouterHeaders(apiKey),
           body: JSON.stringify(requestBody),
         }
       );
@@ -3412,7 +3414,7 @@ Content must be Markdown.`;
         throw new Error("Failed to generate article: " + sanitizeString(String(errorMessage), 200));
       }
 
-      const content = parseFireworksChatContent(data, model);
+      const content = parseOpenRouterChatContent(data, model);
       const parsed = JSON.parse(content);
       const title = sanitizeString(parsed?.title || topic, 180);
       const articleContent = sanitizeString(parsed?.content || "", 20000);
@@ -3431,9 +3433,9 @@ Content must be Markdown.`;
 }
 
 export async function generateQuizScenarioResponse() {
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
   }
 
   const prompt = `Сгенерируй один интересный сценарий для квиза "Не дай себя развести" по кибербезопасности. Верни ответ в формате JSON:
@@ -3448,16 +3450,16 @@ export async function generateQuizScenarioResponse() {
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksBaseRequest(model, [
+      const requestBody = buildOpenRouterBaseRequest(model, [
         { role: "system", content: "Ты — эксперт по кибербезопасности и создатель обучающих квизов. Твоя задача — генерировать только валидный JSON." },
         { role: "user", content: prompt }
       ], { type: "json_object" });
 
       const response = await fetch(
-        FIREWORKS_CHAT_COMPLETIONS_URL,
+        OPENROUTER_CHAT_COMPLETIONS_URL,
         {
           method: "POST",
-          headers: buildFireworksHeaders(apiKey),
+          headers: buildOpenRouterHeaders(apiKey),
           body: JSON.stringify(requestBody),
         }
       );
@@ -3471,7 +3473,7 @@ export async function generateQuizScenarioResponse() {
         throw new Error("Failed to generate quiz: " + sanitizeString(String(errorMessage), 200));
       }
 
-      const contentStr = parseFireworksChatContent(data, model);
+      const contentStr = parseOpenRouterChatContent(data, model);
       const contentJson = JSON.parse(contentStr);
       return { status: 200, body: contentJson };
     } catch (error) {
@@ -3632,9 +3634,9 @@ export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawC
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
-    log("info", "Fireworks proxy listening", {
+    log("info", "OpenRouter proxy listening", {
       port,
-      provider: "fireworks",
+      provider: "openrouter",
       models: modelCandidates,
       cacheEnabled,
       corsOrigin,
