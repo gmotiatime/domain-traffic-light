@@ -1798,9 +1798,9 @@ app.use((req, _res, next) => {
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 const configuredModels = (
-  process.env.FIREWORKS_MODELS ||
-  process.env.FIREWORKS_MODEL ||
-  "accounts/fireworks/routers/kimi-k2p5-turbo,llama-3.3-70b-versatile"
+  process.env.OPENROUTER_MODELS ||
+  process.env.OPENROUTER_MODEL ||
+  "deepseek/deepseek-chat"
 )
   .split(",")
   .map((item) => item.trim())
@@ -1817,7 +1817,7 @@ const compoundSuffixes = [
   "org.by",
 ];
 
-function buildFireworksRequest(model, prompt) {
+function buildOpenRouterRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
@@ -1839,7 +1839,7 @@ function buildFireworksRequest(model, prompt) {
 Принципы:
 - Каждая причина (reason) должна ссылаться на КОНКРЕТНЫЙ сигнал: фрагмент домена, TLD, результат DNS/TLS, запись в OpenPhish, redirect-цепочку, и объяснять, чем это грозит (например, "домен новый, мошенники часто создают такие сайты на пару дней").
 - Не пиши общих фраз вроде «домен выглядит подозрительно» или «есть отдельный поддомен».
-- Если DNS не резолвится — это серьёзный warning. Если TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
+- Если DNS не резолвится — эт�� серьёзный warning. Если TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
 - Если данных мало, честно напиши об ограничении, но не выдумывай проверки.
 - Все тексты — на русском языке, в дружелюбном, но предостерегающем тоне. Формат — строго JSON.
 - Заголовок reason: 1–3 слова, без нумерации, без «Сигнал 1», должен звучать просто (например, "Странное окончание", "Нет защищенного замка").
@@ -1853,7 +1853,7 @@ function buildFireworksRequest(model, prompt) {
   };
 }
 
-function buildFireworksBaseRequest(model, messages, responseFormat) {
+function buildOpenRouterBaseRequest(model, messages, responseFormat) {
   return {
     model,
     temperature: 0.08,
@@ -1863,7 +1863,7 @@ function buildFireworksBaseRequest(model, messages, responseFormat) {
   };
 }
 
-// ─── Domain helpers ─────────��─────────────────────────────────────────────────
+// ─── Domain helpers ─────────��─────���───────────────────────────────────────────
 function buildBreakdown(host) {
   const labels = host.split(".");
   const matchedSuffix = compoundSuffixes.find(
@@ -2630,8 +2630,8 @@ ${whoisSummary}
 {"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }
 
-// ─── Fireworks request with retry ──────────────────────────────────────────────────
-async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
+// ─── OpenRouter request with retry ──────────────────────────────────────────────────
+async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -2641,9 +2641,9 @@ async function requestFireworks({ apiKey, model, prompt, retries = 0 }) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const requestBody = buildFireworksRequest(model, prompt);
+        const requestBody = buildOpenRouterRequest(model, prompt);
         const response = await fetch(
-          "https://api.fireworks.ai/inference/v1/chat/completions",
+          "https://openrouter.ai/api/v1/chat/completions",
           {
             method: "POST",
             headers: {
@@ -2740,9 +2740,9 @@ export function standardHeaders() {
 export function healthResponse() {
   return {
     ok: true,
-    aiConfigured: Boolean(process.env.FIREWORKS_API_KEY),
+    aiConfigured: Boolean(process.env.OPENROUTER_API_KEY),
     hasLocalEnvFile: fs.existsSync(envLocalFile),
-    provider: "fireworks",
+    provider: "openrouter",
     models: modelCandidates,
     openPhishEnabled: true,
     openPhishFeedUrl,
@@ -3006,7 +3006,7 @@ export async function adminCacheDeleteResponse(query = {}, headers = {}) {
 
 export async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   const input = String(body?.input || "");
   const localAnalysis = body?.localAnalysis || null;
   const skipCache = body?.skipCache === true;
@@ -3131,8 +3131,8 @@ export async function analyzeResponse(body = {}, meta = {}) {
     return {
       status: 503,
       body: {
-        error: "FIREWORKS_API_KEY не настроен. Создайте .env.local на основе .env.example.",
-        detail: "AI backend поднят, но без ключа Fireworks.",
+        error: "OPENROUTER_API_KEY не настроен. Создайте .env.local на основе .env.example.",
+        detail: "AI backend поднят, но без ключа OpenRouter.",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3165,7 +3165,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
 
   for (const model of modelCandidates) {
     try {
-      const parsed = await requestFireworks({
+      const parsed = await requestOpenRouter({
         apiKey,
         model,
         prompt,
@@ -3181,7 +3181,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         analysis,
         aiAdjustedResult,
         model,
-        source: "fireworks",
+        source: "openrouter",
         threatIntel,
         urlAbuseIntel,
         networkSignals,
@@ -3218,7 +3218,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
   return {
     status: 502,
       body: {
-        error: "Fireworks request failed.",
+        error: "OpenRouter request failed.",
         detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
         attempts: attempts.slice(0, 5),
         threatIntel,
@@ -3327,9 +3327,9 @@ export async function generateArticleResponse(topic, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
   }
 
   const prompt = `Ты готовишь статью для русскоязычной аудитории о кибербезопасности.
@@ -3349,14 +3349,14 @@ Content must be Markdown.`;
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksBaseRequest(model, [
+      const requestBody = buildOpenRouterBaseRequest(model, [
         { role: "system", content: "Ты — опытный редактор и автор материалов по кибербезопасности. Возвращай только валидный JSON." },
         { role: "user", content: prompt }
       ], { type: "json_object" });
       requestBody.max_tokens = 2200;
 
       const response = await fetch(
-        "https://api.fireworks.ai/inference/v1/chat/completions",
+        "https://openrouter.ai/api/v1/chat/completions",
         {
           method: "POST",
           headers: {
@@ -3398,9 +3398,9 @@ Content must be Markdown.`;
 }
 
 export async function generateQuizScenarioResponse() {
-  const apiKey = process.env.FIREWORKS_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { status: 503, body: { error: "FIREWORKS_API_KEY is missing." } };
+    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
   }
 
   const prompt = `Сгенерируй один интересный сценарий для квиза "Не дай себя развести" по кибербезопасности. Верни ответ в формате JSON:
@@ -3415,13 +3415,13 @@ export async function generateQuizScenarioResponse() {
 
   for (const model of modelCandidates) {
     try {
-      const requestBody = buildFireworksBaseRequest(model, [
+      const requestBody = buildOpenRouterBaseRequest(model, [
         { role: "system", content: "Ты — эксперт по кибербезопасности и создатель обучающих квизов. Твоя задача — генерировать только валидный JSON." },
         { role: "user", content: prompt }
       ], { type: "json_object" });
 
       const response = await fetch(
-        "https://api.fireworks.ai/inference/v1/chat/completions",
+        "https://openrouter.ai/api/v1/chat/completions",
         {
           method: "POST",
           headers: {
@@ -3603,9 +3603,9 @@ export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawC
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
-    log("info", "Fireworks proxy listening", {
+    log("info", "OpenRouter proxy listening", {
       port,
-      provider: "fireworks",
+      provider: "openrouter",
       models: modelCandidates,
       cacheEnabled,
       corsOrigin,
