@@ -4,7 +4,7 @@ import { routeHref } from "@/lib/site-router";
 export function SiteFooter() {
   return (
     <footer className="mt-8 pb-8 sm:pb-12 md:pb-16 px-4 sm:px-5 md:px-8">
-      <div className="liquid-glass mx-auto grid w-full max-w-7xl overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-[#050505] p-8 md:grid-cols-[1fr_auto] md:p-10 lg:p-12 transition-all hover:border-foreground/[0.1] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] relative group">
+      <div className="liquid-glass mx-auto grid w-full max-w-7xl overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-background/40 p-8 md:grid-cols-[1fr_auto] md:p-10 lg:p-12 transition-all hover:border-foreground/[0.1] hover:shadow-[0_0_40px_rgba(255,255,255,0.02)] relative group">
         
         {/* subtle floating glow inside footer */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.02),transparent_60%)] opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />

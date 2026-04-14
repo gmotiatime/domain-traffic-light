@@ -27,7 +27,7 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50">
       <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-5 sm:pt-5 md:px-8 md:pt-6">
         <div
-          className="liquid-glass overflow-hidden rounded-[1.75rem] bg-background/50 px-4 py-3 sm:px-5 md:px-6 md:py-4"
+          className="liquid-glass overflow-hidden rounded-[1.75rem] bg-background/40 px-4 py-3 sm:px-5 md:px-6 md:py-4"
         >
           <div className="flex items-center justify-between gap-4">
             <a
