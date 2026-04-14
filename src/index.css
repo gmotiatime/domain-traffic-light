@@ -53,11 +53,16 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background font-body text-foreground antialiased;
     margin: 0;
+    overflow-x: hidden;
+  }
+
+  #root {
     overflow-x: hidden;
   }
 
