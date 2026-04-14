@@ -146,8 +146,8 @@ export function AdminPage() {
       setArticleTitle(data.title || articleTopic);
       setArticleContent(data.content || "");
       setArticleStatus("Сгенерировано успешно.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err: unknown) {
+      setArticleStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGeneratingArticle(false);
     }
@@ -164,8 +164,8 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка загрузки статей");
       const nextArticles = Array.isArray(data.articles) ? data.articles : [];
       setArticles([...nextArticles].sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)));
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err: unknown) {
+      setArticleStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoadingArticles(false);
     }
@@ -184,8 +184,8 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка удаления статьи");
       await loadArticles();
       setArticleStatus("Статья удалена.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err: unknown) {
+      setArticleStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setDeletingArticleId(null);
     }
@@ -212,8 +212,8 @@ export function AdminPage() {
       setArticleTitle("");
       setArticleContent("");
       await loadArticles();
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err: unknown) {
+      setArticleStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setIsPublishingArticle(false);
     }
@@ -313,7 +313,7 @@ export function AdminPage() {
       if (response.ok) {
         setStats(data);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to load stats:", error);
     }
   }
@@ -337,7 +337,7 @@ export function AdminPage() {
       setEntry(payload?.entry || null);
       syncForm(payload?.entry || null);
       setStatus(payload?.entry ? "Запись загружена." : "Запись по этому хосту не найдена.");
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ошибка загрузки.";
       if (/прав/i.test(message)) {
         setToken("");
@@ -370,7 +370,7 @@ export function AdminPage() {
       setRecent(recentData);
       setStatus("Админка открыта.");
       await loadStats();
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ошибка входа.";
       setToken("");
       window.localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -408,7 +408,7 @@ export function AdminPage() {
       syncForm(payload?.entry || null);
       await loadRecent();
       setStatus("Правки сохранены в базе.");
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ошибка сохранения.";
       setStatus(message);
     } finally {
@@ -436,7 +436,7 @@ export function AdminPage() {
       syncForm(null);
       await loadRecent();
       setStatus("Запись удалена.");
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ошибка удаления.";
       setStatus(message);
     } finally {
@@ -464,7 +464,7 @@ export function AdminPage() {
       await loadEntry(entry.host);
       await loadRecent();
       setStatus("Жалоба удалена.");
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ошибка удаления жалобы.";
       setStatus(message);
     } finally {
