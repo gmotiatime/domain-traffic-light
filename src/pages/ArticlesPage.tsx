@@ -168,7 +168,6 @@ export function ArticlesPage() {
                     <div>
                       <h3 className="text-xl font-semibold text-white/90">{title}</h3>
                       <div className="mt-1 space-y-1 text-xs text-white/40">
-                        {topic && topic !== title ? <p>Тема: {topic}</p> : null}
                         <p>{new Date(article.createdAt).toLocaleDateString("ru-RU")}</p>
                       </div>
                     </div>
@@ -183,9 +182,38 @@ export function ArticlesPage() {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="px-6 pb-6 pt-2 border-t border-white/5 text-white/80 prose prose-invert max-w-none"
+                      className="px-6 pb-6 pt-2 border-t border-white/5 text-white/80"
                     >
-                      <ReactMarkdown>{article.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 text-white" {...props} />,
+                          h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-4 text-white" {...props} />,
+                          h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-white/90" {...props} />,
+                          p: ({ node, ...props }) => <p className="leading-relaxed mb-4 text-white/80" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-4 space-y-2 text-white/80" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-4 space-y-2 text-white/80" {...props} />,
+                          li: ({ node, ...props }) => <li className="pl-2" {...props} />,
+                          a: ({ node, ...props }) => <a className="text-amber-400 hover:text-amber-300 underline underline-offset-2" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
+                          code: ({ node, className, children, ...props }) => {
+                            const match = /language-(\w+)/.exec(className || "");
+                            return match ? (
+                              <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto border border-white/10 mb-4 mt-2">
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              </pre>
+                            ) : (
+                              <code className="bg-black/50 px-1.5 py-0.5 rounded text-amber-200 font-mono text-sm" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-amber-500/50 pl-4 italic text-white/60 mb-4" {...props} />,
+                        }}
+                      >
+                        {article.content}
+                      </ReactMarkdown>
                     </motion.div>
                   )}
                 </motion.div>
