@@ -13,6 +13,7 @@ import {
   Sparkles,
   TriangleAlert,
   Scale,
+  Cat,
   Globe,
   Lock,
   Activity,
@@ -778,10 +779,10 @@ export function AnalyzerPage() {
             ) : (
               <div className="mt-4 flex flex-col items-center justify-center py-8 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04] transition-colors hover:bg-foreground/[0.08]">
-                  <Sparkles className="h-5 w-5 text-foreground/20" />
+                  <Cat className="h-5 w-5 text-foreground/20" />
                 </div>
                 <p className="mt-3 text-sm text-foreground/30">
-                  AI уточнит результат автоматически
+                  Нейрокот начеку. Уточненный вердикт появится автоматически.
                 </p>
               </div>
             )}

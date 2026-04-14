@@ -44,7 +44,7 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
         throw new Error(data?.error || "Не удалось отправить жалобу.");
       }
 
-      setReportStatus("Жалоба отправлена! Спасибо за обратную связь.");
+      setReportStatus("Жалоба отправлена в надёжные лапы! Спасибо за обратную связь 🐾");
       setTimeout(() => {
         onClose();
         setReportText("");
@@ -101,7 +101,7 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
                 id="reportText"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
-                placeholder="Например: результат неверный, домен безопасный..."
+                placeholder="Например: нейрокот ошибся, этот домен точно безопасный..."
                 className="min-h-[120px] w-full rounded-2xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm text-foreground outline-none placeholder:text-foreground/30 focus:border-foreground/20"
                 disabled={isSubmittingReport}
               />

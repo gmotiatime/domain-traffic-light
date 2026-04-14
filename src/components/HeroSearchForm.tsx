@@ -11,10 +11,10 @@ export function HeroSearchForm() {
 
   const placeholders = [
     "Вставьте домен или ссылку...",
-    "Например: example.com",
-    "Проверьте подозрительный URL",
+    "Какую ссылку проверим сегодня? 🐾",
+    "Чую подозрительный URL...",
     "https://suspicious-site.com",
-    "Введите адрес для анализа"
+    "Бросайте ссылку, я поймаю!"
   ];
 
   useEffect(() => {
