@@ -58,7 +58,15 @@ describe('domain-analyzer', () => {
     // 'a' and 'e' are cyrillic here, which turns into punycode when parsed by URL constructor
     const result = analyzeDomainInput('stеаmcommunity.com');
     expect(result.verdict).toBe('high');
-    expect(result.reasons.some(r => r.title.includes('Punycode-маскировка') || r.title.includes('гомоглиф') || r.title.includes('Смешение письменностей'))).toBe(true);
+    expect(result.reasons.some(r => r.title.includes('Punycode-маскировка'))).toBe(true);
+    expect(result.reasons.some(r => r.title.includes('Смешение письменностей'))).toBe(true);
+  });
+
+  it('should detect mixed scripts when cyrillic characters are inserted into a latin domain', () => {
+    // The 'а' in pаypal is Cyrillic, triggering a mixed script warning before Punycode conversion.
+    const result = analyzeDomainInput('pаypal.com');
+    expect(result.verdict).toBe('high');
+    expect(result.reasons.some(r => r.title.includes('Смешение письменностей'))).toBe(true);
   });
 
   it('should detect IP addresses', () => {

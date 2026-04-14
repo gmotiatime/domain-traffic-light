@@ -490,7 +490,7 @@ function levenshtein(left: string, right: string): number {
 }
 
 function normalizeInput(input: string):
-  | { url: URL; host: string }
+  | { url: URL; host: string; rawHost: string }
   | { error: string } {
   const raw = input.trim();
 
@@ -514,6 +514,17 @@ function normalizeInput(input: string):
   }
 
   try {
+    let rawHostPart = candidate.match(/^[^:]+:\/\/(?:[^@/]+@)?([^/?#]+)/i)?.[1] || "";
+    if (rawHostPart.startsWith("[")) {
+      const endBracket = rawHostPart.indexOf("]");
+      if (endBracket !== -1) {
+        rawHostPart = rawHostPart.slice(1, endBracket);
+      }
+    } else {
+      rawHostPart = rawHostPart.split(":")[0];
+    }
+    const rawHost = rawHostPart.toLowerCase().replace(/\.$/, "");
+
     const url = new URL(candidate);
     const host = url.hostname.toLowerCase().replace(/\.$/, "");
 
@@ -530,7 +541,7 @@ function normalizeInput(input: string):
       return { error: "Некорректная структура доменного имени." };
     }
 
-    return { url, host };
+    return { url, host, rawHost: rawHost || host };
   } catch {
     return {
       error:
@@ -760,7 +771,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     };
   }
 
-  const { url, host } = normalized;
+  const { url, host, rawHost } = normalized;
   const canonicalHost = host.startsWith("www.") ? host.slice(4) : host;
   const breakdown = buildBreakdown(host);
   const reasons: AnalyzerReason[] = [];
@@ -863,7 +874,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
 
   // ── 5. Смешение письменностей ─────────────────────────────────────────────
 
-  if (hasMixedScripts(host)) {
+  if (hasMixedScripts(rawHost)) {
     pushReason(
       "Смешение письменностей",
       "В домене одновременно используются латиница и кириллица. Это частый признак визуальной подмены.",
@@ -874,7 +885,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
 
   // ── 5b. Кириллическо-латинские гомоглифы ──────────────────────────────────
 
-  if (!hasMixedScripts(host) && hasCyrLatHomoglyphs(host)) {
+  if (!hasMixedScripts(rawHost) && hasCyrLatHomoglyphs(rawHost)) {
     pushReason(
       "Кириллическо-латинские гомоглифы",
       "Домен содержит символы, визуально идентичные между кириллицей и латиницей (а↔a, е↔e, о↔o и т.п.). Это техника маскировки.",
@@ -1231,7 +1242,7 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     longestLabel < 18 &&
     host.length <= 40 &&
     !host.includes("xn--") &&
-    !hasMixedScripts(host) &&
+    !hasMixedScripts(rawHost) &&
     !typoMatch &&
     !protectedBrandMatch &&
     !mimicsOfficial &&
