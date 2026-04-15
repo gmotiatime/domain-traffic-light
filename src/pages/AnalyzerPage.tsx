@@ -34,6 +34,8 @@ import { useHistory } from "@/lib/history-store";
 import { officialDomains, ruleReference } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
 import { ReportModal } from "@/components/ReportModal";
+import { VerdictCard, SideColumn, SignalsRow, AiInsights, CyberLawSection, ReferenceSections } from "./AnalyzerPageComponents";
+
 
 /* ─── animation presets ─── */
 const fadeUp = {
@@ -88,30 +90,6 @@ const toneStyles = {
 
 const actionIcons = [ShieldAlert, Search, ShieldQuestion, ExternalLink];
 
-/* ─── glass card wrapper ─── */
-function GlassCard({
-  children,
-  className = "",
-  glow,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  glow?: string;
-}) {
-  return (
-    <motion.div
-      className={`group relative overflow-hidden rounded-[2rem] border border-foreground/[0.06] bg-foreground/[0.02] backdrop-blur-2xl transition-all duration-300 hover:bg-foreground/[0.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.03)] hover:border-foreground/[0.1] ${className}`}
-      variants={fadeUp}
-      whileHover={{ y: -4, scale: 1.005 }}
-      style={glow ? { background: glow } : undefined}
-    >
-      {/* top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50 transition-opacity duration-300 group-hover:opacity-100" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100" />
-      {children}
-    </motion.div>
-  );
-}
 
 /* ─── types ─── */
 type AiHealthStatus = "checking" | "ready" | "missing-key" | "offline";
@@ -538,323 +516,51 @@ export function AnalyzerPage() {
           variants={stagger}
         >
           {/* ── Verdict card (main, large) ── */}
-          <GlassCard className="lg:col-span-7 p-8" glow={cfg.bgGlow}>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.15em] ${cfg.pillBg}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} />
-                Вердикт
-              </span>
-              <span className="rounded-full border border-foreground/8 bg-foreground/5 px-3 py-1 text-[11px] text-foreground/50">
-                {result.score}/100
-              </span>
-              {aiExplanation && (
-                <>
-                  <span className={`rounded-full border px-3 py-1 text-[11px] ${
-                    isCachedResult 
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400" 
-                      : "border-violet-500/20 bg-violet-500/10 text-violet-400"
-                  }`}>
-                    <Sparkles className="mr-1 inline h-3 w-3" />
-                    {aiShiftLabel}
-                  </span>
-                  <span className="rounded-full border border-foreground/8 bg-foreground/5 px-3 py-1 text-[11px] text-foreground/50">
-                    {aiExplanation.model}
-                  </span>
-                </>
-              )}
-            </div>
-
-            <h2 
-              className={`mt-8 text-6xl font-bold tracking-[-0.04em] sm:text-7xl md:text-8xl drop-shadow-[0_0_25px_currentColor] transition-colors duration-500 ${cfg.textClass}`}
-              style={{ filter: "brightness(1.1)" }}
-            >
-              {result.verdictLabel}
-            </h2>
-
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-foreground/60 sm:text-lg">
-              {result.summary}
-            </p>
-
-            {isModerated && (
-              <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-400">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Изменено администратором
-              </div>
-            )}
-
-            {/* Progress bar */}
-            <div className="mt-8">
-              <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-foreground/30">
-                <span>Безопасно</span>
-                <span>Опасно</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/5">
-                <motion.div
-                  className={`h-full rounded-full ${cfg.progressClass}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.max(result.score, 4)}%` }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </div>
-            </div>
-
-            {/* Domain breakdown pills */}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { label: "Домен", value: result.host },
-                  { label: "Ядро", value: result.breakdown.registrableDomain },
-                  { label: "Зона", value: result.breakdown.tld },
-                  { label: "Поддомен", value: result.breakdown.subdomain || "—" },
-                ].map((item) => (
-                  <span key={item.label} className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-4 py-2 text-xs text-foreground/60 shadow-sm backdrop-blur-md">
-                    {item.label}: <span className="text-foreground/90 font-medium tracking-wide">{item.value}</span>
-                  </span>
-                ))}
-              </div>
-              
-            </div>
-          </GlassCard>
+          <VerdictCard
+            result={result}
+            cfg={cfg}
+            aiExplanation={aiExplanation}
+            isCachedResult={isCachedResult}
+            aiShiftLabel={aiShiftLabel}
+            isModerated={isModerated}
+          />
 
           {/* ── Side column ── */}
-          <div className="flex flex-col gap-4 lg:col-span-5">
-            {/* Primary action */}
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Действие
-                </div>
-
-                {result.host !== "—" && (
-                  <div className="relative group">
-                    <button
-                      onClick={() => telemetryConsent ? setShowReportModal(true) : null}
-                      disabled={!telemetryConsent}
-                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
-                        telemetryConsent
-                          ? "border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                          : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
-                      }`}
-                    >
-                      <Flag className="h-3 w-3" />
-                      Неверный вердикт?
-                    </button>
-                    {!telemetryConsent && (
-                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 shadow-lg backdrop-blur-sm z-10">
-                        Включите "Анонимно сохранять результат в общую базу" (в настройках) и повторите попытку
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <p className="mt-4 text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
-                {primaryAction(result.verdict)}
-              </p>
-            </GlassCard>
-
-            {/* Quick actions */}
-            <GlassCard className="flex-1 p-5">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-foreground/40">Рекомендации</p>
-              <div className="mt-4 space-y-1">
-                {quickActions.map((action, i) => {
-                  const Icon = actionIcons[i] ?? ShieldQuestion;
-                  return (
-                    <div key={`${action}-${i}`} className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-foreground/[0.03]">
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-foreground/60">
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                      <p className="text-sm leading-relaxed text-foreground/60">{action}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </GlassCard>
-          </div>
+          <SideColumn
+            result={result}
+            telemetryConsent={telemetryConsent}
+            setShowReportModal={setShowReportModal}
+            primaryAction={primaryAction}
+            quickActions={quickActions}
+            actionIcons={actionIcons}
+          />
 
           {/* ── Signals row ── */}
-          <GlassCard className="lg:col-span-8 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TriangleAlert className="h-4 w-4 text-foreground/40" />
-                <p className="text-[11px] uppercase tracking-[0.2em] text-foreground/40">
-                  Сигналы · {result.reasons.length}
-                </p>
-              </div>
-            </div>
-
-            {leadReason && (() => {
-              const isCritical = leadReason.tone === "critical";
-              return (
-                <div className={`mt-5 rounded-2xl border p-5 ${isCritical ? "border-rose-500/20 bg-rose-500/5" : "border-foreground/[0.06] bg-foreground/[0.02]"}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className={`text-[10px] uppercase tracking-[0.2em] ${isCritical ? "text-rose-400/80" : "text-foreground/30"}`}>Главный сигнал</span>
-                      <div className="mt-2 flex items-center gap-2">
-                        {isCritical && <ShieldAlert className="h-4 w-4 text-rose-400" />}
-                        <p className={`text-sm font-medium ${isCritical ? "text-rose-400" : "text-foreground/90"}`}>{leadReason.title}</p>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[leadReason.tone].pill}`}>
-                          {toneStyles[leadReason.tone].label}
-                        </span>
-                      </div>
-                      <p className={`mt-2 text-sm leading-relaxed ${isCritical ? "text-rose-400/80" : "text-foreground/50"}`}>{leadReason.detail}</p>
-                    </div>
-                    <span className="shrink-0 text-sm font-medium text-foreground/70">
-                      {leadReason.scoreDelta > 0 ? `+${leadReason.scoreDelta}` : leadReason.scoreDelta}
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {visibleReasons.length > 0 && (
-              <div className="mt-3 divide-y divide-white/[0.04] rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
-                {visibleReasons.map((reason, i) => {
-                  const isCritical = reason.tone === "critical";
-                  return (
-                    <div key={`${reason.title}-${i}`} className={`flex items-start justify-between gap-4 px-5 py-4 ${isCritical ? "bg-rose-500/5" : ""}`}>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {isCritical && <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />}
-                          <p className={`text-sm ${isCritical ? "font-medium text-rose-400" : "text-foreground/80"}`}>{reason.title}</p>
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone].pill}`}>
-                            {toneStyles[reason.tone].label}
-                          </span>
-                        </div>
-                        <p className={`mt-1 text-sm leading-relaxed ${isCritical ? "text-foreground/60" : "text-foreground/40"}`}>{reason.detail}</p>
-                      </div>
-                      <span className="shrink-0 text-sm text-foreground/60">
-                        {reason.scoreDelta > 0 ? `+${reason.scoreDelta}` : reason.scoreDelta}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </GlassCard>
+          <SignalsRow
+            result={result}
+            leadReason={leadReason}
+            visibleReasons={visibleReasons}
+            toneStyles={toneStyles}
+          />
 
           {/* ── AI insights ── */}
-          <GlassCard className="lg:col-span-4 p-6">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-              AI-слой
-            </div>
-
-            {aiExplanation ? (
-              <div className="mt-4">
-                <p className="text-sm leading-relaxed text-foreground/60">{aiExplanation.summary}</p>
-                {aiExplanation.reasons && aiExplanation.reasons.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    {aiExplanation.reasons.map((reason, i) => {
-                      const isCritical = reason.tone === "critical";
-                      return (
-                        <div key={`ai-${i}`} className={`rounded-xl border px-4 py-3 ${isCritical ? "border-rose-500/20 bg-rose-500/5" : "border-foreground/[0.06] bg-foreground/[0.02]"}`}>
-                          <div className="flex items-center justify-between gap-2">
-                             <div className="flex items-center gap-2">
-                               {isCritical && <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />}
-                               <p className={`text-sm font-medium ${isCritical ? "text-rose-400" : "text-foreground/80"}`}>{reason.title}</p>
-                             </div>
-                             <span className={`rounded-full border px-2 py-0.5 text-[10px] ${toneStyles[reason.tone]?.pill || toneStyles.warning.pill}`}>
-                               {toneStyles[reason.tone]?.label || "Сигнал"}
-                             </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-relaxed text-foreground/60">{reason.detail}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : isAiEnriching ? (
-              <div className="mt-5 space-y-3">
-                <div className="h-3 w-5/6 animate-pulse rounded-full bg-foreground/10" />
-                <div className="h-3 w-4/6 animate-pulse rounded-full bg-foreground/10" />
-                <div className="h-3 w-3/4 animate-pulse rounded-full bg-foreground/10" />
-                <div className="mt-6 space-y-3">
-                  {[1, 2].map((i) => (
-                    <div key={`skel-${i}`} className="h-[4.5rem] w-full animate-pulse rounded-xl border border-foreground/5 bg-foreground/[0.03]" />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 flex flex-col items-center justify-center py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/[0.04] transition-colors hover:bg-foreground/[0.08]">
-                  <Cat className="h-5 w-5 text-foreground/20" />
-                </div>
-                <p className="mt-3 text-sm text-foreground/30">
-                  Нейрокот начеку. Уточненный вердикт появится автоматически.
-                </p>
-              </div>
-            )}
-          </GlassCard>
+          <AiInsights
+            aiExplanation={aiExplanation}
+            isAiEnriching={isAiEnriching}
+            toneStyles={toneStyles}
+          />
 
           {/* ── CyberLaw (КиберПраво) section ── */}
-          {(result.verdict === "high" || result.verdict === "medium") && (
-            <GlassCard className="lg:col-span-12 p-6 border-violet-500/10 bg-violet-500/[0.02]">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-violet-400">
-                <Scale className="h-3.5 w-3.5" />
-                #КиберПраво
-              </div>
-              <div className="mt-4 flex flex-col md:flex-row gap-6 items-start">
-                <div className="flex-1">
-                  <h3 className="text-base font-medium text-foreground/90">Закон о защите персональных данных</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground/60">
-                    По Закону Республики Беларусь вы — субъект персональных данных. Фишинговые ресурсы нарушают этот закон, собирая ваши данные (логины, пароли, платежную информацию) неправомерно, без вашего явного согласия.
-                  </p>
-                </div>
-                <div className="flex-1 rounded-xl border border-violet-500/10 bg-violet-500/5 p-4">
-                  <p className="text-sm text-foreground/70 mb-3">
-                    Вы имеете право на защиту своих данных и правовую помощь.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <a href="https://cpd.by" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-400 transition-colors hover:bg-violet-500/20">
-                      НЦЗПД (cpd.by)
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <a href={routeHref("/safety")} className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 bg-foreground/5 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:bg-foreground/10">
-                      О безопасности
-                      <ArrowRight className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-          )}
+          <CyberLawSection
+            verdict={result.verdict}
+            routeHref={routeHref}
+          />
 
           {/* ── Reference sections ── */}
-          <GlassCard className="lg:col-span-6 p-6">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
-                <span>Что учитывает модель</span>
-                <ChevronDown className="h-4 w-4 text-foreground/30 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="mt-4 space-y-3">
-                {ruleReference.map((rule, i) => (
-                  <div key={`${rule.title}-${i}`} className="rounded-xl border border-foreground/[0.04] bg-foreground/[0.02] px-4 py-3">
-                    <p className="text-sm text-foreground/70">{rule.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-foreground/40">{rule.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </details>
-          </GlassCard>
-
-          <GlassCard className="lg:col-span-6 p-6">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground/70">
-                <span>Справочные домены</span>
-                <ChevronDown className="h-4 w-4 text-foreground/30 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="mt-4 space-y-3">
-                {officialDomains.map((item, i) => (
-                  <div key={`${item.domain}-${i}`} className="rounded-xl border border-foreground/[0.04] bg-foreground/[0.02] px-4 py-3">
-                    <p className="text-sm text-foreground/70">{item.domain}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-foreground/40">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            </details>
-          </GlassCard>
+          <ReferenceSections
+            ruleReference={ruleReference}
+            officialDomains={officialDomains}
+          />
         </motion.div>
       </div>
 
