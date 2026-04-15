@@ -737,6 +737,574 @@ function findProtectedBrandMatch(
 
 // ─── Основной анализатор ──────────────────────────────────────────────────────
 
+
+class DomainAnalyzerSession {
+  private url: URL;
+  private host: string;
+  private rawHost: string;
+  private canonicalHost: string;
+  private breakdown: DomainBreakdown;
+
+  private reasons: AnalyzerReason[] = [];
+  private score = 0;
+  private foundStructuralRisk = false;
+
+  private protectedBrandMatch: { brand: string; exact: boolean; officialDomain: string; observedToken: string; matchedToken: string } | null = null;
+  private typoMatch: string | null = null;
+  private keywordHits: string[] = [];
+  private pathKeywordHits: string[] = [];
+
+  constructor(normalized: { url: URL; host: string; rawHost: string }) {
+    this.url = normalized.url;
+    this.host = normalized.host;
+    this.rawHost = normalized.rawHost;
+    this.canonicalHost = this.host.startsWith("www.") ? this.host.slice(4) : this.host;
+    this.breakdown = buildBreakdown(this.host);
+  }
+
+  private pushReason(title: string, detail: string, scoreDelta: number, tone: AnalyzerTone): void {
+    this.reasons.push({ title, detail, scoreDelta, tone });
+    this.score += scoreDelta;
+    if (tone !== "positive" && scoreDelta > 0) {
+      this.foundStructuralRisk = true;
+    }
+  }
+
+  // 1 & 2
+  private checkWhitelists(): void {
+    // ── 1. Официальный домен ──────────────────────────────────────────────────
+    if (legitimateDomains.has(this.canonicalHost)) {
+      this.pushReason(
+        "Легитимный домен из whitelist",
+        `Домен ${this.canonicalHost} находится в списке проверенных легитимных сервисов.`,
+        -30,
+        "positive",
+      );
+    }
+
+    if (officialDomains.has(this.canonicalHost)) {
+      this.pushReason(
+        "Совпадение с официальным доменом",
+        "Адрес совпадает со справочным официальным доменом. Это сильный положительный сигнал.",
+        -45,
+        "positive",
+      );
+    }
+
+    if (this.canonicalHost.endsWith(".gov.by") && !officialDomains.has(this.canonicalHost)) {
+      this.pushReason(
+        "Государственный домен .gov.by",
+        "Домен находится в государственной зоне .gov.by. Это положительный сигнал, но проверьте точный адрес.",
+        -20,
+        "positive",
+      );
+    }
+
+    // ── 2. Учебная зона ──────────────────────────────────────────────────────
+    if (this.host.endsWith(".example") || this.host.endsWith(".test") || this.host.endsWith(".localhost")) {
+      this.pushReason(
+        "Учебная доменная зона",
+        "Используется безопасная зона для демонстрации и тестовых сценариев.",
+        0,
+        "positive",
+      );
+    }
+  }
+
+  // 3
+  private checkProtocol(): void {
+    if (this.url.protocol === "http:" && !this.host.endsWith(".example") && !this.host.endsWith(".test")) {
+      this.pushReason(
+        "Незащищённый протокол HTTP",
+        "Ссылка открывается по http, а не по https. Данные передаются без шифрования.",
+        8,
+        "warning",
+      );
+    }
+
+    if (this.url.protocol === "https:" && !this.host.endsWith(".example") && !this.host.endsWith(".test")) {
+      this.pushReason(
+        "Защищённый протокол HTTPS",
+        "Ссылка использует https. Это базовый положительный сигнал, но он не гарантирует легитимность сайта.",
+        -4,
+        "positive",
+      );
+    }
+  }
+
+  // 4, 5, 6, 7, 8, 11
+  private checkSpoofingAndHomoglyphs(): void {
+    // ── 4. Punycode / IDN
+    if (this.host.includes("xn--")) {
+      this.pushReason(
+        "Обнаружена Punycode-маскировка (Омоглиф)",
+        "Адрес содержит замаскированные символы (шрифт xn--). Это критически опасный метод подделки визуального адреса известных сайтов.",
+        85,
+        "critical",
+      );
+    }
+
+    // ── 5. Смешение письменностей
+    if (hasMixedScripts(this.rawHost)) {
+      this.pushReason(
+        "Смешение письменностей",
+        "В домене одновременно используются латиница и кириллица. Это частый признак визуальной подмены.",
+        34,
+        "critical",
+      );
+    }
+
+    // ── 5b. Кириллическо-латинские гомоглифы
+    if (!hasMixedScripts(this.rawHost) && hasCyrLatHomoglyphs(this.rawHost)) {
+      this.pushReason(
+        "Кириллическо-латинские гомоглифы",
+        "Домен содержит символы, визуально идентичные между кириллицей и латиницей (а↔a, е↔e, о↔o и т.п.). Это техника маскировки.",
+        32,
+        "critical",
+      );
+    }
+
+    // ── 6. Гомоглифы
+    if (hasHomoglyphPatterns(this.host)) {
+      this.pushReason(
+        "Подозрительные подмены символов",
+        "Обнаружены паттерны, похожие на визуальную подмену символов (0↔o, rn↔m, vv↔w и т.п.).",
+        16,
+        "warning",
+      );
+    }
+
+    // ── 7. IP-адрес
+    if (isIpAddress(this.host)) {
+      this.pushReason(
+        "Прямой IP-адрес",
+        "Вместо доменного имени используется IP. Легитимные сервисы обычно используют домен.",
+        20,
+        "critical",
+      );
+    }
+
+    // ── 8. Typo-squatting
+    this.protectedBrandMatch = findProtectedBrandMatch(this.host, this.canonicalHost);
+    if (this.protectedBrandMatch) {
+      this.pushReason(
+        this.protectedBrandMatch.exact
+          ? `Имя бренда вне официального домена`
+          : `Похоже на подмену бренда ${this.protectedBrandMatch.brand}`,
+        this.protectedBrandMatch.exact
+          ? `В адресе используется бренд '${this.protectedBrandMatch.brand}', но официальный домен сервиса — ${this.protectedBrandMatch.officialDomain}. Это типичный сценарий маскировки.`
+          : `Фрагмент '${this.protectedBrandMatch.observedToken}' слишком похож на бренд '${this.protectedBrandMatch.matchedToken}', но официальный домен сервиса — ${this.protectedBrandMatch.officialDomain}. Это сильный признак brand-spoofing.`,
+        this.protectedBrandMatch.exact ? 52 : 56,
+        "critical",
+      );
+    }
+
+    this.typoMatch = findNearOfficialMatch(this.host);
+    if (this.typoMatch && !this.protectedBrandMatch) {
+      this.pushReason(
+        "Похоже на typo-squat",
+        `Один из фрагментов адреса слишком похож на '${this.typoMatch}', но не совпадает точно. Это может быть попытка имитации.`,
+        24,
+        "critical",
+      );
+    }
+
+    // ── 11. Имитация официального сервиса
+    const normalizedHost = normalizeToken(this.host);
+    const mimicsOfficial = officialTokens.some(
+      (token) => normalizedHost.includes(token) && !officialDomains.has(this.canonicalHost),
+    );
+    if (mimicsOfficial && !this.typoMatch && !this.protectedBrandMatch) {
+      this.pushReason(
+        "Имитация знакомого сервиса",
+        "Адрес напоминает государственный или известный сервис, но не совпадает с официальным доменом.",
+        18,
+        "critical",
+      );
+    }
+  }
+
+  // 8b, 8c, 8d, 9, 10, 20
+  private checkPhishingPatterns(): void {
+    // ── 8b. Обнаружение URL shortener
+    if (urlShorteners.has(this.canonicalHost)) {
+      this.pushReason(
+        "Сокращённая ссылка",
+        `Домен ${this.canonicalHost} — это сервис сокращения ссылок. За короткой ссылкой может скрываться любой адрес, включая фишинговый.`,
+        18,
+        "warning",
+      );
+    }
+
+    // ── 8c. Проверка на известные фишинговые паттерны
+    if (matchesKnownPhishingPattern(this.host)) {
+      this.pushReason(
+        "Известный фишинговый паттерн",
+        "Домен соответствует известным паттернам фишинговых сайтов из базы угроз (например, вариации discord, steam с опечатками).",
+        45,
+        "critical",
+      );
+    }
+
+    // ── 8d. Проверка на фишинговые префиксы
+    const phishingPrefix = hasPhishingPrefix(this.host);
+    if (phishingPrefix) {
+      this.pushReason(
+        "Подозрительный префикс",
+        `Обнаружен префикс '${phishingPrefix}', который часто используется в фишинговых доменах (free-, get-, claim-, verify- и т.п.).`,
+        22,
+        "critical",
+      );
+    }
+
+    // ── 9. Слова-ловушки в домене
+    this.keywordHits = suspiciousKeywords.filter((kw) => this.host.includes(kw));
+    if (this.keywordHits.length > 0) {
+      this.pushReason(
+        "Слова-ловушки в домене",
+        `Найдены слова: ${this.keywordHits.join(", ")}. Они часто используются в фишинговых сценариях.`,
+        Math.min(30, 10 * this.keywordHits.length),
+        "warning",
+      );
+    }
+
+    // ── 10. Слова-ловушки в пути URL
+    const pathLower = this.url.pathname.toLowerCase();
+    this.pathKeywordHits = suspiciousKeywords.filter((kw) => pathLower.includes(kw));
+    if (this.pathKeywordHits.length > 0) {
+      this.pushReason(
+        "Слова-ловушки в пути URL",
+        `В пути ссылки есть слова: ${this.pathKeywordHits.join(", ")}. Даже при спокойном домене это требует проверки.`,
+        Math.min(14, 5 * this.pathKeywordHits.length),
+        "warning",
+      );
+    }
+
+    // ── 20. Слова-ловушки в поддомене
+    if (this.breakdown.subdomain && this.breakdown.subdomain !== "www") {
+      const subdomainLower = this.breakdown.subdomain.toLowerCase();
+      const subdomainKeywordHits = suspiciousKeywords.filter((kw) => subdomainLower.includes(kw));
+      if (subdomainKeywordHits.length > 0) {
+        this.pushReason(
+          "Ловушка в поддомене",
+          `Поддомен содержит слова: ${subdomainKeywordHits.join(", ")}. Это попытка создать иллюзию официальности (secure.bank.evil.com использует "secure" для обмана).`,
+          Math.min(22, 8 * subdomainKeywordHits.length),
+          "critical",
+        );
+      }
+    }
+  }
+
+  // 12, 13, 14, 15, 16, 19
+  private checkStructureAndEntropy(): void {
+    // ── 12. Поддомены
+    if (this.breakdown.subdomain && this.breakdown.subdomain !== "www") {
+      const depth = this.breakdown.subdomain.split(".").length;
+
+      if (depth >= 3) {
+        this.pushReason(
+          "Очень глубокая цепочка поддоменов",
+          `${depth} уровней поддоменов. Это сильно затрудняет проверку и часто используется для маскировки.`,
+          18,
+          "critical",
+        );
+      } else if (depth >= 2) {
+        this.pushReason(
+          "Глубокая цепочка поддоменов",
+          "Несколько уровней поддоменов затрудняют быструю проверку и могут маскировать основное доменное имя.",
+          12,
+          "warning",
+        );
+      } else {
+        this.pushReason(
+          "Есть отдельный поддомен",
+          "Поддомен не опасен сам по себе, но его нужно читать отдельно от ядра домена.",
+          6,
+          "warning",
+        );
+      }
+    }
+
+    // ── 13. Дефисы
+    const hyphenCount = (this.host.match(/-/g) || []).length;
+    if (hyphenCount >= 3) {
+      this.pushReason(
+        "Много дефисов",
+        `${hyphenCount} дефисов в домене. Это часто используется для имитации знакомых названий.`,
+        12,
+        "warning",
+      );
+    } else if (hyphenCount >= 2) {
+      this.pushReason(
+        "Несколько дефисов",
+        "Лишние дефисы часто используют, чтобы приблизить домен к знакомому названию.",
+        8,
+        "warning",
+      );
+    }
+
+    // ── 14. Цифры
+    const digitCount = (this.host.match(/\d/g) || []).length;
+    if (digitCount >= 6) {
+      this.pushReason(
+        "Очень много цифр",
+        `${digitCount} цифр в домене. Такие адреса выглядят как автоматически сгенерированные.`,
+        12,
+        "warning",
+      );
+    } else if (digitCount >= 4) {
+      this.pushReason(
+        "Много цифр",
+        "Большое количество цифр в адресе делает его менее читаемым и требует проверки.",
+        7,
+        "warning",
+      );
+    }
+
+    // ── 15. Длинные фрагменты
+    const longestLabel = Math.max(...this.host.split(".").map((s) => s.length));
+    if (longestLabel >= 25) {
+      this.pushReason(
+        "Очень длинный фрагмент домена",
+        `Фрагмент длиной ${longestLabel} символов. Такие домены почти невозможно быстро проверить.`,
+        12,
+        "warning",
+      );
+    } else if (longestLabel >= 18) {
+      this.pushReason(
+        "Слишком длинный фрагмент",
+        "Один из фрагментов домена слишком длинный. Его труднее быстро проверить глазами.",
+        7,
+        "warning",
+      );
+    }
+
+    // ── 16. Энтропия домена
+    const domainEntropy = entropyOf(this.host.replace(/\./g, ""));
+    if (domainEntropy > 4.2 && this.host.length > 12) {
+      this.pushReason(
+        "Высокая энтропия домена",
+        "Домен выглядит как случайный набор символов, что характерно для автоматически сгенерированных адресов.",
+        10,
+        "warning",
+      );
+    }
+
+    // ── 19. Длина хоста
+    if (this.host.length > 50) {
+      this.pushReason(
+        "Очень длинный домен",
+        `Длина доменного имени — ${this.host.length} символов. Такие адреса крайне трудно проверить глазами и часто генерируются автоматически.`,
+        14,
+        "warning",
+      );
+    } else if (this.host.length > 40) {
+      this.pushReason(
+        "Длинный домен",
+        `Длина доменного имени — ${this.host.length} символов. Длинные адреса сложнее проверить визуально.`,
+        8,
+        "warning",
+      );
+    }
+  }
+
+  // 17
+  private checkTld(): void {
+    const criticalTldScore = criticalTlds.get(this.breakdown.tld);
+    if (criticalTldScore) {
+      this.pushReason(
+        `Доменная зона .${this.breakdown.tld}`,
+        `Зона .${this.breakdown.tld} относится к повышенно рискованным и требует жёсткой перепроверки.`,
+        criticalTldScore,
+        "critical",
+      );
+    } else if (elevatedTlds.has(this.breakdown.tld)) {
+      this.pushReason(
+        `Нестандартная зона .${this.breakdown.tld}`,
+        "Некоторые доменные зоны чаще используются в одноразовых или сомнительных сценариях.",
+        12,
+        "warning",
+      );
+    }
+
+    if (trustedTlds.has(this.breakdown.tld)) {
+      this.pushReason(
+        `Доверенная зона .${this.breakdown.tld}`,
+        `Для целевого региона доменная зона .${this.breakdown.tld} выглядит ожидаемо.`,
+        -3,
+        "positive",
+      );
+    }
+  }
+
+  // 18
+  private checkUrlAnomalies(): void {
+    if (this.url.username || this.url.password) {
+      this.pushReason(
+        "Скрытые данные перед @",
+        "В URL есть служебная часть перед символом @. Это классический приём маскировки реального домена — пользователь видит адрес до @, но браузер откроет домен после @.",
+        30,
+        "critical",
+      );
+    }
+
+    if (this.url.port && this.url.port !== "80" && this.url.port !== "443") {
+      this.pushReason(
+        "Нестандартный порт",
+        `Порт ${this.url.port}. Нестандартный порт повышает требование к ручной проверке.`,
+        5,
+        "warning",
+      );
+    }
+
+    if (this.url.search && this.url.search.length > 100) {
+      this.pushReason(
+        "Длинная строка параметров",
+        "URL содержит большое количество параметров. Это может использоваться для передачи скрытых данных.",
+        4,
+        "warning",
+      );
+    }
+
+    const suspiciousEncoding = /%[0-9a-f]{2}/i.test(this.url.pathname) && this.url.pathname.length > 20;
+    if (suspiciousEncoding) {
+      this.pushReason(
+        "Процентное кодирование в пути",
+        "Путь URL содержит закодированные символы (%XX). Это может скрывать настоящее содержимое ссылки.",
+        6,
+        "warning",
+      );
+    }
+
+    const pathParts = this.url.pathname.split("/").filter(Boolean);
+    const doubleExtension = pathParts.some((part) => /\.\w{2,4}\.\w{2,4}$/.test(part));
+    if (doubleExtension) {
+      this.pushReason(
+        "Двойное расширение файла",
+        "В пути URL обнаружено двойное расширение файла. Это часто используется для маскировки вредоносных файлов.",
+        14,
+        "critical",
+      );
+    }
+  }
+
+  // 21, 22
+  private checkReadability(): void {
+    const hyphenCount = (this.host.match(/-/g) || []).length;
+    const digitCount = (this.host.match(/\d/g) || []).length;
+    const longestLabel = Math.max(...this.host.split(".").map((s) => s.length));
+    const domainEntropy = entropyOf(this.host.replace(/\./g, ""));
+    const normalizedHost = normalizeToken(this.host);
+    const mimicsOfficial = officialTokens.some(
+      (token) => normalizedHost.includes(token) && !officialDomains.has(this.canonicalHost),
+    );
+
+    const looksReadable =
+      (!this.breakdown.subdomain || this.breakdown.subdomain === "www") &&
+      hyphenCount < 2 &&
+      digitCount < 4 &&
+      longestLabel < 18 &&
+      this.host.length <= 40 &&
+      !this.host.includes("xn--") &&
+      !hasMixedScripts(this.rawHost) &&
+      !this.typoMatch &&
+      !this.protectedBrandMatch &&
+      !mimicsOfficial &&
+      this.keywordHits.length === 0 &&
+      this.pathKeywordHits.length === 0 &&
+      domainEntropy <= 4.2;
+
+    if (looksReadable && !this.foundStructuralRisk) {
+      this.pushReason(
+        "Читаемая структура домена",
+        "Адрес короткий, понятный и без типичных приёмов маскировки. Его всё равно нужно сверить вручную.",
+        -3,
+        "positive",
+      );
+    }
+
+    if (this.reasons.length === 0) {
+      this.pushReason(
+        "Явных тревожных признаков нет",
+        "В домене не найдено сильных структурных паттернов риска. Это спокойный, но не абсолютный сигнал.",
+        0,
+        "positive",
+      );
+    }
+  }
+
+  public run(): AnalysisResult {
+    this.checkWhitelists();
+    this.checkProtocol();
+    this.checkSpoofingAndHomoglyphs();
+    this.checkPhishingPatterns();
+    this.checkStructureAndEntropy();
+    this.checkTld();
+    this.checkUrlAnomalies();
+    this.checkReadability();
+
+    const sortedReasons = [...this.reasons].sort((left, right) => {
+      const order: Record<AnalyzerTone, number> = {
+        critical: 0,
+        warning: 1,
+        positive: 2,
+      };
+      const byTone = order[left.tone] - order[right.tone];
+      if (byTone !== 0) return byTone;
+      return Math.abs(right.scoreDelta) - Math.abs(left.scoreDelta);
+    });
+
+    const normalizedScore = Math.max(0, Math.min(100, this.score));
+    const criticalCount = this.reasons.filter((r) => r.tone === "critical").length;
+
+    let verdict: AnalyzerVerdict = "low";
+    let verdictLabel = "Низкий риск";
+
+    if (normalizedScore >= 42) {
+      verdict = "high";
+      verdictLabel = "Высокий риск";
+    } else if (normalizedScore >= 12 || criticalCount >= 2) {
+      verdict = "medium";
+      verdictLabel = "Нужна перепроверка";
+    }
+
+    if (criticalCount >= 2 && verdict === "low") {
+      verdict = "medium";
+      verdictLabel = "Нужна перепроверка";
+    }
+
+    const topIssues = sortedReasons
+      .filter((r) => r.tone === "critical" || r.tone === "warning")
+      .slice(0, 3)
+      .map((r) => r.title);
+
+    let summary: string;
+    if (verdict === "high") {
+      summary = topIssues.length > 0
+        ? `Обнаружены серьёзные признаки риска: ${topIssues.join(", ").toLowerCase()}. Переход и ввод данных лучше остановить.`
+        : "Есть сильные признаки подмены, маскировки или рискованной структуры. Переход и ввод данных лучше остановить.";
+    } else if (verdict === "medium") {
+      summary = topIssues.length > 0
+        ? `Есть настораживающие признаки: ${topIssues.join(", ").toLowerCase()}. Сначала сравните адрес с официальным доменом вручную.`
+        : "Есть настораживающие признаки. Сначала сравните адрес с официальным доменом вручную.";
+    } else {
+      summary = "Сильных тревожных признаков не найдено. Всё равно сверяйте адрес вручную перед вводом данных.";
+    }
+
+    return {
+      host: this.host,
+      score: normalizedScore,
+      verdict,
+      verdictLabel,
+      summary,
+      reasons: sortedReasons,
+      actions: actionsForVerdict(verdict),
+      breakdown: this.breakdown,
+      analyzedAt: new Date().toISOString(),
+    };
+  }
+}
+
 export function analyzeDomainInput(input: string): AnalysisResult {
   const normalized = normalizeInput(input);
 
@@ -771,568 +1339,6 @@ export function analyzeDomainInput(input: string): AnalysisResult {
     };
   }
 
-  const { url, host, rawHost } = normalized;
-  const canonicalHost = host.startsWith("www.") ? host.slice(4) : host;
-  const breakdown = buildBreakdown(host);
-  const reasons: AnalyzerReason[] = [];
-  let score = 0;
-  let foundStructuralRisk = false;
-
-  const pushReason = (
-    title: string,
-    detail: string,
-    scoreDelta: number,
-    tone: AnalyzerTone,
-  ): void => {
-    reasons.push({ title, detail, scoreDelta, tone });
-    score += scoreDelta;
-    if (tone !== "positive" && scoreDelta > 0) {
-      foundStructuralRisk = true;
-    }
-  };
-
-  // ── 1. Официальный домен ──────────────────────────────────────────────────
-
-  // Проверяем whitelist легитимных доменов
-  if (legitimateDomains.has(canonicalHost)) {
-    pushReason(
-      "Легитимный домен из whitelist",
-      `Домен ${canonicalHost} находится в списке проверенных легитимных сервисов.`,
-      -30,
-      "positive",
-    );
-  }
-
-  if (officialDomains.has(canonicalHost)) {
-    pushReason(
-      "Совпадение с официальным доменом",
-      "Адрес совпадает со справочным официальным доменом. Это сильный положительный сигнал.",
-      -45,
-      "positive",
-    );
-  }
-
-  // Проверяем gov-поддомены
-  if (canonicalHost.endsWith(".gov.by") && !officialDomains.has(canonicalHost)) {
-    pushReason(
-      "Государственный домен .gov.by",
-      "Домен находится в государственной зоне .gov.by. Это положительный сигнал, но проверьте точный адрес.",
-      -20,
-      "positive",
-    );
-  }
-
-  // ── 2. Учебная зона ──────────────────────────────────────────────────────
-
-  if (host.endsWith(".example") || host.endsWith(".test") || host.endsWith(".localhost")) {
-    pushReason(
-      "Учебная доменная зона",
-      "Используется безопасная зона для демонстрации и тестовых сценариев.",
-      0,
-      "positive",
-    );
-  }
-
-  // ── 3. Протокол ──────────────────────────────────────────────────────────
-
-  if (
-    url.protocol === "http:" &&
-    !host.endsWith(".example") &&
-    !host.endsWith(".test")
-  ) {
-    pushReason(
-      "Незащищённый протокол HTTP",
-      "Ссылка открывается по http, а не по https. Данные передаются без шифрования.",
-      8,
-      "warning",
-    );
-  }
-
-  if (
-    url.protocol === "https:" &&
-    !host.endsWith(".example") &&
-    !host.endsWith(".test")
-  ) {
-    pushReason(
-      "Защищённый протокол HTTPS",
-      "Ссылка использует https. Это базовый положительный сигнал, но он не гарантирует легитимность сайта.",
-      -4,
-      "positive",
-    );
-  }
-
-  // ── 4. Punycode / IDN ────────────────────────────────────────────────────
-
-  if (host.includes("xn--")) {
-    pushReason(
-      "Обнаружена Punycode-маскировка (Омоглиф)",
-      "Адрес содержит замаскированные символы (шрифт xn--). Это критически опасный метод подделки визуального адреса известных сайтов.",
-      85,
-      "critical",
-    );
-  }
-
-  // ── 5. Смешение письменностей ─────────────────────────────────────────────
-
-  if (hasMixedScripts(rawHost)) {
-    pushReason(
-      "Смешение письменностей",
-      "В домене одновременно используются латиница и кириллица. Это частый признак визуальной подмены.",
-      34,
-      "critical",
-    );
-  }
-
-  // ── 5b. Кириллическо-латинские гомоглифы ──────────────────────────────────
-
-  if (!hasMixedScripts(rawHost) && hasCyrLatHomoglyphs(rawHost)) {
-    pushReason(
-      "Кириллическо-латинские гомоглифы",
-      "Домен содержит символы, визуально идентичные между кириллицей и латиницей (а↔a, е↔e, о↔o и т.п.). Это техника маскировки.",
-      32,
-      "critical",
-    );
-  }
-
-  // ── 6. Гомоглифы ─────────────────────────────────────────────────────────
-
-  if (hasHomoglyphPatterns(host)) {
-    pushReason(
-      "Подозрительные подмены символов",
-      "Обнаружены паттерны, похожие на визуальную подмену символов (0↔o, rn↔m, vv↔w и т.п.).",
-      16,
-      "warning",
-    );
-  }
-
-  // ── 7. IP-адрес ──────────────────────────────────────────────────────────
-
-  if (isIpAddress(host)) {
-    pushReason(
-      "Прямой IP-адрес",
-      "Вместо доменного имени используется IP. Легитимные сервисы обычно используют домен.",
-      20,
-      "critical",
-    );
-  }
-
-  // ── 8. Typo-squatting ─────────────────────────────────────────────────────
-
-  const protectedBrandMatch = findProtectedBrandMatch(host, canonicalHost);
-  if (protectedBrandMatch) {
-    pushReason(
-      protectedBrandMatch.exact
-        ? `Имя бренда вне официального домена`
-        : `Похоже на подмену бренда ${protectedBrandMatch.brand}`,
-      protectedBrandMatch.exact
-        ? `В адресе используется бренд '${protectedBrandMatch.brand}', но официальный домен сервиса — ${protectedBrandMatch.officialDomain}. Это типичный сценарий маскировки.`
-        : `Фрагмент '${protectedBrandMatch.observedToken}' слишком похож на бренд '${protectedBrandMatch.matchedToken}', но официальный домен сервиса — ${protectedBrandMatch.officialDomain}. Это сильный признак brand-spoofing.`,
-      protectedBrandMatch.exact ? 52 : 56,
-      "critical",
-    );
-  }
-
-  const typoMatch = findNearOfficialMatch(host);
-  if (typoMatch && !protectedBrandMatch) {
-    pushReason(
-      "Похоже на typo-squat",
-      `Один из фрагментов адреса слишком похож на '${typoMatch}', но не совпадает точно. Это может быть попытка имитации.`,
-      24,
-      "critical",
-    );
-  }
-
-  // ── 8b. Обнаружение URL shortener ──────────────────────────────────────────
-
-  if (urlShorteners.has(canonicalHost)) {
-    pushReason(
-      "Сокращённая ссылка",
-      `Домен ${canonicalHost} — это сервис сокращения ссылок. За короткой ссылкой может скрываться любой адрес, включая фишинговый.`,
-      18,
-      "warning",
-    );
-  }
-
-  // ── 8c. Проверка на известные фишинговые паттерны ──────────────────────────
-
-  if (matchesKnownPhishingPattern(host)) {
-    pushReason(
-      "Известный фишинговый паттерн",
-      "Домен соответствует известным паттернам фишинговых сайтов из базы угроз (например, вариации discord, steam с опечатками).",
-      45,
-      "critical",
-    );
-  }
-
-  // ── 8d. Проверка на фишинговые префиксы ────────────────────────────────────
-
-  const phishingPrefix = hasPhishingPrefix(host);
-  if (phishingPrefix) {
-    pushReason(
-      "Подозрительный префикс",
-      `Обнаружен префикс '${phishingPrefix}', который часто используется в фишинговых доменах (free-, get-, claim-, verify- и т.п.).`,
-      22,
-      "critical",
-    );
-  }
-
-  // ── 9. Слова-ловушки в домене ─────────────────────────────────────────────
-
-  const keywordHits = suspiciousKeywords.filter((kw) => host.includes(kw));
-  if (keywordHits.length > 0) {
-    pushReason(
-      "Слова-ловушки в домене",
-      `Найдены слова: ${keywordHits.join(", ")}. Они часто используются в фишинговых сценариях.`,
-      Math.min(30, 10 * keywordHits.length),
-      "warning",
-    );
-  }
-
-  // ── 10. Слова-ловушки в пути URL ──────────────────────────────────────────
-
-  const pathLower = url.pathname.toLowerCase();
-  const pathKeywordHits = suspiciousKeywords.filter((kw) =>
-    pathLower.includes(kw),
-  );
-  if (pathKeywordHits.length > 0) {
-    pushReason(
-      "Слова-ловушки в пути URL",
-      `В пути ссылки есть слова: ${pathKeywordHits.join(", ")}. Даже при спокойном домене это требует проверки.`,
-      Math.min(14, 5 * pathKeywordHits.length),
-      "warning",
-    );
-  }
-
-  // ── 11. Имитация официального сервиса ──────────────────────────────────────
-
-  const normalizedHost = normalizeToken(host);
-  const mimicsOfficial = officialTokens.some(
-    (token) => normalizedHost.includes(token) && !officialDomains.has(canonicalHost),
-  );
-  if (mimicsOfficial && !typoMatch && !protectedBrandMatch) {
-    // Не дублируем с typo-squat
-    pushReason(
-      "Имитация знакомого сервиса",
-      "Адрес напоминает государственный или известный сервис, но не совпадает с официальным доменом.",
-      18,
-      "critical",
-    );
-  }
-
-  // ── 12. Поддомены ────────────────────────────────────────────────────────
-
-  if (breakdown.subdomain && breakdown.subdomain !== "www") {
-    const depth = breakdown.subdomain.split(".").length;
-
-    if (depth >= 3) {
-      pushReason(
-        "Очень глубокая цепочка поддоменов",
-        `${depth} уровней поддоменов. Это сильно затрудняет проверку и часто используется для маскировки.`,
-        18,
-        "critical",
-      );
-    } else if (depth >= 2) {
-      pushReason(
-        "Глубокая цепочка поддоменов",
-        "Несколько уровней поддоменов затрудняют быструю проверку и могут маскировать основное доменное имя.",
-        12,
-        "warning",
-      );
-    } else {
-      pushReason(
-        "Есть отдельный поддомен",
-        "Поддомен не опасен сам по себе, но его нужно читать отдельно от ядра домена.",
-        6,
-        "warning",
-      );
-    }
-  }
-
-  // ── 13. Дефисы ───────────────────────────────────────────────────────────
-
-  const hyphenCount = (host.match(/-/g) || []).length;
-  if (hyphenCount >= 3) {
-    pushReason(
-      "Много дефисов",
-      `${hyphenCount} дефисов в домене. Это часто используется для имитации знакомых названий.`,
-      12,
-      "warning",
-    );
-  } else if (hyphenCount >= 2) {
-    pushReason(
-      "Несколько дефисов",
-      "Лишние дефисы часто используют, чтобы приблизить домен к знакомому названию.",
-      8,
-      "warning",
-    );
-  }
-
-  // ── 14. Цифры ────────────────────────────────────────────────────────────
-
-  const digitCount = (host.match(/\d/g) || []).length;
-  if (digitCount >= 6) {
-    pushReason(
-      "Очень много цифр",
-      `${digitCount} цифр в домене. Такие адреса выглядят как автоматически сгенерированные.`,
-      12,
-      "warning",
-    );
-  } else if (digitCount >= 4) {
-    pushReason(
-      "Много цифр",
-      "Большое количество цифр в адресе делает его менее читаемым и требует проверки.",
-      7,
-      "warning",
-    );
-  }
-
-  // ── 15. Длинные фрагменты ────────────────────────────────────────────────
-
-  const longestLabel = Math.max(...host.split(".").map((s) => s.length));
-  if (longestLabel >= 25) {
-    pushReason(
-      "Очень длинный фрагмент домена",
-      `Фрагмент длиной ${longestLabel} символов. Такие домены почти невозможно быстро проверить.`,
-      12,
-      "warning",
-    );
-  } else if (longestLabel >= 18) {
-    pushReason(
-      "Слишком длинный фрагмент",
-      "Один из фрагментов домена слишком длинный. Его труднее быстро проверить глазами.",
-      7,
-      "warning",
-    );
-  }
-
-  // ── 16. Энтропия домена ──────────────────────────────────────────────────
-
-  const domainEntropy = entropyOf(host.replace(/\./g, ""));
-  if (domainEntropy > 4.2 && host.length > 12) {
-    pushReason(
-      "Высокая энтропия домена",
-      "Домен выглядит как случайный набор символов, что характерно для автоматически сгенерированных адресов.",
-      10,
-      "warning",
-    );
-  }
-
-  // ── 17. TLD-анализ ───────────────────────────────────────────────────────
-
-  const criticalTldScore = criticalTlds.get(breakdown.tld);
-  if (criticalTldScore) {
-    pushReason(
-      `Доменная зона .${breakdown.tld}`,
-      `Зона .${breakdown.tld} относится к повышенно рискованным и требует жёсткой перепроверки.`,
-      criticalTldScore,
-      "critical",
-    );
-  } else if (elevatedTlds.has(breakdown.tld)) {
-    pushReason(
-      `Нестандартная зона .${breakdown.tld}`,
-      "Некоторые доменные зоны чаще используются в одноразовых или сомнительных сценариях.",
-      12,
-      "warning",
-    );
-  }
-
-  if (trustedTlds.has(breakdown.tld)) {
-    pushReason(
-      `Доверенная зона .${breakdown.tld}`,
-      `Для целевого региона доменная зона .${breakdown.tld} выглядит ожидаемо.`,
-      -3,
-      "positive",
-    );
-  }
-
-  // ── 18. URL-аномалии ──────────────────────────────────────────────────────
-
-  if (url.username || url.password) {
-    pushReason(
-      "Скрытые данные перед @",
-      "В URL есть служебная часть перед символом @. Это классический приём маскировки реального домена — пользователь видит адрес до @, но браузер откроет домен после @.",
-      30,
-      "critical",
-    );
-  }
-
-  if (url.port && url.port !== "80" && url.port !== "443") {
-    pushReason(
-      "Нестандартный порт",
-      `Порт ${url.port}. Нестандартный порт повышает требование к ручной проверке.`,
-      5,
-      "warning",
-    );
-  }
-
-  // URL-фрагменты с подозрительными данными
-  if (url.search && url.search.length > 100) {
-    pushReason(
-      "Длинная строка параметров",
-      "URL содержит большое количество параметров. Это может использоваться для передачи скрытых данных.",
-      4,
-      "warning",
-    );
-  }
-
-  // Процентное кодирование подозрительных символов
-  const suspiciousEncoding = /%[0-9a-f]{2}/i.test(url.pathname) && url.pathname.length > 20;
-  if (suspiciousEncoding) {
-    pushReason(
-      "Процентное кодирование в пути",
-      "Путь URL содержит закодированные символы (%XX). Это может скрывать настоящее содержимое ссылки.",
-      6,
-      "warning",
-    );
-  }
-
-  // Двойные расширения в пути (file.pdf.exe)
-  const pathParts = url.pathname.split("/").filter(Boolean);
-  const doubleExtension = pathParts.some((part) =>
-    /\.\w{2,4}\.\w{2,4}$/.test(part),
-  );
-  if (doubleExtension) {
-    pushReason(
-      "Двойное расширение файла",
-      "В пути URL обнаружено двойное расширение файла. Это часто используется для маскировки вредоносных файлов.",
-      14,
-      "critical",
-    );
-  }
-
-  // ── 19. Длина хоста ─────────────────────────────────────────────────────
-
-  if (host.length > 50) {
-    pushReason(
-      "Очень длинный домен",
-      `Длина доменного имени — ${host.length} символов. Такие адреса крайне трудно проверить глазами и часто генерируются автоматически.`,
-      14,
-      "warning",
-    );
-  } else if (host.length > 40) {
-    pushReason(
-      "Длинный домен",
-      `Длина доменного имени — ${host.length} символов. Длинные адреса сложнее проверить визуально.`,
-      8,
-      "warning",
-    );
-  }
-
-  // ── 20. Слова-ловушки в поддомене ───────────────────────────────────────
-
-  if (breakdown.subdomain && breakdown.subdomain !== "www") {
-    const subdomainLower = breakdown.subdomain.toLowerCase();
-    const subdomainKeywordHits = suspiciousKeywords.filter((kw) => subdomainLower.includes(kw));
-    if (subdomainKeywordHits.length > 0) {
-      pushReason(
-        "Ловушка в поддомене",
-        `Поддомен содержит слова: ${subdomainKeywordHits.join(", ")}. Это попытка создать иллюзию официальности (secure.bank.evil.com использует "secure" для обмана).`,
-        Math.min(22, 8 * subdomainKeywordHits.length),
-        "critical",
-      );
-    }
-  }
-
-  // ── 21. Читаемость ──────────────────────────────────────────────────────
-
-  const looksReadable =
-    (!breakdown.subdomain || breakdown.subdomain === "www") &&
-    hyphenCount < 2 &&
-    digitCount < 4 &&
-    longestLabel < 18 &&
-    host.length <= 40 &&
-    !host.includes("xn--") &&
-    !hasMixedScripts(rawHost) &&
-    !typoMatch &&
-    !protectedBrandMatch &&
-    !mimicsOfficial &&
-    keywordHits.length === 0 &&
-    pathKeywordHits.length === 0 &&
-    domainEntropy <= 4.2;
-
-  if (looksReadable && !foundStructuralRisk) {
-    pushReason(
-      "Читаемая структура домена",
-      "Адрес короткий, понятный и без типичных приёмов маскировки. Его всё равно нужно сверить вручную.",
-      -3,
-      "positive",
-    );
-  }
-
-  // ── 22. Пустой случай ───────────────────────────────────────────────────
-
-  if (reasons.length === 0) {
-    pushReason(
-      "Явных тревожных признаков нет",
-      "В домене не найдено сильных структурных паттернов риска. Это спокойный, но не абсолютный сигнал.",
-      0,
-      "positive",
-    );
-  }
-
-  // ── Итоги ───────────────────────────────────────────────────────────────
-
-  const sortedReasons = [...reasons].sort((left, right) => {
-    const order: Record<AnalyzerTone, number> = {
-      critical: 0,
-      warning: 1,
-      positive: 2,
-    };
-    const byTone = order[left.tone] - order[right.tone];
-    if (byTone !== 0) return byTone;
-    return Math.abs(right.scoreDelta) - Math.abs(left.scoreDelta);
-  });
-
-  const normalizedScore = Math.max(0, Math.min(100, score));
-
-  // Подсчёт critical-сигналов для guard
-  const criticalCount = reasons.filter((r) => r.tone === "critical").length;
-
-  let verdict: AnalyzerVerdict = "low";
-  let verdictLabel = "Низкий риск";
-
-  if (normalizedScore >= 42) {
-    verdict = "high";
-    verdictLabel = "Высокий риск";
-  } else if (normalizedScore >= 12 || criticalCount >= 2) {
-    verdict = "medium";
-    verdictLabel = "Нужна перепроверка";
-  }
-
-  // Если два+ critical-сигнала, вердикт не может быть low
-  if (criticalCount >= 2 && verdict === "low") {
-    verdict = "medium";
-    verdictLabel = "Нужна перепроверка";
-  }
-
-  // Динамический summary на основе обнаруженных проблем
-  const topIssues = sortedReasons
-    .filter((r) => r.tone === "critical" || r.tone === "warning")
-    .slice(0, 3)
-    .map((r) => r.title);
-
-  let summary: string;
-  if (verdict === "high") {
-    summary = topIssues.length > 0
-      ? `Обнаружены серьёзные признаки риска: ${topIssues.join(", ").toLowerCase()}. Переход и ввод данных лучше остановить.`
-      : "Есть сильные признаки подмены, маскировки или рискованной структуры. Переход и ввод данных лучше остановить.";
-  } else if (verdict === "medium") {
-    summary = topIssues.length > 0
-      ? `Есть настораживающие признаки: ${topIssues.join(", ").toLowerCase()}. Сначала сравните адрес с официальным доменом вручную.`
-      : "Есть настораживающие признаки. Сначала сравните адрес с официальным доменом вручную.";
-  } else {
-    summary = "Сильных тревожных признаков не найдено. Всё равно сверяйте адрес вручную перед вводом данных.";
-  }
-
-  return {
-    host,
-    score: normalizedScore,
-    verdict,
-    verdictLabel,
-    summary,
-    reasons: sortedReasons,
-    actions: actionsForVerdict(verdict),
-    breakdown,
-    analyzedAt: new Date().toISOString(),
-  };
+  const session = new DomainAnalyzerSession(normalized);
+  return session.run();
 }
