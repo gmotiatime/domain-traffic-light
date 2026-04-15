@@ -3218,60 +3218,64 @@ export async function analyzeResponse(body = {}, meta = {}) {
   );
   const attempts = [];
 
-  for (const model of modelCandidates) {
-    try {
-      const parsed = await requestOpenRouter({
-        apiKey,
-        model,
-        prompt,
-        retries: 0,
-      });
-      const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
-      const aiAdjustedResult = applyAiToAnalysis(
-        enrichedLocalAnalysis,
-        analysis,
-        normalized,
-      );
-      const responseData = {
-        analysis,
-        aiAdjustedResult,
-        model,
-        source: "openrouter",
-        threatIntel,
-        urlAbuseIntel,
-        networkSignals,
-        whoisSignals,
-        enrichedLocalResult: enrichedLocalAnalysis,
-        latencyMs: Date.now() - startTime,
-      };
+  try {
+    const responseData = await Promise.any(
+      modelCandidates.map(async (model) => {
+        try {
+          const parsed = await requestOpenRouter({
+            apiKey,
+            model,
+            prompt,
+            retries: 0,
+          });
+          const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
+          const aiAdjustedResult = applyAiToAnalysis(
+            enrichedLocalAnalysis,
+            analysis,
+            normalized,
+          );
+          return {
+            analysis,
+            aiAdjustedResult,
+            model,
+            source: "openrouter",
+            threatIntel,
+            urlAbuseIntel,
+            networkSignals,
+            whoisSignals,
+            enrichedLocalResult: enrichedLocalAnalysis,
+            latencyMs: Date.now() - startTime,
+          };
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error
+              ? sanitizeString(error.message, 300)
+              : "Unknown model error.";
+          attempts.push({ model, error: errorMsg });
+          log("warn", "Model failed", { model, error: errorMsg });
+          throw error;
+        }
+      })
+    );
 
-      await setCachedResponse(cacheKey, responseData, telemetryConsent);
+    await setCachedResponse(cacheKey, responseData, telemetryConsent);
 
-      log("info", "Analyze success", {
-        host: normalized.host,
-        model,
-        verdict: analysis.verdict,
-        latencyMs: responseData.latencyMs,
-      });
+    log("info", "Analyze success", {
+      host: normalized.host,
+      model: responseData.model,
+      verdict: responseData.analysis.verdict,
+      latencyMs: responseData.latencyMs,
+    });
 
-      return { status: 200, body: responseData };
-    } catch (error) {
-      const errorMsg =
-        error instanceof Error
-          ? sanitizeString(error.message, 300)
-          : "Unknown model error.";
-      attempts.push({ model, error: errorMsg });
-      log("warn", "Model failed", { model, error: errorMsg });
-    }
-  }
+    return { status: 200, body: responseData };
+  } catch (aggregateError) {
+    log("error", "All models failed", {
+      host: normalized.host,
+      attempts: attempts.length,
+    });
 
-  log("error", "All models failed", {
-    host: normalized.host,
-    attempts: attempts.length,
-  });
-
-  return {
-    status: 502,
+    return {
+      status: 502,
       body: {
         error: "OpenRouter request failed.",
         detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
@@ -3283,6 +3287,7 @@ export async function analyzeResponse(body = {}, meta = {}) {
         enrichedLocalResult: enrichedLocalAnalysis,
       },
     };
+  }
 }
 
 // ─── Articles API Functions ───────────────────────────────────────────────────
@@ -3415,48 +3420,55 @@ export async function generateArticleResponse(topic, headers) {
   "content": "## Почему BEC-атаки работают\\n\\nЗлоумышленники не взламывают системы, они взламывают людей. Когда письмо приходит от 'генерального директора'..."
 }`;
 
-  for (const model of modelCandidates) {
-    try {
-      const requestBody = buildOpenRouterBaseRequest(model, [
-        { role: "system", content: "Ты — топовый технический писатель и эксперт по кибербезопасности (ex-CISO). Ты пишешь без 'воды', приводишь конкретные примеры и избегаешь банальных клише. Вывод должен быть строго в JSON-формате." },
-        { role: "user", content: prompt }
-      ], { type: "json_object" });
-      requestBody.max_tokens = 2200;
+  try {
+    const responseData = await Promise.any(
+      modelCandidates.map(async (model) => {
+        try {
+          const requestBody = buildOpenRouterBaseRequest(model, [
+            { role: "system", content: "Ты — топовый технический писатель и эксперт по кибербезопасности (ex-CISO). Ты пишешь без 'воды', приводишь конкретные примеры и избегаешь банальных клише. Вывод должен быть строго в JSON-формате." },
+            { role: "user", content: prompt }
+          ], { type: "json_object" });
+          requestBody.max_tokens = 2200;
 
-      const response = await fetch(
-        OPENROUTER_CHAT_COMPLETIONS_URL,
-        {
-          method: "POST",
-          headers: buildOpenRouterHeaders(apiKey),
-          body: JSON.stringify(requestBody),
+          const response = await fetch(
+            OPENROUTER_CHAT_COMPLETIONS_URL,
+            {
+              method: "POST",
+              headers: buildOpenRouterHeaders(apiKey),
+              body: JSON.stringify(requestBody),
+            }
+          );
+
+          const responseText = await response.text();
+          let data = null;
+          try { data = JSON.parse(responseText); } catch {}
+
+          if (!response.ok || !data) {
+            const errorMessage = data?.error?.message || data?.error || response.statusText;
+            throw new Error("Failed to generate article: " + sanitizeString(String(errorMessage), 200));
+          }
+
+          const content = parseOpenRouterChatContent(data, model);
+          const parsed = JSON.parse(content);
+          const title = sanitizeString(parsed?.title || topic, 180);
+          const articleContent = sanitizeString(parsed?.content || "", 20000);
+
+          if (!articleContent) {
+            throw new Error("Empty article body");
+          }
+
+          return { title, content: articleContent };
+        } catch (error) {
+          log("warn", "Model failed to generate article", { model, error: error.message });
+          throw error;
         }
-      );
+      })
+    );
 
-      const responseText = await response.text();
-      let data = null;
-      try { data = JSON.parse(responseText); } catch {}
-
-      if (!response.ok || !data) {
-        const errorMessage = data?.error?.message || data?.error || response.statusText;
-        throw new Error("Failed to generate article: " + sanitizeString(String(errorMessage), 200));
-      }
-
-      const content = parseOpenRouterChatContent(data, model);
-      const parsed = JSON.parse(content);
-      const title = sanitizeString(parsed?.title || topic, 180);
-      const articleContent = sanitizeString(parsed?.content || "", 20000);
-
-      if (!articleContent) {
-        throw new Error("Empty article body");
-      }
-
-      return { status: 200, body: { title, content: articleContent } };
-    } catch (error) {
-      log("warn", "Model failed to generate article", { model, error: error.message });
-    }
+    return { status: 200, body: responseData };
+  } catch (aggregateError) {
+    return { status: 502, body: { error: "Failed to generate article with all models." } };
   }
-
-  return { status: 502, body: { error: "Failed to generate article with all models." } };
 }
 
 export async function generateQuizScenarioResponse() {
@@ -3494,40 +3506,47 @@ export async function generateQuizScenarioResponse() {
 Сгенерируй новый, уникальный сценарий (на другую тему, не про Slack и оплату), придерживаясь этой структуры.
 Обязательно 4 варианта ответа, только 1 правильный. Порядок вариантов должен быть случайным. Возвращай строго валидный JSON.`;
 
-  for (const model of modelCandidates) {
-    try {
-      const requestBody = buildOpenRouterBaseRequest(model, [
-        { role: "system", content: "Ты — эксперт по кибербезопасности, пентестер и создатель хардкорных обучающих квизов. Твоя цель — создавать реалистичные ситуации, в которые попадают обычные пользователи и сотрудники компаний. Вывод должен быть строго в JSON-формате." },
-        { role: "user", content: prompt }
-      ], { type: "json_object" });
+  try {
+    const responseData = await Promise.any(
+      modelCandidates.map(async (model) => {
+        try {
+          const requestBody = buildOpenRouterBaseRequest(model, [
+            { role: "system", content: "Ты — эксперт по кибербезопасности, пентестер и создатель хардкорных обучающих квизов. Твоя цель — создавать реалистичные ситуации, в которые попадают обычные пользователи и сотрудники компаний. Вывод должен быть строго в JSON-формате." },
+            { role: "user", content: prompt }
+          ], { type: "json_object" });
 
-      const response = await fetch(
-        OPENROUTER_CHAT_COMPLETIONS_URL,
-        {
-          method: "POST",
-          headers: buildOpenRouterHeaders(apiKey),
-          body: JSON.stringify(requestBody),
+          const response = await fetch(
+            OPENROUTER_CHAT_COMPLETIONS_URL,
+            {
+              method: "POST",
+              headers: buildOpenRouterHeaders(apiKey),
+              body: JSON.stringify(requestBody),
+            }
+          );
+
+          const responseText = await response.text();
+          let data = null;
+          try { data = JSON.parse(responseText); } catch {}
+
+          if (!response.ok || !data) {
+            const errorMessage = data?.error?.message || data?.error || response.statusText;
+            throw new Error("Failed to generate quiz: " + sanitizeString(String(errorMessage), 200));
+          }
+
+          const contentStr = parseOpenRouterChatContent(data, model);
+          const contentJson = JSON.parse(contentStr);
+          return contentJson;
+        } catch (error) {
+          log("warn", "Model failed to generate quiz", { model, error: error.message });
+          throw error;
         }
-      );
+      })
+    );
 
-      const responseText = await response.text();
-      let data = null;
-      try { data = JSON.parse(responseText); } catch {}
-
-      if (!response.ok || !data) {
-        const errorMessage = data?.error?.message || data?.error || response.statusText;
-        throw new Error("Failed to generate quiz: " + sanitizeString(String(errorMessage), 200));
-      }
-
-      const contentStr = parseOpenRouterChatContent(data, model);
-      const contentJson = JSON.parse(contentStr);
-      return { status: 200, body: contentJson };
-    } catch (error) {
-      log("warn", "Model failed to generate quiz", { model, error: error.message });
-    }
+    return { status: 200, body: responseData };
+  } catch (aggregateError) {
+    return { status: 502, body: { error: "Failed to generate quiz with all models." } };
   }
-
-  return { status: 502, body: { error: "Failed to generate quiz with all models." } };
 }
 
 
