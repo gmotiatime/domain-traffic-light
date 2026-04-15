@@ -319,6 +319,9 @@ const compoundSuffixes = [
   "ac.uk",
 ];
 
+const compoundSuffixesSet = new Set(compoundSuffixes);
+const maxSuffixDepth = Math.max(...compoundSuffixes.map((s) => s.split(".").length));
+
 const ignoredDomainTokens = new Set([
   "www",
   "com",
@@ -553,9 +556,20 @@ function normalizeInput(input: string):
 function buildBreakdown(host: string): DomainBreakdown {
   const labels = host.split(".");
 
-  const matchedSuffix = compoundSuffixes.find(
-    (suffix) => host === suffix || host.endsWith(`.${suffix}`),
-  );
+  let matchedSuffix: string | undefined;
+  const n = labels.length;
+  const maxParts = Math.min(n, maxSuffixDepth);
+
+  for (let i = maxParts; i >= 1; i--) {
+    let candidate = labels[n - i];
+    for (let j = 1; j < i; j++) {
+      candidate += "." + labels[n - i + j];
+    }
+    if (compoundSuffixesSet.has(candidate)) {
+      matchedSuffix = candidate;
+      break;
+    }
+  }
 
   if (matchedSuffix) {
     const suffixLength = matchedSuffix.split(".").length;
