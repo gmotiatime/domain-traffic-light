@@ -146,8 +146,9 @@ export function AdminPage() {
       setArticleTitle(data.title || articleTopic);
       setArticleContent(data.content || "");
       setArticleStatus("Сгенерировано успешно.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsGeneratingArticle(false);
     }
@@ -164,8 +165,9 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка загрузки статей");
       const nextArticles = Array.isArray(data.articles) ? data.articles : [];
       setArticles([...nextArticles].sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)));
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsLoadingArticles(false);
     }
@@ -184,8 +186,9 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка удаления статьи");
       await loadArticles();
       setArticleStatus("Статья удалена.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setDeletingArticleId(null);
     }
@@ -212,8 +215,9 @@ export function AdminPage() {
       setArticleTitle("");
       setArticleContent("");
       await loadArticles();
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsPublishingArticle(false);
     }
@@ -221,7 +225,7 @@ export function AdminPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+    const saved = window.sessionStorage.getItem(TOKEN_STORAGE_KEY) || "";
     if (saved) {
       setToken(saved);
       setDraftToken(saved);
@@ -341,7 +345,7 @@ export function AdminPage() {
       const message = error instanceof Error ? error.message : "Ошибка загрузки.";
       if (/прав/i.test(message)) {
         setToken("");
-        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       }
       setStatus(message);
     } finally {
@@ -353,7 +357,7 @@ export function AdminPage() {
     const nextToken = draftToken.trim();
     if (!nextToken) return;
     setToken(nextToken);
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
     try {
       const response = await fetch(getApiUrl("/api/admin-cache?limit=20"), {
         headers: {
@@ -373,7 +377,7 @@ export function AdminPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ошибка входа.";
       setToken("");
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       setStatus(message);
     }
   }

@@ -73,4 +73,13 @@ describe('domain-analyzer', () => {
       const result = analyzeDomainInput('http://192.168.1.1/login');
       expect(result.reasons.some(r => r.title === 'Прямой IP-адрес')).toBe(true);
   });
+
+  it('should return parsing error for malformed URLs triggering exception', () => {
+    // A space in the host will throw an error in the native URL constructor,
+    // which triggers the catch block in normalizeInput.
+    const result = analyzeDomainInput('https://exa mple.com');
+    expect(result.verdict).toBe('medium');
+    expect(result.summary).toBe('Не удалось распознать ввод. Проверьте адрес и уберите лишние пробелы.');
+    expect(result.reasons[0].title).toBe('Нет распознанного домена');
+  });
 });

@@ -7,11 +7,12 @@ export function useTypewriter(text: string, speed: number = 50, startDelay: numb
   useEffect(() => {
     setDisplayedText("");
     setIsComplete(false);
+    let interval: NodeJS.Timeout;
 
     const timeout = setTimeout(() => {
       let currentIndex = 0;
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (currentIndex <= text.length) {
           setDisplayedText(text.slice(0, currentIndex));
           currentIndex++;
@@ -20,11 +21,12 @@ export function useTypewriter(text: string, speed: number = 50, startDelay: numb
           clearInterval(interval);
         }
       }, speed);
-
-      return () => clearInterval(interval);
     }, startDelay);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, [text, speed, startDelay]);
 
   return { displayedText, isComplete };
