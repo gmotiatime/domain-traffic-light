@@ -238,7 +238,9 @@ export function AnalyzerPage() {
     let cancelled = false;
     async function readHealth() {
       try {
-        const response = await fetch(getApiUrl("/api/health"));
+        const response = await fetch(getApiUrl("/api/health"), {
+          signal: AbortSignal.timeout(5000)
+        });
         if (!response.ok) throw new Error("fail");
         const payload = await response.json();
         if (cancelled) return;
@@ -247,9 +249,13 @@ export function AnalyzerPage() {
           return;
         }
         setAiHealth({ status: "missing-key", note: payload?.hasLocalEnvFile ? "Нет рабочего AI-ключа." : "AI не настроен." });
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        setAiHealth({ status: "offline", note: "AI backend недоступен." });
+        if (err instanceof Error && err.name === "TimeoutError") {
+          setAiHealth({ status: "offline", note: "AI недоступен" });
+        } else {
+          setAiHealth({ status: "offline", note: "Ошибка соединения" });
+        }
       }
     }
     void readHealth();
