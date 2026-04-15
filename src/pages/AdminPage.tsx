@@ -146,8 +146,9 @@ export function AdminPage() {
       setArticleTitle(data.title || articleTopic);
       setArticleContent(data.content || "");
       setArticleStatus("Сгенерировано успешно.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsGeneratingArticle(false);
     }
@@ -164,8 +165,9 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка загрузки статей");
       const nextArticles = Array.isArray(data.articles) ? data.articles : [];
       setArticles([...nextArticles].sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)));
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsLoadingArticles(false);
     }
@@ -184,8 +186,9 @@ export function AdminPage() {
       if (!response.ok) throw new Error(data.error || "Ошибка удаления статьи");
       await loadArticles();
       setArticleStatus("Статья удалена.");
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setDeletingArticleId(null);
     }
@@ -212,8 +215,9 @@ export function AdminPage() {
       setArticleTitle("");
       setArticleContent("");
       await loadArticles();
-    } catch (err: any) {
-      setArticleStatus(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setArticleStatus(message);
     } finally {
       setIsPublishingArticle(false);
     }
