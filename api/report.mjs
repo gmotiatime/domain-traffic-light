@@ -1,7 +1,7 @@
 import { Redis } from "@upstash/redis";
 import { createHash, randomBytes } from "crypto";
 import { reportPostSchema, reportDeleteSchema } from "./schemas.mjs";
-import { assertAdminAccess, standardHeaders, consumeRateLimit } from "../server/openrouter-proxy.mjs";
+import { assertAdminAccess, standardHeaders, consumeRateLimit, extractClientIp } from "../server/openrouter-proxy.mjs";
 
 function normalizeHost(host) {
   let normalized = String(host || "").toLowerCase().trim();
@@ -36,11 +36,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const forwardedFor = req.headers["x-forwarded-for"];
-    const ip =
-      typeof forwardedFor === "string"
-        ? forwardedFor.split(",")[0].trim()
-        : req.socket?.remoteAddress || "unknown";
+    const ip = extractClientIp(req);
 
     const rateLimitHit = consumeRateLimit(ip);
     if (rateLimitHit) {

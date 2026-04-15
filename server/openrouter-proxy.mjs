@@ -40,6 +40,20 @@ const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
 const rateLimitMax = Number(process.env.RATE_LIMIT_MAX) || 30;
 const rateBuckets = new Map();
 
+function extractClientIp(req) {
+  const realIp = req.headers["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim();
+  }
+
+  const vercelForwardedFor = req.headers["x-vercel-forwarded-for"];
+  if (typeof vercelForwardedFor === "string" && vercelForwardedFor.trim()) {
+    return vercelForwardedFor.split(",")[0].trim();
+  }
+
+  return req.socket?.remoteAddress || "unknown";
+}
+
 export function consumeRateLimit(key) {
   const now = Date.now();
   const normalizedKey = key || "unknown";
@@ -3662,7 +3676,7 @@ const port = Number(process.env.PORT || 8787);
 export default app;
 
 // Экспорт функций для тестирования
-export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess };
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {

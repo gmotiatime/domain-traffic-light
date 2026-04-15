@@ -1,4 +1,4 @@
-import { analyzeResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { analyzeResponse, standardHeaders, extractClientIp } from "../server/openrouter-proxy.mjs";
 import { analyzeSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
@@ -18,11 +18,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const forwardedFor = req.headers["x-forwarded-for"];
-  const ip =
-    typeof forwardedFor === "string"
-      ? forwardedFor.split(",")[0].trim()
-      : req.socket?.remoteAddress || "unknown";
+  const ip = extractClientIp(req);
 
   let body = req.body || {};
   if (typeof req.body === "string") {
