@@ -1,7 +1,8 @@
 import { useState } from "react";
 
 import { motion } from "framer-motion";
-import { Menu, Shield, X } from "lucide-react";
+import { Menu, Shield, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
 import { Button } from "@/components/ui/button";
 import { navItems } from "@/lib/site-content";
@@ -22,6 +23,7 @@ function navLinkClass(active: boolean) {
 
 export function SiteHeader({ activePath }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -76,6 +78,14 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                   Открыть Анализатор
                 </a>
               </Button>
+              <button
+                onClick={toggleTheme}
+                aria-label="Сменить тему"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-white/5 text-foreground hover:bg-white/10 px-4 transition-colors font-medium text-sm border border-white/10 ml-2"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                Сменить тему
+              </button>
             </div>
 
             <button
@@ -116,6 +126,12 @@ export function SiteHeader({ activePath }: SiteHeaderProps) {
                   <a href={routeHref("/analyzer")} onClick={() => setIsMenuOpen(false)}>
                     Открыть Анализатор
                   </a>
+                </Button>
+              </div>
+              <div className="mt-2">
+                <Button onClick={toggleTheme} variant="outline" className="w-full rounded-xl border-white/10 bg-transparent text-foreground">
+                  {theme === "dark" ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                  Сменить тему
                 </Button>
               </div>
             </div>

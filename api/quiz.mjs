@@ -150,7 +150,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const forwardedFor = req.headers["x-forwarded-for"];
+    const forwardedFor = req.headers["x-vercel-forwarded-for"] || req.headers["x-real-ip"] || req.headers["x-forwarded-for"];
     const ip =
       typeof forwardedFor === "string"
         ? forwardedFor.split(",")[0].trim()

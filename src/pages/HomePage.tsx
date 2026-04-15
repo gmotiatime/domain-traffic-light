@@ -46,7 +46,7 @@ function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 ${containerClassName}`}
+      className={`relative transition-all duration-200 ease-out hover:-translate-y-1 ${containerClassName}`}
       initial={{ opacity: 0, y: 30, scale: 0.95 }} // Start from scale 0.95, not 0
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
@@ -57,7 +57,7 @@ function GlassCard({
         borderRadius={32}
         glowRadius={30}
         fillOpacity={0}
-        backgroundColor="#000000"
+        backgroundColor="hsl(var(--background))"
       >
         <div style={glow ? { background: glow, height: '100%' } : { height: '100%' }}>
           {children}
@@ -217,7 +217,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Защита от фишинга"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/shield-protection.svg?v=4"
                 />
               </div>
@@ -236,7 +236,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="Сканирование базы данных"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/database-scan.svg?v=4"
                 />
               </div>
@@ -255,7 +255,7 @@ export function HomePage() {
               <div className="px-8 pb-8 pt-0">
                 <img
                   alt="AI анализ"
-                  className="h-48 w-full object-contain mix-blend-screen"
+                  className="h-48 w-full object-contain theme-svg-blend"
                   src="/ai-analysis.svg?v=4"
                 />
               </div>
@@ -283,7 +283,7 @@ export function HomePage() {
                     borderRadius={32}
                     glowRadius={30}
                     fillOpacity={0}
-                    backgroundColor="#000000"
+                    backgroundColor="hsl(var(--background))"
                   >
                     <div className="relative flex flex-col justify-between h-full w-full">
                       {/* Big glowing background number */}
@@ -363,13 +363,13 @@ export function HomePage() {
                   </div>
                   <div className="px-8 pb-8 pt-4">
                     {index === 0 && (
-                      <img alt="Быстрый старт" className="h-48 w-full object-contain mix-blend-screen" src="/speed-fast.svg?v=4" />
+                      <img alt="Быстрый старт" className="h-48 w-full object-contain theme-svg-blend" src="/speed-fast.svg?v=4" />
                     )}
                     {index === 1 && (
-                      <img alt="Объяснимый результат" className="h-48 w-full object-contain mix-blend-screen" src="/verified-check.svg?v=4" />
+                      <img alt="Объяснимый результат" className="h-48 w-full object-contain theme-svg-blend" src="/verified-check.svg?v=4" />
                     )}
                     {index === 2 && (
-                      <img alt="Безопасная публикация" className="h-48 w-full object-contain mix-blend-screen" src="/global-network.svg?v=4" />
+                      <img alt="Безопасная публикация" className="h-48 w-full object-contain theme-svg-blend" src="/global-network.svg?v=4" />
                     )}
                   </div>
                 </GlassCard>

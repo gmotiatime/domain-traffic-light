@@ -782,7 +782,9 @@ export function AnalyzerPage() {
                   <Cat className="h-5 w-5 text-foreground/20" />
                 </div>
                 <p className="mt-3 text-sm text-foreground/30">
-                  Нейрокот начеку. Уточненный вердикт появится автоматически.
+                  Нейрокот готов к работе 🐾
+                  <br />
+                  <span className="text-xs">Вставьте подозрительную ссылку, и мы проверим её по всем базам.</span>
                 </p>
               </div>
             )}
