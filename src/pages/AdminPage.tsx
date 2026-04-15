@@ -225,7 +225,7 @@ export function AdminPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+    const saved = window.sessionStorage.getItem(TOKEN_STORAGE_KEY) || "";
     if (saved) {
       setToken(saved);
       setDraftToken(saved);
@@ -345,7 +345,7 @@ export function AdminPage() {
       const message = error instanceof Error ? error.message : "Ошибка загрузки.";
       if (/прав/i.test(message)) {
         setToken("");
-        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       }
       setStatus(message);
     } finally {
@@ -357,7 +357,7 @@ export function AdminPage() {
     const nextToken = draftToken.trim();
     if (!nextToken) return;
     setToken(nextToken);
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
     try {
       const response = await fetch(getApiUrl("/api/admin-cache?limit=20"), {
         headers: {
@@ -377,7 +377,7 @@ export function AdminPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ошибка входа.";
       setToken("");
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       setStatus(message);
     }
   }
