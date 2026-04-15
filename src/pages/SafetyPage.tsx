@@ -53,6 +53,210 @@ function GlassCard({
   );
 }
 
+function SafetyPrinciplesSection() {
+  return (
+    <section className="mt-16 sm:mt-24 grid gap-5 sm:gap-6 lg:grid-cols-2">
+      {safetyPrinciples.map((item, index) => (
+        <GlassCard key={item.title} delay={index * 0.1} containerClassName="flex flex-col h-full" className="overflow-hidden p-0 h-full">
+          <div className="p-8 flex-1">
+            <h2 className="text-2xl font-semibold text-foreground">{item.title}</h2>
+            <p className="mt-3 text-base leading-relaxed text-foreground/50">
+              {item.text}
+            </p>
+          </div>
+          {index === 0 && (
+            <div className="p-8">
+              <img
+                alt="Без регистрации"
+                className="h-48 w-full object-contain"
+                src="/privacy-lock.svg"
+              />
+            </div>
+          )}
+          {index === 1 && (
+            <div className="p-8">
+              <img
+                alt="Без хранения запросов"
+                className="h-48 w-full object-contain"
+                src="/database-scan.svg"
+              />
+            </div>
+          )}
+          {index === 2 && (
+            <div className="p-8">
+              <img
+                alt="Без реальных вредоносных доменов"
+                className="h-48 w-full object-contain"
+                src="/verified-check.svg"
+              />
+            </div>
+          )}
+          {index === 3 && (
+            <div className="p-8">
+              <img
+                alt="С официальными маршрутами"
+                className="h-48 w-full object-contain"
+                src="/security-alert.svg"
+              />
+            </div>
+          )}
+        </GlassCard>
+      ))}
+    </section>
+  );
+}
+
+function ContextUrgencySection() {
+  return (
+    <section className="mt-24 sm:mt-32">
+      <motion.div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
+            Контекст проблемы
+          </p>
+          <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground/90 sm:text-4xl">
+            Меньше секунды <span className="text-foreground/40">на ошибку</span>
+          </h2>
+          <p className="mt-6 text-base leading-relaxed text-foreground/50">
+            Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение о взломе, переходит по ссылке и сразу вводит код. Анализатор прерывает этот автоматизм.
+          </p>
+        </div>
+        <div className="flex gap-4 sm:flex-row flex-col">
+          <div className="rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-6 backdrop-blur-sm">
+            <p className="text-3xl font-bold text-foreground">88%</p>
+            <p className="mt-2 text-sm text-foreground/50">Скам-атак начинаются<br/>с фишинговой ссылки</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-500/[0.15] bg-emerald-500/[0.02] p-6 backdrop-blur-sm">
+            <p className="text-3xl font-bold text-emerald-400">0</p>
+            <p className="mt-2 text-sm text-emerald-400/70">Личных данных<br/>сохраняется у нас</p>
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+function OfficialRoutesSection() {
+  return (
+    <section className="mt-32 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+      <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
+          Куда направлять пользователя
+        </p>
+        <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
+          После сигнала риска нужен <span className="text-foreground/40">следующий шаг</span>
+        </h2>
+        <p className="mt-6 text-base leading-relaxed text-foreground/50">
+          Мы не банк и не полиция. Наша цель — указать на опасность и направить туда, где окажут компетентную помощь.
+        </p>
+      </motion.div>
+
+      <div className="flex flex-col gap-4">
+        {officialRoutes.map((route, index) => (
+          <GlassCard key={route.title} delay={index * 0.1} containerClassName="flex w-full" className="p-5 sm:p-6 transition-colors hover:bg-foreground/[0.04] group w-full">
+            <a
+              className="flex items-start justify-between gap-4 outline-none"
+              href={route.href}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <div>
+                <p className="text-xl font-medium text-foreground group-hover:text-rose-200 transition-colors">{route.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/50 sm:text-base">
+                  {route.text}
+                </p>
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.05] group-hover:bg-rose-500/20 group-hover:text-rose-400 transition-colors">
+                <ArrowUpRight className="h-5 w-5" />
+              </div>
+            </a>
+          </GlassCard>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CyberLawSection() {
+  return (
+    <section className="mt-32">
+      <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="max-w-3xl">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/20 text-violet-400">
+            <Scale className="h-4 w-4" />
+          </span>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-400/80">
+            #КиберПраво
+          </p>
+        </div>
+        <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
+          Правовой контекст <span className="text-foreground/40">и защита</span>
+        </h2>
+        <p className="mt-6 text-base leading-relaxed text-foreground/50">
+          Фишинг — уголовно наказуемое деяние по законодательству Республики Беларусь. Каждый пользователь сети имеет право на тайну, защиту своих данных и правовую помощь.
+        </p>
+      </motion.div>
+
+      <div className="mt-12 grid gap-6 lg:grid-cols-2">
+        <GlassCard delay={0.1} containerClassName="flex flex-col h-full" className="p-8 border-violet-500/10 bg-violet-500/[0.02] h-full flex flex-col">
+          <h3 className="text-2xl font-semibold text-foreground">Закон о защите персональных данных</h3>
+          <p className="mt-4 text-base leading-relaxed text-foreground/50 flex-1">
+            По Закону РБ «О защите персональных данных» вы — субъект персональных данных. Никто не может собирать, обрабатывать и использовать ваши данные (логин-пароль, ФИО, телефон) без вашего явного согласия. Фишинговые ресурсы нарушают этот закон, собирая данные неправомерно.
+          </p>
+        </GlassCard>
+
+        <GlassCard delay={0.2} containerClassName="flex flex-col h-full" className="p-8 border-rose-500/10 bg-rose-500/[0.02] h-full flex flex-col">
+          <h3 className="text-2xl font-semibold text-foreground">Куда обращаться пострадавшему?</h3>
+          <p className="mt-4 text-base leading-relaxed text-foreground/50">
+            Юридическая фиксация инцидента важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
+          </p>
+          <ul className="mt-5 space-y-4">
+            <li className="flex items-start gap-4">
+              <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
+              <p className="text-base text-foreground/80">
+                <a href="https://cpd.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">НЦЗПД (cpd.by)</a> — при незаконно собранных контактных и личных данных.
+              </p>
+            </li>
+            <li className="flex items-start gap-4">
+              <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
+              <p className="text-base text-foreground/80">
+                <a href="https://cert.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">CERT.BY (cert.by)</a> — национальный центр реагирования на компьютерные инциденты для блокировки вредоносного ресурса.
+              </p>
+            </li>
+          </ul>
+        </GlassCard>
+      </div>
+    </section>
+  );
+}
+
+function FaqSection() {
+  return (
+    <section className="mt-32">
+      <motion.p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground/40" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
+        FAQ
+      </motion.p>
+      <div className="mt-6 space-y-4">
+        {faqItems.map((item, index) => (
+          <GlassCard key={item.title} delay={index * 0.1} containerClassName="w-full" className="p-6 w-full">
+            <details className="group marker:content-['']">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium text-foreground/90 outline-none">
+                <span>{item.title}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] group-open:bg-foreground/10 transition-colors">
+                  <ChevronDown className="h-4 w-4 text-foreground/50 transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
+              <p className="mt-4 pt-4 border-t border-foreground/[0.05] text-base leading-relaxed text-foreground/50">
+                {item.text}
+              </p>
+            </details>
+          </GlassCard>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 import { StickersLayer, StickerData } from "@/components/StickersLayer";
 const safetyStickers: StickerData[] = [
   { src: "/sticker/1-56-256b.png", side: "left", top: "20%", rotation: -10 },
@@ -94,194 +298,11 @@ export function SafetyPage() {
           </p>
         </motion.div>
 
-        {/* Safety Principles */}
-        <section className="mt-16 sm:mt-24 grid gap-5 sm:gap-6 lg:grid-cols-2">
-          {safetyPrinciples.map((item, index) => (
-            <GlassCard key={item.title} delay={index * 0.1} containerClassName="flex flex-col h-full" className="overflow-hidden p-0 h-full">
-              <div className="p-8 flex-1">
-                <h2 className="text-2xl font-semibold text-foreground">{item.title}</h2>
-                <p className="mt-3 text-base leading-relaxed text-foreground/50">
-                  {item.text}
-                </p>
-              </div>
-              {index === 0 && (
-                <div className="p-8">
-                  <img
-                    alt="Без регистрации"
-                    className="h-48 w-full object-contain"
-                    src="/privacy-lock.svg"
-                  />
-                </div>
-              )}
-              {index === 1 && (
-                <div className="p-8">
-                  <img
-                    alt="Без хранения запросов"
-                    className="h-48 w-full object-contain"
-                    src="/database-scan.svg"
-                  />
-                </div>
-              )}
-              {index === 2 && (
-                <div className="p-8">
-                  <img
-                    alt="Без реальных вредоносных доменов"
-                    className="h-48 w-full object-contain"
-                    src="/verified-check.svg"
-                  />
-                </div>
-              )}
-              {index === 3 && (
-                <div className="p-8">
-                  <img
-                    alt="С официальными маршрутами"
-                    className="h-48 w-full object-contain"
-                    src="/security-alert.svg"
-                  />
-                </div>
-              )}
-            </GlassCard>
-          ))}
-        </section>
-
-        {/* Context / Urgency section */}
-        <section className="mt-24 sm:mt-32">
-          <motion.div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
-                Контекст проблемы
-              </p>
-              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground/90 sm:text-4xl">
-                Меньше секунды <span className="text-foreground/40">на ошибку</span>
-              </h2>
-              <p className="mt-6 text-base leading-relaxed text-foreground/50">
-                Социальная инженерия работает за счёт спешки и страха. Жертва получает сообщение о взломе, переходит по ссылке и сразу вводит код. Анализатор прерывает этот автоматизм.
-              </p>
-            </div>
-            <div className="flex gap-4 sm:flex-row flex-col">
-              <div className="rounded-2xl border border-foreground/[0.06] bg-foreground/[0.02] p-6 backdrop-blur-sm">
-                <p className="text-3xl font-bold text-foreground">88%</p>
-                <p className="mt-2 text-sm text-foreground/50">Скам-атак начинаются<br/>с фишинговой ссылки</p>
-              </div>
-              <div className="rounded-2xl border border-emerald-500/[0.15] bg-emerald-500/[0.02] p-6 backdrop-blur-sm">
-                <p className="text-3xl font-bold text-emerald-400">0</p>
-                <p className="mt-2 text-sm text-emerald-400/70">Личных данных<br/>сохраняется у нас</p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        {/* Official Routes */}
-        <section className="mt-32 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
-          <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-400/60">
-              Куда направлять пользователя
-            </p>
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
-              После сигнала риска нужен <span className="text-foreground/40">следующий шаг</span>
-            </h2>
-            <p className="mt-6 text-base leading-relaxed text-foreground/50">
-              Мы не банк и не полиция. Наша цель — указать на опасность и направить туда, где окажут компетентную помощь.
-            </p>
-          </motion.div>
-
-          <div className="flex flex-col gap-4">
-            {officialRoutes.map((route, index) => (
-              <GlassCard key={route.title} delay={index * 0.1} containerClassName="flex w-full" className="p-5 sm:p-6 transition-colors hover:bg-foreground/[0.04] group w-full">
-                <a
-                  className="flex items-start justify-between gap-4 outline-none"
-                  href={route.href}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <div>
-                    <p className="text-xl font-medium text-foreground group-hover:text-rose-200 transition-colors">{route.title}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-foreground/50 sm:text-base">
-                      {route.text}
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.05] group-hover:bg-rose-500/20 group-hover:text-rose-400 transition-colors">
-                    <ArrowUpRight className="h-5 w-5" />
-                  </div>
-                </a>
-              </GlassCard>
-            ))}
-          </div>
-        </section>
-
-        {/* CyberLaw (#КиберПраво) Section */}
-        <section className="mt-32">
-          <motion.div variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="max-w-3xl">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/20 text-violet-400">
-                <Scale className="h-4 w-4" />
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-400/80">
-                #КиберПраво
-              </p>
-            </div>
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-foreground/90 sm:text-5xl">
-              Правовой контекст <span className="text-foreground/40">и защита</span>
-            </h2>
-            <p className="mt-6 text-base leading-relaxed text-foreground/50">
-              Фишинг — уголовно наказуемое деяние по законодательству Республики Беларусь. Каждый пользователь сети имеет право на тайну, защиту своих данных и правовую помощь.
-            </p>
-          </motion.div>
-
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            <GlassCard delay={0.1} containerClassName="flex flex-col h-full" className="p-8 border-violet-500/10 bg-violet-500/[0.02] h-full flex flex-col">
-              <h3 className="text-2xl font-semibold text-foreground">Закон о защите персональных данных</h3>
-              <p className="mt-4 text-base leading-relaxed text-foreground/50 flex-1">
-                По Закону РБ «О защите персональных данных» вы — субъект персональных данных. Никто не может собирать, обрабатывать и использовать ваши данные (логин-пароль, ФИО, телефон) без вашего явного согласия. Фишинговые ресурсы нарушают этот закон, собирая данные неправомерно.
-              </p>
-            </GlassCard>
-
-            <GlassCard delay={0.2} containerClassName="flex flex-col h-full" className="p-8 border-rose-500/10 bg-rose-500/[0.02] h-full flex flex-col">
-              <h3 className="text-2xl font-semibold text-foreground">Куда обращаться пострадавшему?</h3>
-              <p className="mt-4 text-base leading-relaxed text-foreground/50">
-                Юридическая фиксация инцидента важна для защиты ваших прав, возврата средств и блокировки активов злоумышленников. При утечке данных или мошенничестве:
-              </p>
-              <ul className="mt-5 space-y-4">
-                <li className="flex items-start gap-4">
-                  <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
-                  <p className="text-base text-foreground/80">
-                    <a href="https://cpd.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">НЦЗПД (cpd.by)</a> — при незаконно собранных контактных и личных данных.
-                  </p>
-                </li>
-                <li className="flex items-start gap-4">
-                  <div className="mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-rose-500/50" />
-                  <p className="text-base text-foreground/80">
-                    <a href="https://cert.by" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:text-rose-400 transition-colors underline decoration-foreground/20 underline-offset-4">CERT.BY (cert.by)</a> — национальный центр реагирования на компьютерные инциденты для блокировки вредоносного ресурса.
-                  </p>
-                </li>
-              </ul>
-            </GlassCard>
-          </div>
-        </section>
-
-        {/* FAQ Area */}
-        <section className="mt-32">
-          <motion.p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground/40" variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }}>
-            FAQ
-          </motion.p>
-          <div className="mt-6 space-y-4">
-            {faqItems.map((item, index) => (
-              <GlassCard key={item.title} delay={index * 0.1} containerClassName="w-full" className="p-6 w-full">
-                <details className="group marker:content-['']">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium text-foreground/90 outline-none">
-                    <span>{item.title}</span>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] group-open:bg-foreground/10 transition-colors">
-                      <ChevronDown className="h-4 w-4 text-foreground/50 transition-transform group-open:rotate-180" />
-                    </span>
-                  </summary>
-                  <p className="mt-4 pt-4 border-t border-foreground/[0.05] text-base leading-relaxed text-foreground/50">
-                    {item.text}
-                  </p>
-                </details>
-              </GlassCard>
-            ))}
-          </div>
-        </section>
+        <SafetyPrinciplesSection />
+        <ContextUrgencySection />
+        <OfficialRoutesSection />
+        <CyberLawSection />
+        <FaqSection />
         
       </div>
     </div>
