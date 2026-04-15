@@ -137,8 +137,10 @@ function ArticleList({ articles }: { articles: Article[] }) {
               className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden"
             >
               <button
-                className="flex w-full items-center justify-between p-6 text-left hover:bg-white/[0.02] transition-colors"
+                className="flex w-full items-center justify-between p-6 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b] rounded-2xl"
                 onClick={() => setExpandedId(isExpanded ? null : article.id)}
+                aria-expanded={isExpanded}
+                aria-controls={`article-content-${article.id}`}
               >
                 <div>
                   <h3 className="text-xl font-semibold text-white/90">{title}</h3>
@@ -155,6 +157,7 @@ function ArticleList({ articles }: { articles: Article[] }) {
 
               {isExpanded && (
                 <motion.div
+                  id={`article-content-${article.id}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="px-6 pb-6 pt-2 border-t border-white/5 text-white/80"
