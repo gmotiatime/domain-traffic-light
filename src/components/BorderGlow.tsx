@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect, type ReactNode } from 'react';
+import { useRef, useCallback, useState, useEffect, useMemo, type ReactNode } from 'react';
 
 interface BorderGlowProps {
   children?: ReactNode;
@@ -85,6 +85,10 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
   fillOpacity = 0.5,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const memoizedBoxShadow = useMemo(() => buildBoxShadow(glowColor, glowIntensity), [glowColor, glowIntensity]);
+  // Use colors array as dependency. It relies on the parent passing a stable reference,
+  // or we map it to string inside the hook but keep the array as the dependency to satisfy rules.
+  const memoizedMeshGradients = useMemo(() => buildMeshGradients(colors), [colors]);
   const [isHovered, setIsHovered] = useState(false);
   const [cursorAngle, setCursorAngle] = useState(45);
   const [edgeProximity, setEdgeProximity] = useState(0);
@@ -156,9 +160,8 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
     ? Math.max(0, (edgeProximity * 100 - edgeSensitivity) / (100 - edgeSensitivity))
     : 0;
 
-  const meshGradients = buildMeshGradients(colors);
-  const borderBg = meshGradients.map(g => `${g} border-box`);
-  const fillBg = meshGradients.map(g => `${g} padding-box`);
+  const borderBg = memoizedMeshGradients.map(g => `${g} border-box`);
+  const fillBg = memoizedMeshGradients.map(g => `${g} padding-box`);
   const angleDeg = `${cursorAngle.toFixed(3)}deg`;
 
   return (
@@ -240,7 +243,7 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
           className="absolute rounded-[inherit]"
           style={{
             inset: `${glowRadius}px`,
-            boxShadow: buildBoxShadow(glowColor, glowIntensity),
+            boxShadow: memoizedBoxShadow,
           }}
         />
       </span>

@@ -1,0 +1,4 @@
+
+## 2024-05-24 - React useMemo Optimization for Complex UI Component Render Functions
+**Learning:** Functions that parse complex data structures (like parsing arbitrary strings to HSL object format using Regex or computing Math operations mapped over iterative static arrays) are frequently left inline in functional components such as Custom Effects (like `BorderGlow.tsx` computations). This blocks render frames and significantly impacts performance rendering because React re-evaluates all these constants on each component render, even when the UI arguments (such as static glow color and gradients strings) do not change.
+**Action:** When implementing mathematical gradient generations or static string computation mappings, use `useMemo` hooks dependent exclusively on the prop arguments directly within the component body. This mitigates expensive, repetitive JavaScript execution and string concatenations.
