@@ -54,7 +54,7 @@ function extractClientIp(req) {
   return req.socket?.remoteAddress || "unknown";
 }
 
-export function consumeRateLimit(key) {
+function consumeRateLimit(key) {
   const now = Date.now();
   const normalizedKey = key || "unknown";
   let bucket = rateBuckets.get(normalizedKey);
@@ -2781,7 +2781,7 @@ function applyResponseHeaders(res) {
   res.header("Referrer-Policy", "strict-origin-when-cross-origin");
 }
 
-export function standardHeaders() {
+function standardHeaders() {
   return {
     ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -2792,7 +2792,7 @@ export function standardHeaders() {
   };
 }
 
-export function healthResponse() {
+function healthResponse() {
   return {
     ok: true,
     aiConfigured: Boolean(process.env.OPENROUTER_API_KEY),
@@ -2815,7 +2815,7 @@ export function healthResponse() {
   };
 }
 
-export async function cacheStatsResponse() {
+async function cacheStatsResponse() {
   let size = responseCache.size;
   let dbSize = 0;
 
@@ -2982,7 +2982,7 @@ async function rebuildStatsFromScan() {
   }
 }
 
-export async function adminCacheGetResponse(query = {}, headers = {}) {
+async function adminCacheGetResponse(query = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3011,7 +3011,7 @@ export async function adminCacheGetResponse(query = {}, headers = {}) {
   };
 }
 
-export async function adminCacheUpdateResponse(body = {}, headers = {}) {
+async function adminCacheUpdateResponse(body = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3042,7 +3042,7 @@ export async function adminCacheUpdateResponse(body = {}, headers = {}) {
   };
 }
 
-export async function adminCacheDeleteResponse(query = {}, headers = {}) {
+async function adminCacheDeleteResponse(query = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3059,7 +3059,7 @@ export async function adminCacheDeleteResponse(query = {}, headers = {}) {
   };
 }
 
-export async function analyzeResponse(body = {}, meta = {}) {
+async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
   const apiKey = process.env.OPENROUTER_API_KEY;
   const input = String(body?.input || "");
@@ -3311,7 +3311,7 @@ function parseStoredArticle(item) {
   }
 }
 
-export async function getArticlesResponse() {
+async function getArticlesResponse() {
   if (redisCache) {
     try {
       const articlesList = await redisCache.lrange("articles:list", 0, -1);
@@ -3329,7 +3329,7 @@ export async function getArticlesResponse() {
   }
 }
 
-export async function saveArticleResponse(articleBody, headers) {
+async function saveArticleResponse(articleBody, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3355,7 +3355,7 @@ export async function saveArticleResponse(articleBody, headers) {
   }
 }
 
-export async function deleteArticleResponse(articleId, headers) {
+async function deleteArticleResponse(articleId, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3383,7 +3383,7 @@ export async function deleteArticleResponse(articleId, headers) {
   return { status: 200, body: { success: true } };
 }
 
-export async function generateArticleResponse(topic, headers) {
+async function generateArticleResponse(topic, headers) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3471,7 +3471,7 @@ export async function generateArticleResponse(topic, headers) {
   }
 }
 
-export async function generateQuizScenarioResponse() {
+async function generateQuizScenarioResponse() {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };

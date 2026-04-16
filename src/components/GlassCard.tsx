@@ -17,7 +17,7 @@ export function GlassCard({
 }) {
   return (
     <motion.div
-      className={`relative transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 ${containerClassName}`}
+      className={`relative transition-all duration-200 ease-out hover:-translate-y-1 ${containerClassName}`}
       initial={{ opacity: 0, y: 30, scale: 0.95 }} // Start from scale 0.95, not 0
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
