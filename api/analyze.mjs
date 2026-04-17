@@ -1,4 +1,4 @@
-import { analyzeResponse, standardHeaders, extractClientIp } from "../server/openrouter-proxy.mjs";
+import { analyzeResponse, standardHeaders, extractClientIp, consumeRateLimit } from "../server/openrouter-proxy.mjs";
 import { analyzeSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
@@ -18,7 +18,14 @@ export default async function handler(req, res) {
     return;
   }
 
+
   const ip = extractClientIp(req);
+  const rateLimitHit = consumeRateLimit(ip);
+  if (rateLimitHit) {
+    res.status(429).json({ error: "Слишком много запросов. Подождите немного." });
+    return;
+  }
+
 
   let body = req.body || {};
   if (typeof req.body === "string") {

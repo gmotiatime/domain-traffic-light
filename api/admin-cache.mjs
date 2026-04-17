@@ -1,4 +1,4 @@
-import {
+import { consumeRateLimit, extractClientIp,
   adminCacheDeleteResponse,
   adminCacheGetResponse,
   adminCacheUpdateResponse,
@@ -15,6 +15,14 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
+    return;
+  }
+
+
+  const ip = extractClientIp(req);
+  const rateLimitHit = consumeRateLimit(ip);
+  if (rateLimitHit) {
+    res.status(429).json({ error: "Слишком много запросов. Подождите немного." });
     return;
   }
 

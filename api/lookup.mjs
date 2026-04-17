@@ -1,4 +1,4 @@
-import { standardHeaders, getRawCacheRecordByHost, normalizeInput } from "../server/openrouter-proxy.mjs";
+import { standardHeaders, getRawCacheRecordByHost, normalizeInput, consumeRateLimit, extractClientIp } from "../server/openrouter-proxy.mjs";
 import { lookupSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
@@ -10,6 +10,14 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
+    return;
+  }
+
+
+  const ip = extractClientIp(req);
+  const rateLimitHit = consumeRateLimit(ip);
+  if (rateLimitHit) {
+    res.status(429).json({ error: "Слишком много запросов. Подождите немного." });
     return;
   }
 

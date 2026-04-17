@@ -1,4 +1,4 @@
-import { cacheStatsResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { cacheStatsResponse, standardHeaders, consumeRateLimit, extractClientIp } from "../server/openrouter-proxy.mjs";
 
 export default async function handler(req, res) {
   const headers = standardHeaders();
@@ -14,6 +14,14 @@ export default async function handler(req, res) {
 
   if (req.method !== "GET") {
     res.status(405).json({ error: "Method Not Allowed" });
+    return;
+  }
+
+
+  const ip = extractClientIp(req);
+  const rateLimitHit = consumeRateLimit(ip);
+  if (rateLimitHit) {
+    res.status(429).json({ error: "Слишком много запросов. Подождите немного." });
     return;
   }
 

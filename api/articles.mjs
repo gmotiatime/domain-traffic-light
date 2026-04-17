@@ -1,4 +1,4 @@
-import { getArticlesResponse, saveArticleResponse, generateArticleResponse, deleteArticleResponse, standardHeaders } from "../server/openrouter-proxy.mjs";
+import { getArticlesResponse, saveArticleResponse, generateArticleResponse, deleteArticleResponse, standardHeaders, consumeRateLimit, extractClientIp } from "../server/openrouter-proxy.mjs";
 import { articlePostSchema } from "./schemas.mjs";
 import { z } from "zod";
 
@@ -11,6 +11,14 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
+    return;
+  }
+
+
+  const ip = extractClientIp(req);
+  const rateLimitHit = consumeRateLimit(ip);
+  if (rateLimitHit) {
+    res.status(429).json({ error: "Слишком много запросов. Подождите немного." });
     return;
   }
 

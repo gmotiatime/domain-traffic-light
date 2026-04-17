@@ -3441,7 +3441,7 @@ async function generateArticleResponse(topic, headers) {
 
           const responseText = await response.text();
           let data = null;
-          try { data = JSON.parse(responseText); } catch {}
+          try { data = JSON.parse(responseText); } catch { /* empty block statement */ }
 
           if (!response.ok || !data) {
             const errorMessage = data?.error?.message || data?.error || response.statusText;
@@ -3526,7 +3526,7 @@ async function generateQuizScenarioResponse() {
 
           const responseText = await response.text();
           let data = null;
-          try { data = JSON.parse(responseText); } catch {}
+          try { data = JSON.parse(responseText); } catch { /* empty block statement */ }
 
           if (!response.ok || !data) {
             const errorMessage = data?.error?.message || data?.error || response.statusText;
