@@ -352,6 +352,14 @@ export function AnalyzerPage() {
         ? formatErrorMessage(error.name === "AbortError" ? "AI ответил слишком медленно." : error.message)
         : "AI request failed.";
       setStatusNote(`AI: ${msg}`);
+      setAiExplanation({
+        model: "AI",
+        summary: msg,
+        score: baseResult.score,
+        verdictLabel: baseResult.verdictLabel,
+        reasons: [],
+        actions: []
+      });
     } finally {
       if (activeRequestRef.current === requestId) setIsAiEnriching(false);
     }
