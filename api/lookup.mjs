@@ -1,4 +1,4 @@
-import { standardHeaders, getRawCacheRecordByHost, normalizeInput, extractClientIp, consumeRateLimit } from "../server/openrouter-proxy.mjs";
+import { standardHeaders, getRawCacheRecordByHost, normalizeInput } from "../server/openrouter-proxy.mjs";
 import { lookupSchema } from "./schemas.mjs";
 
 export default async function handler(req, res) {
@@ -15,14 +15,6 @@ export default async function handler(req, res) {
 
   if (req.method !== "GET") {
     res.status(405).json({ error: "Method Not Allowed" });
-    return;
-  }
-
-  const ip = extractClientIp(req);
-
-  const rateLimitHit = consumeRateLimit(ip);
-  if (rateLimitHit) {
-    res.status(429).json(rateLimitHit);
     return;
   }
 

@@ -1876,12 +1876,11 @@ const compoundSuffixes = [
 ];
 
 function buildOpenRouterRequest(model, prompt) {
-  const isKimi = model.toLowerCase().includes("kimi");
   return {
     model,
     temperature: 0.08,
     max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
-    ...(isKimi ? {} : { response_format: { type: "json_object" } }),
+    response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
@@ -1913,12 +1912,11 @@ function buildOpenRouterRequest(model, prompt) {
 }
 
 function buildOpenRouterBaseRequest(model, messages, responseFormat) {
-  const isKimi = model.toLowerCase().includes("kimi");
   return {
     model,
     temperature: 0.08,
     max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
-    ...(isKimi ? {} : { response_format: responseFormat }),
+    response_format: responseFormat,
     messages: messages,
   };
 }
@@ -2667,7 +2665,7 @@ ${whoisSummary}
 7. Summary: 1-2 предложения, по существу. Не пиши "выглядит легитимно" если score > 20.
 8. scoreDelta: отрицательный для позитива, положительный для риска.
 9. Если нет новых полезных причин — верни пустой массив reasons.
-10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
+10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высок��й риск.
 11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
 12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), зате�� формулируй вердикт.
 13. Scoring guide: low=0-19 (безопасный), medium=20-49 (подозрительный), high=50-100 (опасный). Не ставь score=0 если есть хоть один сигнал.
@@ -3697,7 +3695,7 @@ const port = Number(process.env.PORT || 8787);
 export default app;
 
 // Экспорт функций для тестирования
-export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp, deleteArticleResponse, getArticlesResponse, saveArticleResponse, generateArticleResponse, standardHeaders, analyzeResponse, consumeRateLimit };
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
