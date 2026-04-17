@@ -10,3 +10,7 @@
 ## 2024-04-16 - [Added aria-haspopup to modal trigger button]
 **Learning:** Found a pattern where buttons triggering modals via React state lacked `aria-haspopup` attributes, which can affect screen reader experience when trying to understand what the button does.
 **Action:** When creating or modifying a button that opens a modal dialog through state (like `setShowReportModal`), always include `aria-haspopup="dialog"`, even if it is not a native `<dialog>` element.
+
+## 2024-05-25 - Interactive Color-Coded Feedback Accessibility
+**Learning:** Found that interactive components using color to convey meaning (like green/red quiz answers or history verdict dots) leave screen reader users without context. Dynamic state changes (like showing an explanation after a quiz selection) also need to be explicitly announced.
+**Action:** Add `sr-only` text descriptions alongside decorative color indicators (and hide the decorative element with `aria-hidden="true"` if necessary). Use `aria-live="polite"` on containers that dynamically appear with feedback to ensure the screen reader announces the result (e.g., "Верно." or "Неверно.").
