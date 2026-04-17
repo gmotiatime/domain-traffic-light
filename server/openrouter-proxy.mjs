@@ -1814,7 +1814,7 @@ app.use((req, _res, next) => {
 const configuredModels = (
   process.env.OPENROUTER_MODELS ||
   process.env.OPENROUTER_MODEL ||
-  "moonshotai/kimi-k2.5:nitro"
+  "moonshotai/kimi-k2.5"
 )
   .split(",")
   .map((item) => item.trim())
