@@ -1876,11 +1876,12 @@ const compoundSuffixes = [
 ];
 
 function buildOpenRouterRequest(model, prompt) {
+  const isKimi = model.toLowerCase().includes("kimi");
   return {
     model,
     temperature: 0.08,
     max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
-    response_format: { type: "json_object" },
+    ...(isKimi ? {} : { response_format: { type: "json_object" } }),
     messages: [
       {
         role: "system",
@@ -1912,11 +1913,12 @@ function buildOpenRouterRequest(model, prompt) {
 }
 
 function buildOpenRouterBaseRequest(model, messages, responseFormat) {
+  const isKimi = model.toLowerCase().includes("kimi");
   return {
     model,
     temperature: 0.08,
     max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
-    response_format: responseFormat,
+    ...(isKimi ? {} : { response_format: responseFormat }),
     messages: messages,
   };
 }
@@ -3695,7 +3697,7 @@ const port = Number(process.env.PORT || 8787);
 export default app;
 
 // Экспорт функций для тестирования
-export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp };
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp, deleteArticleResponse, getArticlesResponse, saveArticleResponse, generateArticleResponse, standardHeaders, analyzeResponse, consumeRateLimit };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
