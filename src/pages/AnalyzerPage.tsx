@@ -140,7 +140,7 @@ function recommendedActions(verdict: "low" | "medium" | "high") {
 
   return [
     "Сверьте адрес вручную перед вводом данных.",
-    "Проверьте, что домен совпа��ает с ожидаемым сайтом.",
+    "Проверьте, что домен совпадает с ожидаемым сайтом.",
     "Продолжайте только при полном совпадении адреса.",
     "При желании проверьте сертификат и владельца домена вручную.",
   ];
@@ -352,6 +352,14 @@ export function AnalyzerPage() {
         ? formatErrorMessage(error.name === "AbortError" ? "AI ответил слишком медленно." : error.message)
         : "AI request failed.";
       setStatusNote(`AI: ${msg}`);
+      setAiExplanation({
+        model: "AI",
+        summary: msg,
+        score: baseResult.score,
+        verdictLabel: baseResult.verdictLabel,
+        reasons: [],
+        actions: []
+      });
     } finally {
       if (activeRequestRef.current === requestId) setIsAiEnriching(false);
     }
@@ -470,7 +478,7 @@ export function AnalyzerPage() {
                   }}
                   className="rounded border-foreground/20 bg-foreground/5 accent-emerald-500"
                 />
-                Анонимно сохранять результат в общую базу
+                Анонимно сохранять резуль��ат в общую базу
               </label>
 
               <div className="flex items-center gap-3">
