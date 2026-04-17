@@ -7,3 +7,6 @@
 ## 2024-05-25 - Custom accordion accessibility (ArticlesPage)
 **Learning:** Found that custom accordion buttons used for expanding/collapsing content (like in `ArticlesPage.tsx`) lacked semantic state communication for screen readers and visible focus states for keyboard users.
 **Action:** Implemented `aria-expanded` and `aria-controls` on accordion buttons, along with matching `id` attributes on their content panels. Added explicit `focus-visible` styling (`focus-visible:outline-none focus-visible:ring-2 ...`) to ensure clear visual feedback during keyboard navigation. Next time, always ensure custom disclosure widgets implement proper ARIA properties and focus states.
+## 2024-04-16 - [Added aria-haspopup to modal trigger button]
+**Learning:** Found a pattern where buttons triggering modals via React state lacked `aria-haspopup` attributes, which can affect screen reader experience when trying to understand what the button does.
+**Action:** When creating or modifying a button that opens a modal dialog through state (like `setShowReportModal`), always include `aria-haspopup="dialog"`, even if it is not a native `<dialog>` element.
