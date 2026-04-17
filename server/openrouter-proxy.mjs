@@ -1880,7 +1880,7 @@ function buildOpenRouterRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 8192,
     ...(isKimi ? {} : { response_format: { type: "json_object" } }),
     messages: [
       {
@@ -1917,7 +1917,7 @@ function buildOpenRouterBaseRequest(model, messages, responseFormat) {
   return {
     model,
     temperature: 0.08,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 800,
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 8192,
     ...(isKimi ? {} : { response_format: responseFormat }),
     messages: messages,
   };
@@ -2697,7 +2697,7 @@ async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 8_000;
+      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 60_000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
@@ -3430,7 +3430,7 @@ async function generateArticleResponse(topic, headers) {
             { role: "system", content: "Ты — топовый технический писатель и эксперт по кибербезопасности (ex-CISO). Ты пишешь без 'воды', приводишь конкретные примеры и избегаешь банальных клише. Вывод должен быть строго в JSON-формате." },
             { role: "user", content: prompt }
           ], { type: "json_object" });
-          requestBody.max_tokens = 2200;
+          requestBody.max_tokens = 8192;
 
           const response = await fetch(
             OPENROUTER_CHAT_COMPLETIONS_URL,
