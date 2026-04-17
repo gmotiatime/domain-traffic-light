@@ -177,7 +177,7 @@ function sanitizeCacheInput(input, normalized) {
       url.port = "";
     }
 
-    // Убираем www. для единообразия
+    // Уби��аем www. для единообразия
     let hostname = url.hostname.toLowerCase();
     if (hostname.startsWith('www.')) {
       hostname = hostname.substring(4);
@@ -1814,7 +1814,7 @@ app.use((req, _res, next) => {
 const configuredModels = (
   process.env.OPENROUTER_MODELS ||
   process.env.OPENROUTER_MODEL ||
-  "moonshotai/kimi-k2.5"
+  "moonshotai/kimi-k2.5:nitro"
 )
   .split(",")
   .map((item) => item.trim())
@@ -2669,7 +2669,7 @@ ${whoisSummary}
 9. Если нет новых полезных причин — верни пустой массив reasons.
 10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
 11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
-12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), зате�� формулируй вердикт.
+12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный ��ишинг), зате�� формулируй вердикт.
 13. Scoring guide: low=0-19 (безопасный), medium=20-49 (подозрительный), high=50-100 (опасный). Не ставь score=0 если есть хоть один сигнал.
 
 ## ПРИМЕРЫ ХОРОШЕГО И ПЛОХОГО СТИЛЯ
