@@ -63,7 +63,7 @@ function QuizSection() {
       ) : quiz ? (
         <div className="relative z-10">
           <p className="text-lg mb-6 leading-relaxed">{quiz.scenario}</p>
-          <div className="space-y-3">
+          <div className="space-y-3" aria-live="polite">
             {quiz.options.map((option, idx) => {
               const isSelected = selectedOption === idx;
               const showResult = selectedOption !== null;
@@ -80,11 +80,15 @@ function QuizSection() {
                   <button
                     onClick={() => !showResult && setSelectedOption(idx)}
                     disabled={showResult}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${bgClass} flex items-center justify-between`}
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${bgClass} flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50`}
                   >
-                    <span>{option.text}</span>
-                    {showResult && option.isCorrect && <CheckCircle className="h-5 w-5 text-green-400" />}
-                    {showResult && !option.isCorrect && isSelected && <XCircle className="h-5 w-5 text-red-400" />}
+                    <span>
+                      {option.text}
+                      {showResult && option.isCorrect && <span className="sr-only"> - Правильный ответ</span>}
+                      {showResult && !option.isCorrect && isSelected && <span className="sr-only"> - Неправильный ответ</span>}
+                    </span>
+                    {showResult && option.isCorrect && <CheckCircle className="h-5 w-5 text-green-400" aria-hidden="true" />}
+                    {showResult && !option.isCorrect && isSelected && <XCircle className="h-5 w-5 text-red-400" aria-hidden="true" />}
                   </button>
                   {showResult && isSelected && (
                     <motion.div

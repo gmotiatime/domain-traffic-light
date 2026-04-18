@@ -25,7 +25,8 @@ export function VerdictCard({
     <GlassCard className="lg:col-span-7 p-8" glow={cfg.bgGlow}>
       <div className="flex flex-wrap items-center gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.15em] ${cfg.pillBg}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} />
+          <span className="sr-only">{cfg.label}</span>
+          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClass}`} aria-hidden="true" />
           Вердикт
         </span>
         <span className="rounded-full border border-foreground/8 bg-foreground/5 px-3 py-1 text-[11px] text-foreground/50">
