@@ -3432,10 +3432,42 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         continue;
       }
 
+      log("debug", "Stream raw content", { 
+        model, 
+        contentLen: collectedContent.length, 
+        reasoningLen: collectedReasoning.length,
+        contentPreview: collectedContent.slice(0, 200),
+      });
+
       // Parse the JSON analysis
-      const parsed = extractJson(rawContent);
-      const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
-      const aiAdjustedResult = applyAiToAnalysis(enrichedLocalAnalysis, analysis, normalized);
+      let analysis, aiAdjustedResult;
+      try {
+        const parsed = extractJson(rawContent);
+        analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
+        aiAdjustedResult = applyAiToAnalysis(enrichedLocalAnalysis, analysis, normalized);
+      } catch (parseError) {
+        log("warn", "Stream JSON parse failed, using fallback", { 
+          model, 
+          error: parseError instanceof Error ? parseError.message : "parse error",
+          rawContentPreview: rawContent.slice(0, 300),
+        });
+        
+        // Fallback: create a basic analysis from local results
+        // The reasoning text was already streamed, so user saw the thinking
+        const fallbackSummary = collectedReasoning 
+          ? collectedReasoning.slice(0, 500).trim()
+          : "AI-анализ завершён, но структурированный ответ не получен.";
+        
+        analysis = {
+          verdict: enrichedLocalAnalysis?.verdict || "medium",
+          verdictLabel: enrichedLocalAnalysis?.verdictLabel || "Нужна перепроверка",
+          score: enrichedLocalAnalysis?.score ?? 30,
+          summary: fallbackSummary,
+          reasons: [],
+          actions: enrichedLocalAnalysis?.actions || [],
+        };
+        aiAdjustedResult = enrichedLocalAnalysis;
+      }
       
       const responseData = {
         analysis,
@@ -3450,14 +3482,18 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         latencyMs: Date.now() - startTime,
       };
 
-      await setCachedResponse(cacheKey, responseData, telemetryConsent);
+      // Only cache if JSON parsing succeeded (analysis has reasons)
+      if (analysis.reasons && analysis.reasons.length > 0) {
+        await setCachedResponse(cacheKey, responseData, telemetryConsent);
+      }
 
-      log("info", "Stream analyze success", {
+      log("info", "Stream analyze complete", {
         host: normalized.host,
         model,
         verdict: analysis.verdict,
         latencyMs: responseData.latencyMs,
         reasoningChars: collectedReasoning.length,
+        hadJsonParseFallback: analysis.reasons?.length === 0,
       });
 
       sendEvent("complete", responseData);
@@ -3467,6 +3503,12 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
     } catch (error) {
       const errorMsg = error instanceof Error ? sanitizeString(error.message, 300) : "Stream error";
       log("warn", "Stream model error", { model, error: errorMsg });
+      // Don't continue to next model if we already sent reasoning tokens
+      if (collectedReasoning.length > 0) {
+        sendEvent("error", { error: `AI ошибка: ${errorMsg}`, enrichedLocalResult: enrichedLocalAnalysis });
+        res.end();
+        return;
+      }
       continue;
     }
   }
