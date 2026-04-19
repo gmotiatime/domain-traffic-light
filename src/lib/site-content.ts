@@ -6,7 +6,7 @@ export const navItems: Array<{ label: string; path: SitePath }> = [
   { label: "Главная", path: "/" },
   { label: "Методика", path: "/method" },
   { label: "Безопасность", path: "/safety" },
-  { label: "Статьи", path: "/articles" },
+  { label: "Статьи", path: "/changelog" },
 ];
 
 export const homeManifest = [

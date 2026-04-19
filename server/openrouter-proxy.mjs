@@ -1823,7 +1823,7 @@ function buildGroqRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 4000,
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 2000,
     response_format: { type: "json_object" },
     messages: [
       {
