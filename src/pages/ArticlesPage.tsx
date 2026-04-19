@@ -208,6 +208,13 @@ function ArticleList({ articles }: { articles: Article[] }) {
                         );
                       },
                       blockquote: (props: any) => <blockquote className="border-l-4 border-amber-500/50 pl-4 italic text-white/60 mb-4" {...props} />,
+                      table: (props: any) => <div className="overflow-x-auto mb-4"><table className="w-full border-collapse border border-white/10 text-sm" {...props} /></div>,
+                      thead: (props: any) => <thead className="bg-white/5" {...props} />,
+                      tbody: (props: any) => <tbody {...props} />,
+                      tr: (props: any) => <tr className="border-b border-white/10" {...props} />,
+                      th: (props: any) => <th className="px-4 py-2 text-left font-semibold text-white/90 border border-white/10" {...props} />,
+                      td: (props: any) => <td className="px-4 py-2 text-white/70 border border-white/10" {...props} />,
+                      hr: (props: any) => <hr className="border-white/10 my-6" {...props} />,
                     }}
                   >
                     {extractMarkdown(article.content)}
