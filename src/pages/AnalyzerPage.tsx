@@ -208,6 +208,7 @@ export function AnalyzerPage() {
   const [threatIntel, setThreatIntel] = useState<ThreatIntel | null>(null);
   const [urlAbuseIntel, setUrlAbuseIntel] = useState<ThreatIntel | null>(null);
   const [isModerated, setIsModerated] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
   const [aiHealth, setAiHealth] = useState<AiHealth>({
     status: "checking",
     note: "Проверяем AI backend.",
@@ -299,53 +300,111 @@ export function AnalyzerPage() {
     if (aiHealth.status === "offline") { setStatusNote("Backend недоступен."); return; }
     const requestId = activeRequestRef.current + 1;
     activeRequestRef.current = requestId;
-    setStatusNote("AI уточняет…"); setIsAiEnriching(true);
+    setStatusNote("AI уточняет…"); setIsAiEnriching(true); setStreamingText("");
 
     try {
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 18000);
-      const response = await fetch(getApiUrl("/api/analyze"), {
+      const timeoutId = window.setTimeout(() => controller.abort(), 35000);
+
+      const response = await fetch(getApiUrl("/api/analyze-stream"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({ input: nextInput, localAnalysis: baseResult, telemetryConsent }),
-      }).finally(() => window.clearTimeout(timeoutId));
+      });
 
-      if (!response.ok) {
-        const ep = await response.json().catch(() => ({}));
-        if (ep?.enrichedLocalResult) { setBaselineResult(ep.enrichedLocalResult); setResult(ep.enrichedLocalResult); }
-        if (ep?.threatIntel) setThreatIntel(ep.threatIntel);
-        if (ep?.urlAbuseIntel) setUrlAbuseIntel(ep.urlAbuseIntel);
-        throw new Error([String(ep?.error||"").trim(), String(ep?.detail||"").trim()].filter(Boolean).join(" ") || "AI request failed.");
+      clearTimeout(timeoutId);
+
+      if (!response.ok || !response.body) {
+        throw new Error("Stream unavailable");
       }
 
-      const payload = await response.json();
-      if (activeRequestRef.current !== requestId) return;
-      const nextBaseline = payload.enrichedLocalResult ?? baseResult;
-      setBaselineResult(nextBaseline);
-      setIsCachedResult(payload.cached === true);
-      setIsModerated(payload.moderated === true);
-      setResult(payload.aiAdjustedResult ?? nextBaseline);
-      setThreatIntel(payload.threatIntel ?? null);
-      setUrlAbuseIntel(payload.urlAbuseIntel ?? null);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let completed = false;
+      let currentEvent = "";
+      let streamedText = "";
 
-      const nextAi = payload.analysis ? {
-        model: payload.model ?? "AI",
-        summary: payload.analysis.summary || "",
-        score: typeof payload.analysis.score === "number" ? payload.analysis.score : baseResult.score,
-        verdictLabel: payload.analysis.verdictLabel ?? baseResult.verdictLabel,
-        reasons: Array.isArray(payload.analysis.reasons) ? payload.analysis.reasons.slice(0, 3) : [],
-        actions: Array.isArray(payload.analysis.actions) ? payload.analysis.actions.slice(0, 3) : [],
-      } : null;
-      setAiExplanation(nextAi);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (activeRequestRef.current !== requestId) { reader.cancel(); return; }
 
-      const parts: string[] = [];
-      if (payload.threatIntel?.status === "hit") parts.push("OpenPhish: совпадение");
-      else if (payload.threatIntel?.status === "clear") parts.push("OpenPhish: чисто");
-      if (payload.urlAbuseIntel?.status === "hit") parts.push("URLAbuse: совпадение");
-      else if (payload.urlAbuseIntel?.status === "clear") parts.push("URLAbuse: чисто");
-      if (payload.model) parts.push(`AI · ${payload.model}`);
-      setStatusNote(parts.join(" · ") || "Анализ обновлён.");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+
+          if (trimmed.startsWith("event: ")) {
+            currentEvent = trimmed.slice(7);
+            continue;
+          }
+
+          if (!trimmed.startsWith("data: ")) continue;
+
+          try {
+            const payload = JSON.parse(trimmed.slice(6));
+
+            if (currentEvent === "local") {
+              const nextBaseline = payload.enrichedLocalResult ?? baseResult;
+              setBaselineResult(nextBaseline);
+              setResult(nextBaseline);
+              setThreatIntel(payload.threatIntel ?? null);
+              setUrlAbuseIntel(payload.urlAbuseIntel ?? null);
+              setStatusNote("AI думает…");
+            }
+
+            if (currentEvent === "ai-token" && payload.text) {
+              streamedText += payload.text;
+              setStreamingText(streamedText);
+            }
+
+            if (currentEvent === "complete") {
+              completed = true;
+              const nextBaseline = payload.enrichedLocalResult ?? baseResult;
+              setBaselineResult(nextBaseline);
+              setIsCachedResult(payload.cached === true);
+              setIsModerated(payload.moderated === true);
+              setResult(payload.aiAdjustedResult ?? nextBaseline);
+              setThreatIntel(payload.threatIntel ?? null);
+              setUrlAbuseIntel(payload.urlAbuseIntel ?? null);
+
+              const nextAi = payload.analysis ? {
+                model: payload.model ?? "AI",
+                summary: payload.analysis.summary || "",
+                score: typeof payload.analysis.score === "number" ? payload.analysis.score : baseResult.score,
+                verdictLabel: payload.analysis.verdictLabel ?? baseResult.verdictLabel,
+                reasons: Array.isArray(payload.analysis.reasons) ? payload.analysis.reasons.slice(0, 3) : [],
+                actions: Array.isArray(payload.analysis.actions) ? payload.analysis.actions.slice(0, 3) : [],
+              } : null;
+              setAiExplanation(nextAi);
+
+              const parts: string[] = [];
+              if (payload.threatIntel?.status === "hit") parts.push("OpenPhish: совпадение");
+              else if (payload.threatIntel?.status === "clear") parts.push("OpenPhish: чисто");
+              if (payload.urlAbuseIntel?.status === "hit") parts.push("URLAbuse: совпадение");
+              else if (payload.urlAbuseIntel?.status === "clear") parts.push("URLAbuse: чисто");
+              if (payload.model) parts.push(`AI · ${payload.model}`);
+              setStatusNote(parts.join(" · ") || "Анализ обновлён.");
+            }
+
+            if (currentEvent === "error") {
+              throw new Error(payload.error || "AI error");
+            }
+          } catch (e) {
+            if (currentEvent === "error") throw e;
+            // skip malformed data lines
+          }
+          currentEvent = "";
+        }
+      }
+
+      if (!completed && activeRequestRef.current === requestId) {
+        setStatusNote("Анализ завершён.");
+      }
     } catch (error) {
       if (activeRequestRef.current !== requestId) return;
       const msg = error instanceof Error
@@ -361,7 +420,10 @@ export function AnalyzerPage() {
         actions: []
       });
     } finally {
-      if (activeRequestRef.current === requestId) setIsAiEnriching(false);
+      if (activeRequestRef.current === requestId) {
+        setIsAiEnriching(false);
+        setStreamingText("");
+      }
     }
   }
 
@@ -561,6 +623,7 @@ export function AnalyzerPage() {
           <AiInsights
             aiExplanation={aiExplanation}
             isAiEnriching={isAiEnriching}
+            streamingText={streamingText}
             toneStyles={toneStyles}
           />
 

@@ -27,6 +27,10 @@
     },
     "api/articles.mjs": {
       "maxDuration": 60
+    },
+    "api/analyze-stream.mjs": {
+      "maxDuration": 60,
+      "supportsResponseStreaming": true
     }
   }
 }

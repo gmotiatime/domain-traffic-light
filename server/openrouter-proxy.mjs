@@ -3237,6 +3237,219 @@ export async function analyzeResponse(body = {}, meta = {}) {
     };
 }
 
+// ─── SSE Streaming analyze ────────────────────────────────────────────────────
+export async function analyzeResponseStream(body = {}, meta = {}, res) {
+  const startTime = Date.now();
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY;
+  const input = String(body?.input || "");
+  const localAnalysis = body?.localAnalysis || null;
+  const skipCache = body?.skipCache === true;
+  const telemetryConsent = body?.telemetryConsent === true;
+  const rateLimitHit = consumeRateLimit(meta.ip || "unknown");
+
+  // SSE helpers
+  function sendEvent(event, data) {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
+  }
+
+  // Setup SSE headers
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+    ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  });
+
+  if (rateLimitHit) {
+    sendEvent("error", rateLimitHit);
+    res.end();
+    return;
+  }
+
+  const normalized = normalizeInput(input);
+  if ("error" in normalized) {
+    sendEvent("error", { error: normalized.error });
+    res.end();
+    return;
+  }
+
+  log("info", "Analyze stream request", { host: normalized.host });
+
+  // Phase 1: local + threat intel (parallel, same as analyzeResponse)
+  const [threatIntel, urlAbuseIntel, networkSignals, whoisSignals] = await Promise.all([
+    lookupThreatIntel(normalized).catch(() => ({ source: "openphish", status: "unavailable" })),
+    lookupUrlAbuseIntel(normalized).catch(() => ({ source: "urlabuse", status: "unavailable" })),
+    lookupNetworkSignals(normalized).catch(() => ({ source: "network", dns: { resolved: false }, http: { reachable: false }, tls: { available: false } })),
+    lookupWhoisSignals(normalized.host).catch(() => ({ available: false })),
+  ]);
+
+  const enrichedLocalAnalysis = applyUrlAbuseToAnalysis(
+    applyThreatIntelToAnalysis(
+      applyWhoisToAnalysis(
+        applyNetworkSignalsToAnalysis(localAnalysis, networkSignals, normalized),
+        whoisSignals, normalized
+      ),
+      threatIntel, normalized
+    ),
+    urlAbuseIntel, normalized
+  );
+
+  // Send local results immediately
+  sendEvent("local", {
+    enrichedLocalResult: enrichedLocalAnalysis,
+    threatIntel,
+    urlAbuseIntel,
+    networkSignals,
+    whoisSignals,
+  });
+
+  if (!apiKey) {
+    sendEvent("error", { error: "OPENROUTER_API_KEY не настроен." });
+    res.end();
+    return;
+  }
+
+  // Check cache
+  const cacheKey = getCacheKey(input, enrichedLocalAnalysis, normalized);
+  if (!skipCache) {
+    const cached = await getCachedResponse(cacheKey, normalized);
+    if (cached) {
+      log("info", "Stream cache hit", { host: normalized.host });
+      sendEvent("complete", { ...cached, cached: true });
+      res.end();
+      return;
+    }
+  }
+
+  // Phase 2: Streaming AI request
+  const prompt = buildPrompt(input, normalized, enrichedLocalAnalysis, networkSignals, whoisSignals, threatIntel, urlAbuseIntel);
+
+  for (const model of modelCandidates) {
+    try {
+      const requestBody = buildGroqRequest(model, prompt);
+      requestBody.stream = true;
+
+      const controller = new AbortController();
+      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 30000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://gmotia.tech",
+          "X-Title": "Domain Traffic Light",
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+        body: JSON.stringify(requestBody),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text().catch(() => "");
+        log("warn", "Stream model failed", { model, status: aiResponse.status });
+        continue; // try next model
+      }
+
+      // Read SSE stream from OpenRouter
+      let collectedContent = "";
+      let collectedReasoning = "";
+      const reader = aiResponse.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === "data: [DONE]") continue;
+          if (!trimmed.startsWith("data: ")) continue;
+
+          try {
+            const chunk = JSON.parse(trimmed.slice(6));
+            const delta = chunk?.choices?.[0]?.delta;
+            if (!delta) continue;
+
+            // Reasoning text (human-readable thinking)
+            if (delta.reasoning_content || delta.reasoning) {
+              const reasonText = delta.reasoning_content || delta.reasoning;
+              collectedReasoning += reasonText;
+              sendEvent("ai-token", { text: reasonText, type: "reasoning" });
+            }
+
+            // Content (JSON result) 
+            if (delta.content) {
+              collectedContent += delta.content;
+              // Don't stream JSON chars — not readable
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
+      }
+
+      // If no content but have reasoning, use reasoning
+      const rawContent = collectedContent || collectedReasoning;
+      if (!rawContent) {
+        log("warn", "Stream empty response", { model });
+        continue;
+      }
+
+      // Parse the JSON analysis
+      const parsed = extractJson(rawContent);
+      const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
+      const aiAdjustedResult = applyAiToAnalysis(enrichedLocalAnalysis, analysis, normalized);
+      
+      const responseData = {
+        analysis,
+        aiAdjustedResult,
+        model,
+        source: "openrouter",
+        threatIntel,
+        urlAbuseIntel,
+        networkSignals,
+        whoisSignals,
+        enrichedLocalResult: enrichedLocalAnalysis,
+        latencyMs: Date.now() - startTime,
+      };
+
+      await setCachedResponse(cacheKey, responseData, telemetryConsent);
+
+      log("info", "Stream analyze success", {
+        host: normalized.host,
+        model,
+        verdict: analysis.verdict,
+        latencyMs: responseData.latencyMs,
+        reasoningChars: collectedReasoning.length,
+      });
+
+      sendEvent("complete", responseData);
+      res.end();
+      return;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? sanitizeString(error.message, 300) : "Stream error";
+      log("warn", "Stream model error", { model, error: errorMsg });
+      continue;
+    }
+  }
+
+  // All models failed
+  sendEvent("error", { error: "Все AI-модели недоступны.", enrichedLocalResult: enrichedLocalAnalysis });
+  res.end();
+}
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json(healthResponse());
