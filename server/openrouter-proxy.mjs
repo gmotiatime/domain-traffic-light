@@ -3424,10 +3424,25 @@ export async function generateArticleResponse(topic, headers = {}) {
   }
 
   try {
-    const prompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
+    const prompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов. Верни ТОЛЬКО текст статьи в Markdown без обёрток JSON.`;
     const parsed = await requestGroq({ apiKey, model: modelCandidates[0], prompt, retries: 1 });
-    const content = typeof parsed === "string" ? parsed : (parsed?.content || parsed?.summary || JSON.stringify(parsed));
-    return { status: 200, body: { ok: true, topic, content: String(content).trim() } };
+    let content = "";
+    if (typeof parsed === "string") {
+      content = parsed;
+    } else if (parsed?.markdown) {
+      content = parsed.markdown;
+    } else if (parsed?.content) {
+      content = parsed.content;
+    } else if (parsed?.text) {
+      content = parsed.text;
+    } else if (parsed?.summary) {
+      content = parsed.summary;
+    } else {
+      content = JSON.stringify(parsed, null, 2);
+    }
+    // Clean up escaped newlines that AI sometimes adds
+    content = String(content).trim().replace(/\\n/g, "\n");
+    return { status: 200, body: { ok: true, topic, content } };
   } catch (error) {
     console.error("[Articles] generateArticleResponse error:", error.message);
     return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail: error.message } };

@@ -115,6 +115,25 @@ function QuizSection() {
   );
 }
 
+/** Extract clean markdown from potentially JSON-wrapped content */
+function extractMarkdown(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      // AI may return {markdown: "..."}, {content: "..."}, or {text: "..."}
+      const md = parsed.markdown || parsed.content || parsed.text || parsed.article;
+      if (typeof md === "string") return md;
+      // If it's an object with nested content, stringify nicely
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // Not valid JSON, return as-is
+    }
+  }
+  // Clean up escaped newlines that AI sometimes produces
+  return trimmed.replace(/\\n/g, "\n");
+}
+
 function ArticleList({ articles }: { articles: Article[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -191,7 +210,7 @@ function ArticleList({ articles }: { articles: Article[] }) {
                       blockquote: (props: any) => <blockquote className="border-l-4 border-amber-500/50 pl-4 italic text-white/60 mb-4" {...props} />,
                     }}
                   >
-                    {article.content}
+                    {extractMarkdown(article.content)}
                   </ReactMarkdown>
                 </motion.div>
               )}
