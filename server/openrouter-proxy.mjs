@@ -3417,7 +3417,12 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
             // Content (JSON result)
             if (delta.content) {
               collectedContent += delta.content;
-              // Don't stream JSON chars — not readable for users
+              
+              // If model lacks native reasoning_content, stream the content 
+              // so the user sees live progress instead of a frozen screen.
+              if (!delta.reasoning_content && !delta.reasoning) {
+                sendEvent("ai-token", { text: delta.content, type: "reasoning" });
+              }
             }
           } catch {
             // Ignore non-JSON payloads (per SSE spec recommendation)
