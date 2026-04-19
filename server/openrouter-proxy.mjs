@@ -3373,28 +3373,54 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || trimmed === "data: [DONE]") continue;
+          
+          // Skip empty lines
+          if (!trimmed) continue;
+
+          // SSE comments (": OPENROUTER PROCESSING") — keepalive, ignore per spec
+          if (trimmed.startsWith(":")) continue;
+
+          // End of stream
+          if (trimmed === "data: [DONE]") continue;
+
+          // Only process data lines
           if (!trimmed.startsWith("data: ")) continue;
 
           try {
             const chunk = JSON.parse(trimmed.slice(6));
-            const delta = chunk?.choices?.[0]?.delta;
+
+            // Mid-stream error handling
+            if (chunk.error) {
+              log("warn", "Mid-stream error", { model, error: chunk.error.message });
+              sendEvent("ai-token", { text: `\n⚠️ ${chunk.error.message || "AI ошибка"}`, type: "error" });
+              break;
+            }
+
+            const choice = chunk?.choices?.[0];
+            const delta = choice?.delta;
+
+            // Check for error finish_reason
+            if (choice?.finish_reason === "error") {
+              log("warn", "Stream finished with error", { model });
+              break;
+            }
+
             if (!delta) continue;
 
-            // Reasoning text (human-readable thinking)
+            // Reasoning text (human-readable thinking) 
             if (delta.reasoning_content || delta.reasoning) {
               const reasonText = delta.reasoning_content || delta.reasoning;
               collectedReasoning += reasonText;
               sendEvent("ai-token", { text: reasonText, type: "reasoning" });
             }
 
-            // Content (JSON result) 
+            // Content (JSON result)
             if (delta.content) {
               collectedContent += delta.content;
-              // Don't stream JSON chars — not readable
+              // Don't stream JSON chars — not readable for users
             }
           } catch {
-            // skip malformed chunks
+            // Ignore non-JSON payloads (per SSE spec recommendation)
           }
         }
       }

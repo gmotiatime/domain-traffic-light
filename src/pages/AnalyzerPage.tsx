@@ -338,6 +338,12 @@ export function AnalyzerPage() {
         for (const line of lines) {
           const trimmed = line.trim();
 
+          // Skip empty lines and SSE comments (": OPENROUTER PROCESSING")
+          if (!trimmed || trimmed.startsWith(":")) continue;
+
+          // End of stream
+          if (trimmed === "data: [DONE]") continue;
+
           if (trimmed.startsWith("event: ")) {
             currentEvent = trimmed.slice(7);
             continue;
