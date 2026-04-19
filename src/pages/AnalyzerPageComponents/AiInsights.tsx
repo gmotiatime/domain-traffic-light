@@ -32,7 +32,9 @@ export function AiInsights({
 
       {aiExplanation ? (
         <div className="mt-4">
-          <p className="text-sm leading-relaxed text-foreground/60">{aiExplanation.summary}</p>
+          <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            <p className="text-sm leading-relaxed text-foreground/60 whitespace-pre-wrap">{aiExplanation.summary}</p>
+          </div>
           {aiExplanation.reasons && aiExplanation.reasons.length > 0 && (
             <div className="mt-4 space-y-3">
               {aiExplanation.reasons.map((reason: any, i: number) => {
@@ -48,7 +50,9 @@ export function AiInsights({
                          {toneStyles[reason.tone]?.label || "Сигнал"}
                        </span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-foreground/60">{reason.detail}</p>
+                    <div className="mt-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                      <p className="text-sm leading-relaxed text-foreground/60 whitespace-pre-wrap">{reason.detail}</p>
+                    </div>
                   </div>
                 );
               })}
