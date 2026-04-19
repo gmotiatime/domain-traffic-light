@@ -3371,6 +3371,91 @@ export function extractClientIp(req) {
   return req.ip || req.connection?.remoteAddress || "unknown";
 }
 
+// ─── Articles CRUD ────────────────────────────────────────────────────────────
+const articlesKey = `${cachePrefix}:articles`;
+
+export async function getArticlesResponse() {
+  try {
+    if (!redisCache) {
+      return { status: 200, body: { articles: [] } };
+    }
+    const raw = await redisCache.get(articlesKey);
+    const articles = Array.isArray(raw) ? raw : [];
+    return { status: 200, body: { articles } };
+  } catch (error) {
+    console.error("[Articles] getArticlesResponse error:", error.message);
+    return { status: 500, body: { error: "Не удалось загрузить статьи." } };
+  }
+}
+
+export async function saveArticleResponse(data, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  try {
+    if (!redisCache) {
+      return { status: 503, body: { error: "Redis не настроен." } };
+    }
+    const raw = await redisCache.get(articlesKey);
+    const articles = Array.isArray(raw) ? raw : [];
+    const newArticle = {
+      id: createHash("sha256").update(`article-${Date.now()}-${Math.random()}`).digest("hex").slice(0, 16),
+      title: data.title || data.topic || "Без названия",
+      topic: data.topic || "",
+      content: data.content || "",
+      createdAt: Date.now(),
+    };
+    articles.unshift(newArticle);
+    await redisCache.set(articlesKey, articles);
+    return { status: 200, body: { ok: true, article: newArticle } };
+  } catch (error) {
+    console.error("[Articles] saveArticleResponse error:", error.message);
+    return { status: 500, body: { error: "Не удалось сохранить статью." } };
+  }
+}
+
+export async function generateArticleResponse(topic, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY || "";
+  if (!apiKey) {
+    return { status: 503, body: { error: "AI-ключ не настроен." } };
+  }
+
+  try {
+    const prompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
+    const parsed = await requestGroq({ apiKey, model: modelCandidates[0], prompt, retries: 1 });
+    const content = typeof parsed === "string" ? parsed : (parsed?.content || parsed?.summary || JSON.stringify(parsed));
+    return { status: 200, body: { ok: true, topic, content: String(content).trim() } };
+  } catch (error) {
+    console.error("[Articles] generateArticleResponse error:", error.message);
+    return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail: error.message } };
+  }
+}
+
+export async function deleteArticleResponse(articleId, headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  try {
+    if (!redisCache) {
+      return { status: 503, body: { error: "Redis не настроен." } };
+    }
+    const raw = await redisCache.get(articlesKey);
+    const articles = Array.isArray(raw) ? raw : [];
+    const filtered = articles.filter(a => a.id !== articleId);
+    if (filtered.length === articles.length) {
+      return { status: 404, body: { error: "Статья не найдена." } };
+    }
+    await redisCache.set(articlesKey, filtered);
+    return { status: 200, body: { ok: true, message: "Статья удалена." } };
+  } catch (error) {
+    console.error("[Articles] deleteArticleResponse error:", error.message);
+    return { status: 500, body: { error: "Не удалось удалить статью." } };
+  }
+}
+
 // Экспорт функций для тестирования и Vercel serverless handlers
 export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, consumeRateLimit };
 

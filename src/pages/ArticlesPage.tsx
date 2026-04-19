@@ -164,30 +164,31 @@ function ArticleList({ articles }: { articles: Article[] }) {
                 >
                   <ReactMarkdown
                     components={{
-                      h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 text-white" {...props} />,
-                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-4 text-white" {...props} />,
-                      h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-white/90" {...props} />,
-                      p: ({ node, ...props }) => <p className="leading-relaxed mb-4 text-white/80" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-4 space-y-2 text-white/80" {...props} />,
-                      ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-4 space-y-2 text-white/80" {...props} />,
-                      li: ({ node, ...props }) => <li className="pl-2" {...props} />,
-                      a: ({ node, ...props }) => <a className="text-amber-400 hover:text-amber-300 underline underline-offset-2" {...props} />,
-                      strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
-                      code: ({ node, className, children, ...props }) => {
+                      h1: (props: any) => <h1 className="text-2xl font-bold mt-6 mb-4 text-white" {...props} />,
+                      h2: (props: any) => <h2 className="text-xl font-bold mt-6 mb-4 text-white" {...props} />,
+                      h3: (props: any) => <h3 className="text-lg font-semibold mt-4 mb-2 text-white/90" {...props} />,
+                      p: (props: any) => <p className="leading-relaxed mb-4 text-white/80" {...props} />,
+                      ul: (props: any) => <ul className="list-disc list-inside mb-4 space-y-2 text-white/80" {...props} />,
+                      ol: (props: any) => <ol className="list-decimal list-inside mb-4 space-y-2 text-white/80" {...props} />,
+                      li: (props: any) => <li className="pl-2" {...props} />,
+                      a: (props: any) => <a className="text-amber-400 hover:text-amber-300 underline underline-offset-2" {...props} />,
+                      strong: (props: any) => <strong className="font-semibold text-white" {...props} />,
+                      code: (props: any) => {
+                        const { className, children, ...rest } = props;
                         const match = /language-(\w+)/.exec(className || "");
                         return match ? (
                           <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto border border-white/10 mb-4 mt-2">
-                            <code className={className} {...props}>
+                            <code className={className} {...rest}>
                               {children}
                             </code>
                           </pre>
                         ) : (
-                          <code className="bg-black/50 px-1.5 py-0.5 rounded text-amber-200 font-mono text-sm" {...props}>
+                          <code className="bg-black/50 px-1.5 py-0.5 rounded text-amber-200 font-mono text-sm" {...rest}>
                             {children}
                           </code>
                         );
                       },
-                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-amber-500/50 pl-4 italic text-white/60 mb-4" {...props} />,
+                      blockquote: (props: any) => <blockquote className="border-l-4 border-amber-500/50 pl-4 italic text-white/60 mb-4" {...props} />,
                     }}
                   >
                     {article.content}

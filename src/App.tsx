@@ -4,9 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { normalizeHashRoute, routeHref, type SitePath } from "@/lib/site-router";
+import { normalizeHashRoute, routeHref, sitePaths, type SitePath } from "@/lib/site-router";
 import { AdminPage } from "@/pages/AdminPage";
 import { AnalyzerPage } from "@/pages/AnalyzerPage";
+import { ArticlesPage } from "@/pages/ArticlesPage";
 import { BrandKitPage } from "@/pages/BrandKitPage";
 import { ChangelogPage } from "@/pages/ChangelogPage";
 import { HomePage } from "@/pages/HomePage";
@@ -22,8 +23,7 @@ function readRoute(): SitePath | "404" {
   }
 
   const hash = window.location.hash.replace(/^#/, "") || "/";
-  const sitePaths = ["/", "/analyzer", "/method", "/safety", "/admin", "/brand", "/changelog", "/presentation", "/main2"];
-  if (sitePaths.includes(hash)) {
+  if ((sitePaths as readonly string[]).includes(hash)) {
     return hash as SitePath;
   }
   return hash === "/" ? "/" as SitePath : "404";
@@ -37,6 +37,7 @@ const routeTitles: Record<SitePath | "404", string> = {
   "/admin": "Админка кэша | Доменный светофор",
   "/brand": "Бренд-кит | Доменный светофор",
   "/changelog": "Что нового | Доменный светофор",
+  "/articles": "Библиотека безопасности | Доменный светофор",
   "/presentation": "Презентация | Доменный светофор",
   "/main2": "Новый Лэндинг | Доменный светофор",
   "404": "Красный свет | Тупик",
@@ -57,6 +58,8 @@ function renderPage(path: SitePath | "404") {
       return <BrandKitPage />;
     case "/changelog":
       return <ChangelogPage />;
+    case "/articles":
+      return <ArticlesPage />;
     case "/presentation":
       return <PresentationPage />;
     case "/main2":

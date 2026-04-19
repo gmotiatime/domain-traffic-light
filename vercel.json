@@ -21,6 +21,12 @@
     },
     "api/admin-cache-deduplicate.mjs": {
       "maxDuration": 30
+    },
+    "api/quiz.mjs": {
+      "maxDuration": 10
+    },
+    "api/articles.mjs": {
+      "maxDuration": 60
     }
   }
 }

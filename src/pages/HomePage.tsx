@@ -88,6 +88,16 @@ const homeStickers: StickerData[] = [
   { src: "/sticker/1-54-256b.png", side: "left", top: "85%", rotation: 15 },
 ];
 
+const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
+const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
+const placeholders = [
+  "Вставьте домен или ссылку...",
+  "Например: example.com",
+  "Проверьте подозрительный URL",
+  "https://suspicious-site.com",
+  "Введите адрес для анализа"
+];
+
 export function HomePage() {
   const [heroInput, setHeroInput] = useState("");
   const [stats, setStats] = useState<CacheStats | null>(null);
@@ -95,16 +105,6 @@ export function HomePage() {
   const [currentWord, setCurrentWord] = useState(0);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-
-  const verbs = ["Проверяй", "Анализируй", "Сканируй", "Изучай", "Оценивай"];
-  const words = ["домен", "ссылку", "сервис", "URL", "сайт"];
-  const placeholders = [
-    "Вставьте домен или ссылку...",
-    "Например: example.com",
-    "Проверьте подозрительный URL",
-    "https://suspicious-site.com",
-    "Введите адрес для анализа"
-  ];
 
   useEffect(() => {
     async function loadStats() {
@@ -269,7 +269,7 @@ export function HomePage() {
                         </motion.div>
                       </AnimatePresence>
                       <input
-                        id="domain-input"
+                        id="hero-domain-input"
                         className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                         onChange={(event) => setHeroInput(event.target.value)}
                         value={heroInput}
@@ -572,7 +572,7 @@ export function HomePage() {
               className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-95"
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
-                document.getElementById('domain-input')?.focus();
+                document.getElementById('hero-domain-input')?.focus();
               }}
             >
               Начать анализ
