@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Cat, ShieldAlert, Sparkles } from "lucide-react";
 import { GlassCard } from "./GlassCard";
 
@@ -14,6 +15,14 @@ export function AiInsights({
   streamingText,
   toneStyles
 }: AiInsightsProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [streamingText]);
+
   return (
     <GlassCard className="lg:col-span-4 p-6">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-foreground/40">
@@ -54,10 +63,15 @@ export function AiInsights({
                 <div className="h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
                 <span className="text-[10px] uppercase tracking-widest text-violet-400/70">AI рассуждает</span>
               </div>
-              <p className="text-sm leading-relaxed text-foreground/60 whitespace-pre-wrap">
-                {streamingText}
-                <span className="inline-block w-[2px] h-4 bg-violet-400 ml-0.5 align-text-bottom animate-pulse" />
-              </p>
+              <div 
+                ref={scrollContainerRef}
+                className="max-h-64 overflow-y-auto pr-2 custom-scrollbar"
+              >
+                <p className="text-sm leading-relaxed text-foreground/60 whitespace-pre-wrap">
+                  {streamingText}
+                  <span className="inline-block w-[2px] h-4 bg-violet-400 ml-0.5 align-text-bottom animate-pulse" />
+                </p>
+              </div>
             </div>
           </div>
         ) : (
