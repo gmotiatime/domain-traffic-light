@@ -3424,25 +3424,60 @@ export async function generateArticleResponse(topic, headers = {}) {
   }
 
   try {
-    const prompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов. Верни ТОЛЬКО текст статьи в Markdown без обёрток JSON.`;
-    const parsed = await requestGroq({ apiKey, model: modelCandidates[0], prompt, retries: 1 });
-    let content = "";
-    if (typeof parsed === "string") {
-      content = parsed;
-    } else if (parsed?.markdown) {
-      content = parsed.markdown;
-    } else if (parsed?.content) {
-      content = parsed.content;
-    } else if (parsed?.text) {
-      content = parsed.text;
-    } else if (parsed?.summary) {
-      content = parsed.summary;
-    } else {
-      content = JSON.stringify(parsed, null, 2);
+    const userPrompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
+
+    const controller = new AbortController();
+    const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 25_000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://gmotia.tech",
+          "X-Title": "Domain Traffic Light",
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: modelCandidates[0],
+          messages: [
+            { role: "system", content: "Ты — автор образовательных статей по кибербезопасности. Отвечай ТОЛЬКО текстом статьи в формате Markdown. Не оборачивай ответ в JSON. Не добавляй комментариев. Только Markdown-текст статьи." },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 4000,
+          temperature: 0.7,
+        }),
+      });
+
+      const data = await response.json();
+      let content = data?.choices?.[0]?.message?.content || "";
+
+      // If content is empty, try reasoning field (reasoning models)
+      if (!content && data?.choices?.[0]?.message?.reasoning) {
+        content = data.choices[0].message.reasoning;
+      }
+
+      // Unwrap if AI still returned JSON
+      if (content.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(content.trim());
+          content = parsed.markdown || parsed.content || parsed.text || parsed.article || content;
+        } catch { /* not JSON, use as-is */ }
+      }
+
+      // Clean up escaped newlines
+      content = String(content).trim().replace(/\\n/g, "\n");
+
+      if (!content) {
+        return { status: 502, body: { error: "AI не вернул текст статьи." } };
+      }
+
+      return { status: 200, body: { ok: true, topic, content } };
+    } finally {
+      clearTimeout(timeoutId);
     }
-    // Clean up escaped newlines that AI sometimes adds
-    content = String(content).trim().replace(/\\n/g, "\n");
-    return { status: 200, body: { ok: true, topic, content } };
   } catch (error) {
     console.error("[Articles] generateArticleResponse error:", error.message);
     return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail: error.message } };
