@@ -40,20 +40,6 @@ const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
 const rateLimitMax = Number(process.env.RATE_LIMIT_MAX) || 30;
 const rateBuckets = new Map();
 
-function extractClientIp(req) {
-  const realIp = req.headers["x-real-ip"];
-  if (typeof realIp === "string" && realIp.trim()) {
-    return realIp.trim();
-  }
-
-  const vercelForwardedFor = req.headers["x-vercel-forwarded-for"];
-  if (typeof vercelForwardedFor === "string" && vercelForwardedFor.trim()) {
-    return vercelForwardedFor.split(",")[0].trim();
-  }
-
-  return req.socket?.remoteAddress || "unknown";
-}
-
 function consumeRateLimit(key) {
   const now = Date.now();
   const normalizedKey = key || "unknown";
@@ -177,7 +163,7 @@ function sanitizeCacheInput(input, normalized) {
       url.port = "";
     }
 
-    // Уби��аем www. для единообразия
+    // Убираем www. для единообразия
     let hostname = url.hostname.toLowerCase();
     if (hostname.startsWith('www.')) {
       hostname = hostname.substring(4);
@@ -974,7 +960,7 @@ async function lookupThreatIntel(normalized) {
       status: "unavailable",
       note: openPhishState.lastError
         ? `OpenPhish недоступен: ${sanitizeString(openPhishState.lastError, 120)}`
-        : "OpenPhish временно не��оступен.",
+        : "OpenPhish временно недоступен.",
       checkedAt: new Date().toISOString(),
     };
   }
@@ -1516,7 +1502,7 @@ function applyThreatIntelToAnalysis(localAnalysis, threatIntel, normalized) {
     const actions = [
       "Не открывайте этот адрес. Не вводите данные.",
       "Откройте официальный сайт вручную через поисковик или закладки.",
-      "Если ссылка пришла в сообщении, покажите её взр��слому или специалисту.",
+      "Если ссылка пришла в сообщении, покажите её взрослому или специалисту.",
     ];
 
     return {
@@ -1751,7 +1737,7 @@ function applyNetworkSignalsToAnalysis(localAnalysis, networkSignals, normalized
     analyzedAt: new Date().toISOString(),
     score: normalizedScore,
     verdict,
-    verdictLabel: verdict === "high" ? "Высокий рис��" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
+    verdictLabel: verdict === "high" ? "Высокий риск" : verdict === "medium" ? "Нужна перепроверка" : "Низкий риск",
     summary: localAnalysis.summary,
     reasons: sortReasons(baseReasons).slice(0, 10),
     actions: localAnalysis.actions,
@@ -1814,7 +1800,9 @@ app.use((req, _res, next) => {
 const configuredModels = (
   process.env.OPENROUTER_MODELS ||
   process.env.OPENROUTER_MODEL ||
-  "moonshotai/kimi-k2.5:nitro"
+  process.env.GROQ_MODELS ||
+  process.env.GROQ_MODEL ||
+  "deepseek/deepseek-chat"
 )
   .split(",")
   .map((item) => item.trim())
@@ -1822,50 +1810,6 @@ const configuredModels = (
 
 const modelCandidates = [...new Set(configuredModels)];
 
-const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
-const OPENROUTER_CHAT_COMPLETIONS_URL = OPENROUTER_BASE_URL + "/chat/completions";
-
-function buildOpenRouterHeaders(apiKey) {
-  return {
-    Authorization: "Bearer " + apiKey,
-    "Content-Type": "application/json",
-    "HTTP-Referer": "https://domain-traffic-light.vercel.app",
-    "X-Title": "Domain Traffic Light",
-  };
-}
-
-function parseOpenRouterChatContent(data, model) {
-  if (!data) {
-    throw new Error(model + ": empty OpenRouter response.");
-  }
-
-  if (data.error) {
-    const errorMessage = typeof data.error === "string" ? data.error : data.error?.message || JSON.stringify(data.error);
-    throw new Error(model + ": OpenRouter error — " + sanitizeString(errorMessage, 200));
-  }
-
-  const choice = data?.choices?.[0];
-  if (!choice) {
-    throw new Error(model + ": OpenRouter response missing choices.");
-  }
-
-  let content = choice?.message?.content ?? choice?.delta?.content ?? choice?.text;
-
-  if (Array.isArray(content)) {
-    content = content
-      .map((part) => {
-        if (typeof part === "string") return part;
-        return part?.text ?? part?.content ?? "";
-      })
-      .join("");
-  }
-
-  if (content == null || String(content).trim().length === 0) {
-    throw new Error(model + ": OpenRouter response missing assistant content.");
-  }
-
-  return typeof content === "string" ? content : JSON.stringify(content);
-}
 const compoundSuffixes = [
   "edu.gov.by",
   "gov.by",
@@ -1875,13 +1819,12 @@ const compoundSuffixes = [
   "org.by",
 ];
 
-function buildOpenRouterRequest(model, prompt) {
-  const isKimi = model.toLowerCase().includes("kimi");
+function buildGroqRequest(model, prompt) {
   return {
     model,
     temperature: 0.08,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 8192,
-    ...(isKimi ? {} : { response_format: { type: "json_object" } }),
+    max_tokens: Number(process.env.AI_MAX_TOKENS) || 4000,
+    response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
@@ -1895,10 +1838,10 @@ function buildOpenRouterRequest(model, prompt) {
 5. Не смягчать вердикт, если локальный анализ уже нашёл серьёзные риски (typo-squat, brand-spoof, punycode, OpenPhish hit).
 6. Анализировать корреляции между сигналами (например, новый домен + подозрительные слова + нестандартный TLD = высокий риск).
 
-Пр��нципы:
+Принципы:
 - Каждая причина (reason) должна ссылаться на КОНКРЕТНЫЙ сигнал: фрагмент домена, TLD, результат DNS/TLS, запись в OpenPhish, redirect-цепочку, и объяснять, чем это грозит (например, "домен новый, мошенники часто создают такие сайты на пару дней").
-- Не пиши общих фраз вроде «домен выгл��дит подозрительно» или «есть отдельный по��домен».
-- Если DNS не резолвится — эт�� серьёзный warning. ��сли TLS subject не совпад��ет с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
+- Не пиши общих фраз вроде «домен выглядит подозрительно» или «есть отдельный поддомен».
+- Если DNS не резолвится — это серьёзный warning. Если TLS subject не совпадает с доменом — это warning. Если HTTP redirect ведёт на другой домен — это critical.
 - Если данных мало, честно напиши об ограничении, но не выдумывай проверки.
 - Все тексты — на русском языке, в дружелюбном, но предостерегающем тоне. Формат — строго JSON.
 - Заголовок reason: 1–3 слова, без нумерации, без «Сигнал 1», должен звучать просто (например, "Странное окончание", "Нет защищенного замка").
@@ -1912,18 +1855,7 @@ function buildOpenRouterRequest(model, prompt) {
   };
 }
 
-function buildOpenRouterBaseRequest(model, messages, responseFormat) {
-  const isKimi = model.toLowerCase().includes("kimi");
-  return {
-    model,
-    temperature: 0.08,
-    max_tokens: Number(process.env.AI_MAX_TOKENS) || 8192,
-    ...(isKimi ? {} : { response_format: responseFormat }),
-    messages: messages,
-  };
-}
-
-// ─── Domain helpers ─────────��─────���───────────────────────────────────────────
+// ─── Domain helpers ───────────────────────────────────────────────────────────
 function buildBreakdown(host) {
   const labels = host.split(".");
   const matchedSuffix = compoundSuffixes.find(
@@ -2257,7 +2189,7 @@ function isContradictorySummary(summary, verdict) {
   const calmPatterns = [
     "не выявлен",
     "не обнаружен",
-    "сильных тревож��ых признаков не найдено",
+    "сильных тревожных признаков не найдено",
     "явных угроз не видно",
     "выглядит легитим",
     "выглядит норм",
@@ -2665,11 +2597,11 @@ ${whoisSummary}
 5. Если локальный анализ видит typo-squat, brand-spoof, punycode, OpenPhish-hit, URLAbuse-hit — НЕ смягчай итог.
 6. Если данных мало — честно напиши, но не додумывай.
 7. Summary: 1-2 предложения, по существу. Не пиши "выглядит легитимно" если score > 20.
-8. scoreDelta: отрицательный для позитива, поло��ительный для риска.
+8. scoreDelta: отрицательный для позитива, положительный для риска.
 9. Если нет новых полезных причин — верни пустой массив reasons.
 10. Анализируй корреляции: несколько слабых сигналов вместе могут означать высокий риск.
 11. Обращай внимание на несоответствия: например, известный бренд на подозрительном TLD.
-12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный ��ишинг), зате�� формулируй вердикт.
+12. Chain-of-thought: Сначала мысленно классифицируй домен (официальный / подозрительный / явный фишинг), затем формулируй вердикт.
 13. Scoring guide: low=0-19 (безопасный), medium=20-49 (подозрительный), high=50-100 (опасный). Не ставь score=0 если есть хоть один сигнал.
 
 ## ПРИМЕРЫ ХОРОШЕГО И ПЛОХОГО СТИЛЯ
@@ -2690,23 +2622,28 @@ ${whoisSummary}
 {"verdict":"low|medium|high","score":0,"summary":"...","reasons":[{"title":"...","detail":"...","tone":"positive|warning|critical","scoreDelta":0}],"actions":["..."]}`;
 }
 
-// ─── OpenRouter request with retry ──────────────────────────────────────────────────
-async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
+// ─── Groq request with retry ──────────────────────────────────────────────────
+async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 60_000;
+      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 25_000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const requestBody = buildOpenRouterRequest(model, prompt);
+        const requestBody = buildGroqRequest(model, prompt);
         const response = await fetch(
-          OPENROUTER_CHAT_COMPLETIONS_URL,
+          "https://openrouter.ai/api/v1/chat/completions",
           {
             method: "POST",
-            headers: buildOpenRouterHeaders(apiKey),
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "HTTP-Referer": "https://gmotia.tech", // Site URL
+              "X-Title": "Domain Traffic Light", // Site Name
+              "Content-Type": "application/json",
+            },
             signal: controller.signal,
             body: JSON.stringify(requestBody),
           },
@@ -2751,7 +2688,20 @@ async function requestOpenRouter({ apiKey, model, prompt, retries = 0 }) {
           throw new Error(`${model}: upstream returned non-JSON payload.`);
         }
 
-        const content = parseOpenRouterChatContent(data, model);
+        const message = data?.choices?.[0]?.message;
+        // Reasoning models (like Kimi K2.5) may put the JSON in content,
+        // but if content is empty, fall back to reasoning output
+        let content = message?.content;
+        if (!content && message?.reasoning) {
+          log("debug", "Content empty, extracting from reasoning", { model });
+          content = message.reasoning;
+        }
+        if (!content && Array.isArray(message?.reasoning_details)) {
+          log("debug", "Content empty, extracting from reasoning_details", { model });
+          content = message.reasoning_details
+            .map(d => typeof d === 'string' ? d : d?.content || '')
+            .join('\n');
+        }
         return extractJson(content);
       } finally {
         clearTimeout(timeoutId);
@@ -2783,7 +2733,7 @@ function applyResponseHeaders(res) {
   res.header("Referrer-Policy", "strict-origin-when-cross-origin");
 }
 
-function standardHeaders() {
+export function standardHeaders() {
   return {
     ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -2794,10 +2744,10 @@ function standardHeaders() {
   };
 }
 
-function healthResponse() {
+export function healthResponse() {
   return {
     ok: true,
-    aiConfigured: Boolean(process.env.OPENROUTER_API_KEY),
+    aiConfigured: Boolean(process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY),
     hasLocalEnvFile: fs.existsSync(envLocalFile),
     provider: "openrouter",
     models: modelCandidates,
@@ -2817,7 +2767,7 @@ function healthResponse() {
   };
 }
 
-async function cacheStatsResponse() {
+export async function cacheStatsResponse() {
   let size = responseCache.size;
   let dbSize = 0;
 
@@ -2845,7 +2795,7 @@ async function cacheStatsResponse() {
         }
       }
 
-      // Если REST API Upstash не поддерживает команду INFO, аппроксимируем раз��ер:
+      // Если REST API Upstash не поддерживает команду INFO, аппроксимируем размер:
       // каждый JSON-рекорд весит в среднем 1850 байт
       if (!dbSize && size > 0) {
         dbSize = size * 1850;
@@ -2984,7 +2934,7 @@ async function rebuildStatsFromScan() {
   }
 }
 
-async function adminCacheGetResponse(query = {}, headers = {}) {
+export async function adminCacheGetResponse(query = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3013,7 +2963,7 @@ async function adminCacheGetResponse(query = {}, headers = {}) {
   };
 }
 
-async function adminCacheUpdateResponse(body = {}, headers = {}) {
+export async function adminCacheUpdateResponse(body = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3044,7 +2994,7 @@ async function adminCacheUpdateResponse(body = {}, headers = {}) {
   };
 }
 
-async function adminCacheDeleteResponse(query = {}, headers = {}) {
+export async function adminCacheDeleteResponse(query = {}, headers = {}) {
   const authError = assertAdminAccess(headers);
   if (authError) return authError;
 
@@ -3061,9 +3011,9 @@ async function adminCacheDeleteResponse(query = {}, headers = {}) {
   };
 }
 
-async function analyzeResponse(body = {}, meta = {}) {
+export async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY;
   const input = String(body?.input || "");
   const localAnalysis = body?.localAnalysis || null;
   const skipCache = body?.skipCache === true;
@@ -3220,64 +3170,60 @@ async function analyzeResponse(body = {}, meta = {}) {
   );
   const attempts = [];
 
-  try {
-    const responseData = await Promise.any(
-      modelCandidates.map(async (model) => {
-        try {
-          const parsed = await requestOpenRouter({
-            apiKey,
-            model,
-            prompt,
-            retries: 0,
-          });
-          const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
-          const aiAdjustedResult = applyAiToAnalysis(
-            enrichedLocalAnalysis,
-            analysis,
-            normalized,
-          );
-          return {
-            analysis,
-            aiAdjustedResult,
-            model,
-            source: "openrouter",
-            threatIntel,
-            urlAbuseIntel,
-            networkSignals,
-            whoisSignals,
-            enrichedLocalResult: enrichedLocalAnalysis,
-            latencyMs: Date.now() - startTime,
-          };
-        } catch (error) {
-          const errorMsg =
-            error instanceof Error
-              ? sanitizeString(error.message, 300)
-              : "Unknown model error.";
-          attempts.push({ model, error: errorMsg });
-          log("warn", "Model failed", { model, error: errorMsg });
-          throw error;
-        }
-      })
-    );
+  for (const model of modelCandidates) {
+    try {
+      const parsed = await requestGroq({
+        apiKey,
+        model,
+        prompt,
+        retries: 0,
+      });
+      const analysis = sanitizeAnalysis(parsed, input, enrichedLocalAnalysis);
+      const aiAdjustedResult = applyAiToAnalysis(
+        enrichedLocalAnalysis,
+        analysis,
+        normalized,
+      );
+      const responseData = {
+        analysis,
+        aiAdjustedResult,
+        model,
+        source: "openrouter",
+        threatIntel,
+        urlAbuseIntel,
+        networkSignals,
+        whoisSignals,
+        enrichedLocalResult: enrichedLocalAnalysis,
+        latencyMs: Date.now() - startTime,
+      };
 
-    await setCachedResponse(cacheKey, responseData, telemetryConsent);
+      await setCachedResponse(cacheKey, responseData, telemetryConsent);
 
-    log("info", "Analyze success", {
-      host: normalized.host,
-      model: responseData.model,
-      verdict: responseData.analysis.verdict,
-      latencyMs: responseData.latencyMs,
-    });
+      log("info", "Analyze success", {
+        host: normalized.host,
+        model,
+        verdict: analysis.verdict,
+        latencyMs: responseData.latencyMs,
+      });
 
-    return { status: 200, body: responseData };
-  } catch (aggregateError) {
-    log("error", "All models failed", {
-      host: normalized.host,
-      attempts: attempts.length,
-    });
+      return { status: 200, body: responseData };
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error
+          ? sanitizeString(error.message, 300)
+          : "Unknown model error.";
+      attempts.push({ model, error: errorMsg });
+      log("warn", "Model failed", { model, error: errorMsg });
+    }
+  }
 
-    return {
-      status: 502,
+  log("error", "All models failed", {
+    host: normalized.host,
+    attempts: attempts.length,
+  });
+
+  return {
+    status: 502,
       body: {
         error: "OpenRouter request failed.",
         detail: attempts.at(-1)?.error || "Все модели вернули ошибку.",
@@ -3289,297 +3235,14 @@ async function analyzeResponse(body = {}, meta = {}) {
         enrichedLocalResult: enrichedLocalAnalysis,
       },
     };
-  }
 }
-
-// ─── Articles API Functions ───────────────────────────────────────────────────
-function normalizeArticleRecord(article = {}) {
-  return {
-    id: String(article.id || Date.now()),
-    title: sanitizeString(article.title || article.topic || "Без названия", 180),
-    topic: sanitizeString(article.topic || article.title || "", 180),
-    content: sanitizeString(article.content || "", 20000),
-    createdAt: Number(article.createdAt) || Date.now(),
-  };
-}
-
-function parseStoredArticle(item) {
-  if (!item) return null;
-  try {
-    const parsed = typeof item === "string" ? JSON.parse(item) : item;
-    return normalizeArticleRecord(parsed);
-  } catch {
-    return null;
-  }
-}
-
-async function getArticlesResponse() {
-  if (redisCache) {
-    try {
-      const articlesList = await redisCache.lrange("articles:list", 0, -1);
-      const articles = articlesList.map(parseStoredArticle).filter(Boolean);
-      return { status: 200, body: { articles } };
-    } catch (e) {
-      return { status: 500, body: { error: "Failed to fetch articles from Redis" } };
-    }
-  } else {
-    if (!global.mockArticles) global.mockArticles = [];
-    return {
-      status: 200,
-      body: { articles: global.mockArticles.map((article) => normalizeArticleRecord(article)) },
-    };
-  }
-}
-
-async function saveArticleResponse(articleBody, headers) {
-  const authError = assertAdminAccess(headers);
-  if (authError) return authError;
-
-  const article = normalizeArticleRecord({
-    id: Date.now().toString(),
-    title: articleBody.title || articleBody.topic,
-    topic: articleBody.topic,
-    content: articleBody.content,
-    createdAt: Date.now(),
-  });
-
-  if (redisCache) {
-    try {
-      await redisCache.lpush("articles:list", JSON.stringify(article));
-      return { status: 200, body: { success: true, article } };
-    } catch (e) {
-      return { status: 500, body: { error: "Failed to save article to Redis" } };
-    }
-  } else {
-    if (!global.mockArticles) global.mockArticles = [];
-    global.mockArticles.unshift(article);
-    return { status: 200, body: { success: true, article } };
-  }
-}
-
-async function deleteArticleResponse(articleId, headers) {
-  const authError = assertAdminAccess(headers);
-  if (authError) return authError;
-
-  if (redisCache) {
-    try {
-      const articlesList = await redisCache.lrange("articles:list", 0, -1);
-      const remaining = articlesList
-        .map(parseStoredArticle)
-        .filter(Boolean)
-        .filter((article) => article.id !== articleId);
-
-      await redisCache.del("articles:list");
-      for (const article of remaining.slice().reverse()) {
-        await redisCache.lpush("articles:list", JSON.stringify(article));
-      }
-
-      return { status: 200, body: { success: true } };
-    } catch (error) {
-      return { status: 500, body: { error: "Failed to delete article from Redis" } };
-    }
-  }
-
-  if (!global.mockArticles) global.mockArticles = [];
-  global.mockArticles = global.mockArticles.filter((article) => String(article.id) !== String(articleId));
-  return { status: 200, body: { success: true } };
-}
-
-async function generateArticleResponse(topic, headers) {
-  const authError = assertAdminAccess(headers);
-  if (authError) return authError;
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
-  }
-
-  const prompt = `Напиши глубокую и практичную статью по кибербезопасности.
-Тема: "${topic}".
-
-Твоя задача — выдать структурированный JSON, содержащий "title" и "content".
-
-Требования к "title":
-- Краткий, емкий и точный (максимум 70 символов).
-- Без кликбейта, но привлекающий внимание профессионалов и продвинутых пользователей.
-
-Требования к "content" (строго в Markdown):
-1. **Структура**:
-   - Введение (хук, почему это важно прямо сейчас).
-   - 3-4 основных раздела с подзаголовками (H2, H3), объясняющих механику угрозы или защиты на реальных примерах.
-   - Чек-лист или конкретные шаги для защиты (с использованием списков).
-   - Заключение (краткий итог).
-2. **Стиль**:
-   - Экспертный, уверенный, технически грамотный, но без лишней воды.
-   - Исключи шаблонные ИИ-фразы ("В современном цифровом мире...", "Подводя итоги...", "Крайне важно помнить...").
-3. **Форматирование**:
-   - Используй жирный шрифт для выделения главного.
-   - Используй \`code blocks\` для команд, утилит или конфигураций, если это уместно.
-
-Выведи строго валидный JSON. Пример:
-{
-  "title": "Защита от BEC-атак: Как не отдать деньги хакерам",
-  "content": "## Почему BEC-атаки работают\\n\\nЗлоумышленники не взламывают системы, они взламывают людей. Когда письмо приходит от 'генерального директора'..."
-}`;
-
-  try {
-    const responseData = await Promise.any(
-      modelCandidates.map(async (model) => {
-        try {
-          const requestBody = buildOpenRouterBaseRequest(model, [
-            { role: "system", content: "Ты — топовый технический писатель и эксперт по кибербезопасности (ex-CISO). Ты пишешь без 'воды', приводишь конкретные примеры и избегаешь банальных клише. Вывод должен быть строго в JSON-формате." },
-            { role: "user", content: prompt }
-          ], { type: "json_object" });
-          requestBody.max_tokens = 8192;
-
-          const response = await fetch(
-            OPENROUTER_CHAT_COMPLETIONS_URL,
-            {
-              method: "POST",
-              headers: buildOpenRouterHeaders(apiKey),
-              body: JSON.stringify(requestBody),
-            }
-          );
-
-          const responseText = await response.text();
-          let data = null;
-          try { data = JSON.parse(responseText); } catch {}
-
-          if (!response.ok || !data) {
-            const errorMessage = data?.error?.message || data?.error || response.statusText;
-            throw new Error("Failed to generate article: " + sanitizeString(String(errorMessage), 200));
-          }
-
-          const content = parseOpenRouterChatContent(data, model);
-          const parsed = JSON.parse(content);
-          const title = sanitizeString(parsed?.title || topic, 180);
-          const articleContent = sanitizeString(parsed?.content || "", 20000);
-
-          if (!articleContent) {
-            throw new Error("Empty article body");
-          }
-
-          return { title, content: articleContent };
-        } catch (error) {
-          log("warn", "Model failed to generate article", { model, error: error.message });
-          throw error;
-        }
-      })
-    );
-
-    return { status: 200, body: responseData };
-  } catch (aggregateError) {
-    return { status: 502, body: { error: "Failed to generate article with all models." } };
-  }
-}
-
-async function generateQuizScenarioResponse() {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return { status: 503, body: { error: "OPENROUTER_API_KEY is missing." } };
-  }
-
-  const prompt = `Сгенерируй один сложный и реалистичный сценарий для квиза по кибербезопасности.
-Ситуация должна быть современной (например: компрометация Telegram, поддельный QR-код курьера, фишинг в рабочем Slack, фейковое расширение для браузера).
-Не делай правильный ответ слишком очевидным.
-
-Формат вывода — строго JSON:
-{
-  "scenario": "Детальное описание ситуации (2-3 предложения).",
-  "options": [
-    { "text": "Правдоподобное неверное действие 1", "isCorrect": false, "explanation": "Почему это ошибка и к чему приведет." },
-    { "text": "Правдоподобное неверное действие 2", "isCorrect": false, "explanation": "В чем подвох этого варианта." },
-    { "text": "Единственное верное действие", "isCorrect": true, "explanation": "Почему это безопасно и как распознать угрозу." },
-    { "text": "Интуитивное, но неверное действие 3", "isCorrect": false, "explanation": "Почему кажущееся безопасным действие на самом деле опасно." }
-  ]
-}
-
-Пример хорошего вывода:
-{
-  "scenario": "В рабочем Slack вам пишет руководитель с просьбой срочно оплатить счет новому подрядчику, прикрепив ссылку на портал оплаты. Ссылка выглядит как 'pay-corp-portal.com', а аватарка руководителя настоящая.",
-  "options": [
-    { "text": "Оплатить счет, так как пишет руководитель", "isCorrect": false, "explanation": "Аккаунт руководителя мог быть взломан (BEC-атака). Поддельные домены — частый прием злоумышленников." },
-    { "text": "Переслать ссылку в бухгалтерию для оплаты", "isCorrect": false, "explanation": "Пересылка не снимает риск, а лишь перекладывает его на других сотрудников, которые могут довериться вашему авторитету." },
-    { "text": "Связаться с руководителем по другому каналу (например, позвонить) и уточнить", "isCorrect": true, "explanation": "Верификация нестандартных просьб об оплате через альтернативный канал (Out-of-Band) — главный способ защиты от компрометации переписки." },
-    { "text": "Спросить в том же чате Slack, точно ли это он", "isCorrect": false, "explanation": "Если аккаунт взломан, злоумышленник просто подтвердит, что это он." }
-  ]
-}
-
-Сгенерируй новый, уникальный сценарий (на другую тему, не про Slack и оплату), придерживаясь этой структуры.
-Обязательно 4 варианта ответа, только 1 правильный. Порядок вариантов должен быть случайным. Возвращай строго валидный JSON.`;
-
-  try {
-    const responseData = await Promise.any(
-      modelCandidates.map(async (model) => {
-        try {
-          const requestBody = buildOpenRouterBaseRequest(model, [
-            { role: "system", content: "Ты — эксперт по кибербезопасности, пентестер и создатель хардкорных обучающих квизов. Твоя цель — создавать реалистичные ситуации, в которые попадают обычные пользователи и сотрудники компаний. Вывод должен быть строго в JSON-формате." },
-            { role: "user", content: prompt }
-          ], { type: "json_object" });
-
-          const response = await fetch(
-            OPENROUTER_CHAT_COMPLETIONS_URL,
-            {
-              method: "POST",
-              headers: buildOpenRouterHeaders(apiKey),
-              body: JSON.stringify(requestBody),
-            }
-          );
-
-          const responseText = await response.text();
-          let data = null;
-          try { data = JSON.parse(responseText); } catch {}
-
-          if (!response.ok || !data) {
-            const errorMessage = data?.error?.message || data?.error || response.statusText;
-            throw new Error("Failed to generate quiz: " + sanitizeString(String(errorMessage), 200));
-          }
-
-          const contentStr = parseOpenRouterChatContent(data, model);
-          const contentJson = JSON.parse(contentStr);
-          return contentJson;
-        } catch (error) {
-          log("warn", "Model failed to generate quiz", { model, error: error.message });
-          throw error;
-        }
-      })
-    );
-
-    return { status: 200, body: responseData };
-  } catch (aggregateError) {
-    return { status: 502, body: { error: "Failed to generate quiz with all models." } };
-  }
-}
-
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-import articlesHandler from "../api/articles.mjs";
-import quizHandler from "../api/quiz.mjs";
-
-app.all("/api/articles", async (req, res) => {
-  try {
-    await articlesHandler(req, res);
-  } catch (error) {
-    log("error", "Articles API error", { error: error.message });
-    if (!res.headersSent) res.status(500).json({ error: "Внутренняя ошибка сервера." });
-  }
-});
-
-app.all("/api/quiz", async (req, res) => {
-  try {
-    await quizHandler(req, res);
-  } catch (error) {
-    log("error", "Quiz API error", { error: error.message });
-    if (!res.headersSent) res.status(500).json({ error: "Внутренняя ошибка сервера." });
-  }
-});
-
-
 app.get("/api/health", (_req, res) => {
   res.json(healthResponse());
 });
 
-app.get("/api/cache/stats", async (_req, res) => {
+app.get(["/api/cache/stats", "/api/cache-stats"], async (_req, res) => {
   res.json(await cacheStatsResponse());
 });
 
@@ -3691,13 +3354,25 @@ if (fs.existsSync(indexFile)) {
   });
 }
 
-// ─── Start ────────��───────────────��───────────────────────────────────────────
+// ─── Start ────────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT || 8787);
 
 export default app;
 
-// Экспорт функций для тестирования
-export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, extractClientIp, deleteArticleResponse, getArticlesResponse, saveArticleResponse, generateArticleResponse, standardHeaders, analyzeResponse, consumeRateLimit };
+// ─── extractClientIp ──────────────────────────────────────────────────────────
+export function extractClientIp(req) {
+  const forwarded = req.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return String(forwarded[0]).trim();
+  }
+  return req.ip || req.connection?.remoteAddress || "unknown";
+}
+
+// Экспорт функций для тестирования и Vercel serverless handlers
+export { getCachedResponse, setCachedResponse, getRawCacheRecordByHost, saveRawCacheRecord, normalizeInput, assertAdminAccess, consumeRateLimit };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   app.listen(port, () => {
