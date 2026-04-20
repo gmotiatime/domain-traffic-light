@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Cat, ShieldAlert, Sparkles } from "lucide-react";
 import { GlassCard } from "./GlassCard";
+import type { AiExplanation } from "@/lib/domain-analyzer";
 
 interface AiInsightsProps {
-  aiExplanation: any;
+  aiExplanation: AiExplanation | null;
   isAiEnriching: boolean;
   streamingText?: string;
   toneStyles: Record<string, { pill: string; label: string }>;

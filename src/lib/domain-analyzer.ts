@@ -1,6 +1,15 @@
 export type AnalyzerTone = "positive" | "warning" | "critical";
 export type AnalyzerVerdict = "low" | "medium" | "high";
 
+export type AiExplanation = {
+  model: string;
+  summary: string;
+  score: number;
+  verdictLabel: string;
+  reasons: AnalyzerReason[];
+  actions: string[];
+};
+
 export type AnalyzerReason = {
   title: string;
   detail: string;

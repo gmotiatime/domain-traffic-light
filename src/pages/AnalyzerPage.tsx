@@ -29,6 +29,7 @@ import {
   analyzeDomainInput,
   type AnalyzerReason,
   type AnalysisResult,
+  type AiExplanation,
 } from "@/lib/domain-analyzer";
 import { useHistory } from "@/lib/history-store";
 import { officialDomains, ruleReference } from "@/lib/site-content";
@@ -94,14 +95,6 @@ const actionIcons = [ShieldAlert, Search, ShieldQuestion, ExternalLink];
 /* ─── types ─── */
 type AiHealthStatus = "checking" | "ready" | "missing-key" | "offline";
 type AiHealth = { status: AiHealthStatus; note: string };
-type AiExplanation = {
-  model: string;
-  summary: string;
-  score: number;
-  verdictLabel: string;
-  reasons: AnalyzerReason[];
-  actions: string[];
-};
 type ThreatIntel = {
   source: string;
   status: "hit" | "clear" | "unavailable";
