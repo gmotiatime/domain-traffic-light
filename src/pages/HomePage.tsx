@@ -270,6 +270,7 @@ export function HomePage() {
                       </AnimatePresence>
                       <input
                         id="hero-domain-input"
+                        aria-label="Введите домен или ссылку для проверки"
                         className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                         onChange={(event) => setHeroInput(event.target.value)}
                         value={heroInput}

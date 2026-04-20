@@ -168,6 +168,7 @@ export function HomePageAlternate() {
                   <Globe className="h-6 w-6 text-white/30" />
                   <input
                     id="domain-input"
+                    aria-label="Введите домен или ссылку для проверки"
                     className="w-full bg-transparent text-xl font-medium text-white placeholder:text-white/20 outline-none"
                     placeholder="example.com или полный URL..."
                     value={heroInput}
