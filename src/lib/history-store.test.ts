@@ -25,6 +25,23 @@ afterEach(() => {
 });
 
 describe("useHistory", () => {
+  test("handles invalid JSON in localStorage on mount", () => {
+    // Break JSON parsing
+    const mockStorage = {
+      getItem: () => "{ invalid json }",
+      setItem: () => {},
+      removeItem: () => {},
+    };
+    Object.defineProperty(globalThis.window, "localStorage", {
+      value: mockStorage,
+      writable: true,
+    });
+
+    // Should not throw, should fall back to empty array
+    const { result } = renderHook(() => useHistory());
+    expect(result.current.history.length).toBe(0);
+  });
+
   test("handles localStorage.getItem error on mount", () => {
     // Break localStorage.getItem
     const mockStorage = {
