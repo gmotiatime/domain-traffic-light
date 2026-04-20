@@ -2,19 +2,34 @@ import { describe, it, expect } from 'vitest';
 import { analyzeDomainInput, isIpAddress } from './domain-analyzer';
 
 describe('domain-analyzer', () => {
-  it('isIpAddress should correctly validate IP addresses', () => {
-    expect(isIpAddress('192.168.1.1')).toBe(true);
-    expect(isIpAddress('0.0.0.0')).toBe(true);
-    expect(isIpAddress('255.255.255.255')).toBe(true);
-
-    // Invalid ranges
-    expect(isIpAddress('999.999.999.999')).toBe(false);
-    expect(isIpAddress('256.256.256.256')).toBe(false);
-
-    // Invalid formats
-    expect(isIpAddress('1.2.3')).toBe(false);
-    expect(isIpAddress('1.2.3.4.5')).toBe(false);
-    expect(isIpAddress('not.an.ip')).toBe(false);
+  describe('isIpAddress', () => {
+    it.each([
+      // Valid IPs
+      ['192.168.1.1', true],
+      ['0.0.0.0', true],
+      ['255.255.255.255', true],
+      ['10.0.0.1', true],
+      ['172.16.0.0', true],
+      // Invalid ranges
+      ['999.999.999.999', false],
+      ['256.256.256.256', false],
+      ['192.168.1.256', false],
+      ['256.1.1.1', false],
+      // Invalid formats
+      ['1.2.3', false],
+      ['1.2.3.4.5', false],
+      ['not.an.ip', false],
+      ['1..2.3.4', false],
+      ['abc.def.ghi.jkl', false],
+      ['-1.2.3.4', false],
+      ['1.2.3.-4', false],
+      ['', false],
+      [' ', false],
+      ['192.168. 1.1', false],
+      ['.1.2.3.4', false],
+    ])('should correctly validate "%s" as %s', (ip, expected) => {
+      expect(isIpAddress(ip)).toBe(expected);
+    });
   });
 
   it('should return low risk for official domains', () => {
