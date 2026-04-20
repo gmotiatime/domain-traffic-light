@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 
 // Setup basic DOM environment for React to run in browser mode
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: "http://localhost" });
-globalThis.window = dom.window as any;
+globalThis.window = dom.window as unknown as Window & typeof globalThis;
 globalThis.document = dom.window.document;
 Object.defineProperty(globalThis, "navigator", { value: dom.window.navigator });
 
