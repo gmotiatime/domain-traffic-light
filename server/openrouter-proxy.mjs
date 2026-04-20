@@ -1392,7 +1392,7 @@ function lookupTlsSignals(host) {
         host,
         servername: host,
         port: 443,
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
       },
       () => {
         const certificate = socket.getPeerCertificate();
