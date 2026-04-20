@@ -192,6 +192,7 @@ const analyzerStickers: StickerData[] = [
 export function AnalyzerPage() {
   const initialResult = analyzeDomainInput("");
   const activeRequestRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [draft, setDraft] = useState("");
   const [result, setResult] = useState<AnalysisResult>(initialResult);
   const [baselineResult, setBaselineResult] = useState<AnalysisResult>(initialResult);
@@ -286,6 +287,10 @@ export function AnalyzerPage() {
   }
 
   function runAnalysis(nextInput: string) {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     const normalizedInput = nextInput.trim();
     setDraft(normalizedInput); setStatusNote(""); setIsCachedResult(false); setIsModerated(false);
     if (!normalizedInput) { applyLocalFallback(normalizedInput, "Введите домен или URL."); return; }
@@ -304,6 +309,7 @@ export function AnalyzerPage() {
 
     try {
       const controller = new AbortController();
+      abortControllerRef.current = controller;
       const timeoutId = window.setTimeout(() => controller.abort(), 35000);
 
       const response = await fetch(getApiUrl("/api/analyze-stream"), {
@@ -546,7 +552,7 @@ export function AnalyzerPage() {
                   }}
                   className="rounded border-foreground/20 bg-foreground/5 accent-emerald-500"
                 />
-                Анонимно сохранять резуль��ат в общую базу
+                Анонимно сохранять результат в общую базу
               </label>
 
               <div className="flex items-center gap-3">
