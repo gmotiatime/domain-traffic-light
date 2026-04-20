@@ -568,6 +568,7 @@ export function AnalyzerPage() {
               <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
                 {history.map((item) => {
                   const pColor = item.verdict === "high" ? "bg-rose-400" : item.verdict === "medium" ? "bg-amber-400" : "bg-emerald-400";
+                  const verdictText = item.verdict === "high" ? "Опасно" : item.verdict === "medium" ? "Подозрительно" : "Безопасно";
                   return (
                     <button
                       key={item.id}
@@ -576,9 +577,10 @@ export function AnalyzerPage() {
                         setDraft(item.domain);
                         runAnalysis(item.domain);
                       }}
-                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3.5 py-1.5 text-xs font-medium transition-all duration-300 hover:bg-foreground/10 hover:border-foreground/20 hover:scale-105 active:scale-95 cursor-pointer"
+                      aria-label={`Проверить снова: ${item.domain}, предыдущий вердикт: ${verdictText}`}
+                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3.5 py-1.5 text-xs font-medium transition-all duration-300 hover:bg-foreground/10 hover:border-foreground/20 hover:scale-105 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/50"
                     >
-                      <span className={`h-2 w-2 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
+                      <span aria-hidden="true" className={`h-2 w-2 rounded-full ${pColor} shadow-[0_0_8px_currentColor]`} />
                       <span className="text-foreground/70">{item.domain}</span>
                     </button>
                   );
