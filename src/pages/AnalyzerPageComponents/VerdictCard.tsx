@@ -1,12 +1,32 @@
 import { motion } from "framer-motion";
 import { GlassCard } from "./GlassCard";
 import { ShieldCheck, Sparkles } from "lucide-react";
-import type { AnalysisResult } from "@/lib/domain-analyzer";
+import type { AnalysisResult, AnalyzerReason } from "@/lib/domain-analyzer";
+
+export interface VerdictConfig {
+  label: string;
+  color: string;
+  textClass: string;
+  bgGlow: string;
+  borderClass: string;
+  progressClass: string;
+  dotClass: string;
+  pillBg: string;
+}
+
+export interface AiExplanation {
+  model: string;
+  summary: string;
+  score: number;
+  verdictLabel: string;
+  reasons: AnalyzerReason[];
+  actions: string[];
+}
 
 interface VerdictCardProps {
   result: AnalysisResult;
-  cfg: any; // We'll type this properly later
-  aiExplanation: any; // Type properly later
+  cfg: VerdictConfig;
+  aiExplanation: AiExplanation | null;
   isCachedResult: boolean;
   aiShiftLabel: string | boolean;
   isModerated: boolean;
