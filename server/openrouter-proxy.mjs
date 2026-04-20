@@ -544,14 +544,15 @@ async function getRawCacheRecordByHost(hostInput) {
       // Теперь host -> key (ссылка), а не host -> record (полная запись)
       const recordKey = await retryOperation(async () => {
         let key = await redisCache.get(getCacheHostKey(normalized.host));
-        if (!key) {
+        if (!key && legacyCachePrefixes.length > 0) {
           // Проверяем legacy префиксы
-          for (const prefix of legacyCachePrefixes) {
-            key = await redisCache.get(getCacheHostKeyForPrefix(prefix, normalized.host));
-            if (key) {
-              console.log(`[Cache] Found host in legacy prefix: ${prefix}`);
-              break;
-            }
+          const keysToFetch = legacyCachePrefixes.map(prefix => getCacheHostKeyForPrefix(prefix, normalized.host));
+          const results = await redisCache.mget(...keysToFetch);
+
+          const foundIndex = results.findIndex(result => result !== null && result !== undefined);
+          if (foundIndex !== -1) {
+            key = results[foundIndex];
+            console.log(`[Cache] Found host in legacy prefix: ${legacyCachePrefixes[foundIndex]}`);
           }
         }
         return key;
