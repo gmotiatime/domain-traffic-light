@@ -8,6 +8,15 @@ export type AnalyzerReason = {
   tone: AnalyzerTone;
 };
 
+export type AiExplanation = {
+  model: string;
+  summary: string;
+  score: number;
+  verdictLabel: string;
+  reasons: AnalyzerReason[];
+  actions: string[];
+};
+
 export type DomainBreakdown = {
   subdomain: string;
   registrableDomain: string;
