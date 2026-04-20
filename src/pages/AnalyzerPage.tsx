@@ -94,7 +94,7 @@ const actionIcons = [ShieldAlert, Search, ShieldQuestion, ExternalLink];
 /* ─── types ─── */
 type AiHealthStatus = "checking" | "ready" | "missing-key" | "offline";
 type AiHealth = { status: AiHealthStatus; note: string };
-type AiExplanation = {
+export type AiExplanation = {
   model: string;
   summary: string;
   score: number;

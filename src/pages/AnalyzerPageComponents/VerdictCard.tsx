@@ -2,11 +2,12 @@ import { motion } from "framer-motion";
 import { GlassCard } from "./GlassCard";
 import { ShieldCheck, Sparkles } from "lucide-react";
 import type { AnalysisResult } from "@/lib/domain-analyzer";
+import type { AiExplanation } from "../AnalyzerPage";
 
 interface VerdictCardProps {
   result: AnalysisResult;
   cfg: any; // We'll type this properly later
-  aiExplanation: any; // Type properly later
+  aiExplanation: AiExplanation | null;
   isCachedResult: boolean;
   aiShiftLabel: string | boolean;
   isModerated: boolean;

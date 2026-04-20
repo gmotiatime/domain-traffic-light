@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Cat, ShieldAlert, Sparkles } from "lucide-react";
 import { GlassCard } from "./GlassCard";
+import type { AiExplanation } from "../AnalyzerPage";
+import type { AnalyzerReason } from "@/lib/domain-analyzer";
 
 interface AiInsightsProps {
-  aiExplanation: any;
+  aiExplanation: AiExplanation | null;
   isAiEnriching: boolean;
   streamingText?: string;
   toneStyles: Record<string, { pill: string; label: string }>;
@@ -35,7 +37,7 @@ export function AiInsights({
           <p className="text-sm leading-relaxed text-foreground/60 whitespace-pre-wrap">{aiExplanation.summary}</p>
           {aiExplanation.reasons && aiExplanation.reasons.length > 0 && (
             <div className="mt-4 space-y-3">
-              {aiExplanation.reasons.map((reason: any, i: number) => {
+              {aiExplanation.reasons.map((reason: AnalyzerReason, i: number) => {
                 const isCritical = reason.tone === "critical";
                 return (
                   <div key={`ai-${i}`} className={`rounded-xl border px-4 py-3 ${isCritical ? "border-rose-500/20 bg-rose-500/5" : "border-foreground/[0.06] bg-foreground/[0.02]"}`}>
