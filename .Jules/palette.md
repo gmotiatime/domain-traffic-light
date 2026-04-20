@@ -10,3 +10,6 @@
 ## 2024-04-16 - [Added aria-haspopup to modal trigger button]
 **Learning:** Found a pattern where buttons triggering modals via React state lacked `aria-haspopup` attributes, which can affect screen reader experience when trying to understand what the button does.
 **Action:** When creating or modifying a button that opens a modal dialog through state (like `setShowReportModal`), always include `aria-haspopup="dialog"`, even if it is not a native `<dialog>` element.
+## 2025-02-19 - [Adding ARIA Labels to Icon/Data-only Buttons]
+**Learning:** Found that some buttons with dynamic data (like domain history chips) or purely functional UI (like quiz options) lacked proper aria-labels, making their specific action ambiguous for screen readers.
+**Action:** Always ensure interactive elements, especially those acting on dynamic data (like `Повторить анализ для ${item.domain}`) or serving as selectable options (`Выбрать вариант ответа: ${option.text}`), have explicit `aria-label` attributes to clarify their purpose to assistive technologies.

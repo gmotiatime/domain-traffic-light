@@ -580,6 +580,7 @@ export function AnalyzerPage() {
                     <button
                       key={item.id}
                       type="button"
+                      aria-label={`Повторить анализ для ${item.domain}`}
                       onClick={() => {
                         setDraft(item.domain);
                         runAnalysis(item.domain);

@@ -80,6 +80,7 @@ function QuizSection() {
                   <button
                     onClick={() => !showResult && setSelectedOption(idx)}
                     disabled={showResult}
+                    aria-label={`Выбрать вариант ответа: ${option.text}`}
                     className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${bgClass} flex items-center justify-between`}
                   >
                     <span>{option.text}</span>
