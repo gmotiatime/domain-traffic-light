@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { JSDOM } from "jsdom";
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: "http://localhost" });
-globalThis.window = dom.window as any;
+globalThis.window = dom.window as unknown as Window & typeof globalThis;
 globalThis.document = dom.window.document;
 Object.defineProperty(globalThis, "navigator", { value: dom.window.navigator });
 
