@@ -582,11 +582,13 @@ export function HomePage() {
         </div>
       </section>
       {/* Tailwind specific animations strictly for this page */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style>
+        {`
         @keyframes shimmer {
           100% { left: 100%; }
         }
-      `}} />
+        `}
+      </style>
     </div>
   );
 }
