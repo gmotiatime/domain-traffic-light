@@ -1,13 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { routeHref, normalizeHashRoute } from './site-router.ts';
+import { routeHref, normalizeHashRoute, sitePaths } from './site-router.ts';
 
 describe('site-router', () => {
   describe('routeHref', () => {
-    it('should prefix path with #', () => {
-      // @ts-ignore
-      expect(routeHref('/analyzer')).toBe('#/analyzer');
-      // @ts-ignore
-      expect(routeHref('/')).toBe('#/');
+    it('should correctly prefix all valid site paths with #', () => {
+      sitePaths.forEach((path) => {
+        expect(routeHref(path)).toBe(`#${path}`);
+      });
     });
   });
 
