@@ -27,7 +27,7 @@ import { getApiUrl } from "@/lib/api";
 import { consumeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import {
   analyzeDomainInput,
-  type AnalyzerReason,
+  type AnalyzerReason, type AiExplanation,
   type AnalysisResult,
 } from "@/lib/domain-analyzer";
 import { useHistory } from "@/lib/history-store";
@@ -94,14 +94,6 @@ const actionIcons = [ShieldAlert, Search, ShieldQuestion, ExternalLink];
 /* ─── types ─── */
 type AiHealthStatus = "checking" | "ready" | "missing-key" | "offline";
 type AiHealth = { status: AiHealthStatus; note: string };
-type AiExplanation = {
-  model: string;
-  summary: string;
-  score: number;
-  verdictLabel: string;
-  reasons: AnalyzerReason[];
-  actions: string[];
-};
 type ThreatIntel = {
   source: string;
   status: "hit" | "clear" | "unavailable";
