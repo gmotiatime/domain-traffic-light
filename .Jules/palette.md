@@ -14,3 +14,6 @@
 ## 2024-05-25 - Interactive Color-Coded Feedback Accessibility
 **Learning:** Found that interactive components using color to convey meaning (like green/red quiz answers or history verdict dots) leave screen reader users without context. Dynamic state changes (like showing an explanation after a quiz selection) also need to be explicitly announced.
 **Action:** Add `sr-only` text descriptions alongside decorative color indicators (and hide the decorative element with `aria-hidden="true"` if necessary). Use `aria-live="polite"` on containers that dynamically appear with feedback to ensure the screen reader announces the result (e.g., "Верно." or "Неверно.").
+## 2026-04-21 - Added missing focus states to interactive components
+**Learning:** Added `focus-visible` states to `<button>` elements in `PresentationPage.tsx` and `ReportModal.tsx` that previously relied only on hover state or simple transitions. These elements were invisible to keyboard navigation, degrading accessibility.
+**Action:** Use `focus-visible:outline-none focus-visible:ring-2` with appropriate styling/ring colors to explicitly indicate keyboard focus for interactive components, especially icon-only and slider buttons.

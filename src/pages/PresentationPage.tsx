@@ -327,7 +327,7 @@ export function PresentationPage() {
           onClick={() => setCurrentSlide(prev => Math.max(prev - 1, 0))}
           aria-label="Предыдущий слайд"
           disabled={currentSlide === 0}
-          className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
@@ -338,7 +338,7 @@ export function PresentationPage() {
               key={i}
               onClick={() => setCurrentSlide(i)}
               aria-label={`Перейти к слайду ${i + 1}`}
-              className={`h-2 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-emerald-500' : 'w-2 bg-white/20'}`}
+              className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${i === currentSlide ? 'w-8 bg-emerald-500' : 'w-2 bg-white/20'}`}
             />
           ))}
         </div>
@@ -347,7 +347,7 @@ export function PresentationPage() {
           onClick={() => setCurrentSlide(prev => Math.min(prev + 1, slides.length - 1))}
           aria-label="Следующий слайд"
           disabled={currentSlide === slides.length - 1}
-          className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="p-3 rounded-full border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
