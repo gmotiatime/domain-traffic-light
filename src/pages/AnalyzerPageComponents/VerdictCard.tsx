@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "./GlassCard";
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles, Check, Copy } from "lucide-react";
 import type { AnalysisResult, AiExplanation } from "@/lib/domain-analyzer";
 
 interface VerdictCardProps {
@@ -21,6 +22,15 @@ export function VerdictCard({
   aiShiftLabel,
   isModerated
 }: VerdictCardProps) {
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+
+  const handleCopy = (label: string, value: string) => {
+    if (value === "—") return;
+    navigator.clipboard.writeText(value);
+    setCopiedLabel(label);
+    setTimeout(() => setCopiedLabel(null), 2000);
+  };
+
   return (
     <GlassCard className="lg:col-span-7 p-8" glow={cfg.bgGlow}>
       <div className="flex flex-wrap items-center gap-2">
@@ -90,11 +100,36 @@ export function VerdictCard({
             { label: "Ядро", value: result.breakdown.registrableDomain },
             { label: "Зона", value: result.breakdown.tld },
             { label: "Поддомен", value: result.breakdown.subdomain || "—" },
-          ].map((item) => (
-            <span key={item.label} className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-4 py-2 text-xs text-foreground/60 shadow-sm backdrop-blur-md">
-              {item.label}: <span className="text-foreground/90 font-medium tracking-wide">{item.value}</span>
-            </span>
-          ))}
+          ].map((item) => {
+            const isCopied = copiedLabel === item.label;
+            const canCopy = item.value !== "—";
+
+            return (
+              <button
+                key={item.label}
+                onClick={() => handleCopy(item.label, item.value)}
+                disabled={!canCopy}
+                aria-label={canCopy ? `Скопировать ${item.label.toLowerCase()} (${item.value})` : `${item.label} отсутствует`}
+                title={canCopy ? "Скопировать" : ""}
+                className={`group flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs shadow-sm backdrop-blur-md transition-all ${
+                  canCopy
+                    ? "border-foreground/10 bg-foreground/[0.04] text-foreground/60 hover:bg-foreground/[0.08] hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/50 active:scale-95 cursor-pointer"
+                    : "border-foreground/5 bg-foreground/[0.02] text-foreground/40 cursor-default"
+                }`}
+              >
+                <span>{item.label}: <span className={`font-medium tracking-wide ${canCopy ? "text-foreground/90" : "text-foreground/50"}`}>{item.value}</span></span>
+                {canCopy && (
+                  <span className="flex h-3.5 w-3.5 items-center justify-center">
+                    {isCopied ? (
+                      <Check className="h-3 w-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
       </div>

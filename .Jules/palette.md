@@ -14,3 +14,6 @@
 ## 2024-05-25 - Interactive Color-Coded Feedback Accessibility
 **Learning:** Found that interactive components using color to convey meaning (like green/red quiz answers or history verdict dots) leave screen reader users without context. Dynamic state changes (like showing an explanation after a quiz selection) also need to be explicitly announced.
 **Action:** Add `sr-only` text descriptions alongside decorative color indicators (and hide the decorative element with `aria-hidden="true"` if necessary). Use `aria-live="polite"` on containers that dynamically appear with feedback to ensure the screen reader announces the result (e.g., "Верно." or "Неверно.").
+## 2026-04-23 - [Interactive Domain Breakdown Pills]
+**Learning:** For reusable copy-to-clipboard micro-interactions, use interactive `<button>` elements instead of static text tags (like `<span>`), include explicit `aria-label`s, and provide visual success feedback by temporarily toggling `lucide-react` icons (e.g., from `Copy` to `Check`) with a state timeout. Ensure empty states are gracefully disabled to avoid broken behavior.
+**Action:** Apply this pattern to static text labels representing actionable data throughout the app to improve data portability and accessibility.
