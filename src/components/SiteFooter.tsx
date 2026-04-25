@@ -24,12 +24,12 @@ export function SiteFooter() {
         </div>
         <div className="mt-10 flex flex-col gap-3.5 text-sm font-medium text-foreground/40 md:mt-0 md:items-end relative z-10">
           {navItems.map((item) => (
-            <a key={item.path} href={routeHref(item.path)} className="transition-all hover:text-foreground hover:translate-x-1 md:hover:-translate-x-1">
+            <a key={item.path} href={routeHref(item.path)} className="transition-all hover:text-foreground hover:translate-x-1 md:hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm">
               {item.label}
             </a>
           ))}
           <div className="mt-2 h-px w-12 bg-foreground/10 md:mr-0 md:ml-auto" />
-          <a href={routeHref("/changelog")} className="transition-all hover:text-foreground hover:translate-x-1 md:hover:-translate-x-1">
+          <a href={routeHref("/changelog")} className="transition-all hover:text-foreground hover:translate-x-1 md:hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm">
             Changelog
           </a>
         </div>
