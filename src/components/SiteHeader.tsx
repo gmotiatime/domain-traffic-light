@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { motion } from "framer-motion";
 import { Menu, Shield, X } from "lucide-react";
@@ -22,6 +22,13 @@ function navLinkClass(active: boolean) {
 
 export function SiteHeader({ activePath }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Close mobile menu on navigation (hashchange)
+  useEffect(() => {
+    const close = () => setIsMenuOpen(false);
+    window.addEventListener("hashchange", close);
+    return () => window.removeEventListener("hashchange", close);
+  }, []);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">

@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       if (!parsedQuery.success) {
         res.status(400).json({
           error: "Ошибка валидации входных данных",
-          details: parsedQuery.error.errors,
+          details: parsedQuery.error.issues,
         });
         return;
       }
@@ -181,7 +181,7 @@ export default async function handler(req, res) {
     if (!parsedBody.success) {
       res.status(400).json({
         error: "Ошибка валидации входных данных",
-        details: parsedBody.error.errors,
+        details: parsedBody.error.issues,
       });
       return;
     }

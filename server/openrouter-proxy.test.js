@@ -1,7 +1,82 @@
-import { test, describe, expect } from "vitest";
-import { normalizeInput, extractClientIp } from "./openrouter-proxy.mjs";
+import { EventEmitter } from "node:events";
+
+import { test, describe, expect, beforeEach, afterEach, vi } from "vitest";
+
+const builtinMocks = vi.hoisted(() => ({
+  dns: {
+    resolve4: vi.fn(),
+    resolve6: vi.fn(),
+    resolveCname: vi.fn(),
+  },
+  net: {
+    createConnection: vi.fn(),
+  },
+  tls: {
+    connect: vi.fn(),
+  },
+}));
+
+vi.mock("node:dns/promises", () => ({
+  default: builtinMocks.dns,
+}));
+
+vi.mock("node:net", () => ({
+  default: builtinMocks.net,
+}));
+
+vi.mock("node:tls", () => ({
+  default: builtinMocks.tls,
+}));
+
+import { analyzeDomainInput } from "../src/lib/domain-analyzer.ts";
+import { analyzeResponseStream, normalizeInput, extractClientIp } from "./openrouter-proxy.mjs";
+
+function createMockSocket() {
+  const socket = new EventEmitter();
+  socket.setTimeout = vi.fn();
+  socket.write = vi.fn();
+  socket.destroy = vi.fn();
+  socket.end = vi.fn();
+  socket.getPeerCertificate = vi.fn(() => ({}));
+  return socket;
+}
+
+function createMockSseResponse() {
+  const chunks = [];
+  return {
+    chunks,
+    writeHead: vi.fn(),
+    write: vi.fn((chunk) => {
+      chunks.push(String(chunk));
+    }),
+    end: vi.fn(),
+    flush: vi.fn(),
+  };
+}
 
 describe("openrouter-proxy", () => {
+  const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = "test-api-key";
+    builtinMocks.dns.resolve4.mockReset();
+    builtinMocks.dns.resolve6.mockReset();
+    builtinMocks.dns.resolveCname.mockReset();
+    builtinMocks.net.createConnection.mockReset();
+    builtinMocks.tls.connect.mockReset();
+  });
+
+  afterEach(() => {
+    if (originalOpenRouterApiKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+    }
+
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   describe("normalizeInput", () => {
     test("returns error for empty input", () => {
       expect(normalizeInput("")).toEqual({ error: "Введите домен или ссылку." });
@@ -62,6 +137,67 @@ describe("openrouter-proxy", () => {
     test("returns unknown if nothing is present", () => {
       const req = { headers: {} };
       expect(extractClientIp(req)).toBe("unknown");
+    });
+  });
+
+  describe("analyzeResponseStream", () => {
+    test("returns an SSE error event when the AI request fails before streaming starts", async () => {
+      builtinMocks.dns.resolve4.mockRejectedValue(new Error("DNS unavailable"));
+      builtinMocks.dns.resolve6.mockRejectedValue(new Error("DNS unavailable"));
+      builtinMocks.dns.resolveCname.mockRejectedValue(new Error("DNS unavailable"));
+
+      builtinMocks.net.createConnection.mockImplementation((_port, _host, onConnect) => {
+        const socket = createMockSocket();
+        queueMicrotask(() => {
+          if (typeof onConnect === "function") {
+            onConnect();
+          }
+          socket.emit("error", new Error("WHOIS unavailable"));
+        });
+        return socket;
+      });
+
+      builtinMocks.tls.connect.mockImplementation((_options, _onSecureConnect) => {
+        const socket = createMockSocket();
+        queueMicrotask(() => {
+          socket.emit("error", new Error("TLS unavailable"));
+        });
+        return socket;
+      });
+
+      const fetchMock = vi.fn(async (url) => {
+        const target = String(url);
+        if (target.includes("openrouter.ai")) {
+          throw new Error("AI upstream unavailable");
+        }
+        throw new Error(`Mocked network failure for ${target}`);
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = createMockSseResponse();
+
+      await expect(
+        analyzeResponseStream(
+          {
+            input: "example.com",
+            localAnalysis: analyzeDomainInput("example.com"),
+          },
+          { ip: "127.0.0.1" },
+          res,
+        ),
+      ).resolves.toBeUndefined();
+
+      const output = res.chunks.join("");
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({
+          "Content-Type": "text/event-stream",
+        }),
+      );
+      expect(res.end).toHaveBeenCalled();
+      expect(output).toContain("event: local");
+      expect(output).toContain("event: error");
+      expect(output).toContain("Все AI-модели недоступны.");
     });
   });
 });

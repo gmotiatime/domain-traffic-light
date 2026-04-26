@@ -72,7 +72,7 @@ function rateLimit(req, res, next) {
 }
 
 // Периодическая очистка старых записей rate limiter
-setInterval(() => {
+const _rateLimitCleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, bucket] of rateBuckets) {
     if (now - bucket.windowStart > rateLimitWindowMs * 2) {
@@ -80,6 +80,10 @@ setInterval(() => {
     }
   }
 }, rateLimitWindowMs * 3);
+// Prevent timer from keeping the process alive during tests/hot-reload
+if (typeof _rateLimitCleanupTimer.unref === 'function') {
+  _rateLimitCleanupTimer.unref();
+}
 
 // ─── Кэш ответов AI (Redis only) ────────────────────────────────────────────
 const cacheEnabled = process.env.CACHE_ENABLED !== "false";
@@ -3336,13 +3340,15 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   const prompt = buildPrompt(input, normalized, enrichedLocalAnalysis, networkSignals, whoisSignals, threatIntel, urlAbuseIntel);
 
   for (const model of modelCandidates) {
+    let collectedContent = "";
+    let collectedReasoning = "";
+    const controller = new AbortController();
+    const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 30000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const requestBody = buildGroqRequest(model, prompt);
       requestBody.stream = true;
-
-      const controller = new AbortController();
-      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 30000;
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -3356,8 +3362,6 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         body: JSON.stringify(requestBody),
       });
 
-      clearTimeout(timeoutId);
-
       if (!aiResponse.ok) {
         const errText = await aiResponse.text().catch(() => "");
         log("warn", "Stream model failed", { model, status: aiResponse.status });
@@ -3365,8 +3369,6 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
       }
 
       // Read SSE stream from OpenRouter
-      let collectedContent = "";
-      let collectedReasoning = "";
       const reader = aiResponse.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -3523,6 +3525,8 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         return;
       }
       continue;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

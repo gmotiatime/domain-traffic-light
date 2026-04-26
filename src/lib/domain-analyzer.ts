@@ -449,18 +449,6 @@ function hasCyrLatHomoglyphs(host: string): boolean {
       return true;
     }
   }
-  // Проверяем наличие отдельных кириллических символов среди латиницы
-  const hasCyr = /[а-яёіў]/i.test(withoutTld);
-  const hasLat = /[a-z]/i.test(withoutTld);
-  if (hasCyr && hasLat) {
-    // Если есть и кириллица и латиница — это уже ловится hasMixedScripts,
-    // но проверим конкретные гомоглифные подмены
-    for (const [cyr] of cyrLatHomoglyphs) {
-      if (withoutTld.includes(cyr)) {
-        return true;
-      }
-    }
-  }
   return false;
 }
 

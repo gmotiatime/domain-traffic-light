@@ -572,8 +572,7 @@ export function HomePage() {
             <Button 
               className="mt-10 h-14 w-full sm:w-auto shrink-0 rounded-[1.5rem] bg-foreground text-black px-10 text-base font-bold tracking-wide shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:bg-foreground hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-95"
               onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-                document.getElementById('hero-domain-input')?.focus();
+                openAnalyzerWithInput(heroInput);
               }}
             >
               Начать анализ

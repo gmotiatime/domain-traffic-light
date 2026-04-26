@@ -31,7 +31,7 @@ import {
   type AnalysisResult,
 } from "@/lib/domain-analyzer";
 import { useHistory } from "@/lib/history-store";
-import { officialDomains, ruleReference } from "@/lib/site-content";
+import { officialDomains, ruleReference, analyzerVideo } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
 import { ReportModal } from "@/components/ReportModal";
 import { VerdictCard, SideColumn, SignalsRow, AiInsights, CyberLawSection, ReferenceSections } from "./AnalyzerPageComponents";
@@ -256,10 +256,15 @@ export function AnalyzerPage() {
     return () => { cancelled = true; };
   }, []);
 
+  const prefillConsumedRef = useRef(false);
   useEffect(() => {
+    // Wait until health check finishes before running prefill analysis
+    if (aiHealth.status === "checking") return;
+    if (prefillConsumedRef.current) return;
+    prefillConsumedRef.current = true;
     const pendingInput = consumeAnalyzerPrefill();
     if (pendingInput) { setDraft(pendingInput); runAnalysis(pendingInput); }
-  }, []);
+  }, [aiHealth.status]);
 
   useEffect(() => {
     // Make sure we focus whenever the shortcut is activated
@@ -441,7 +446,7 @@ export function AnalyzerPage() {
       <video
         autoPlay loop muted playsInline
         className="fixed inset-0 z-0 h-full w-full object-cover scale-105"
-        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260319_015952_e1deeb12-8fb7-4071-a42a-60779fc64ab6.mp4"
+        src={analyzerVideo}
       />
       <div className="fixed inset-0 z-[1] bg-black/40 dark:bg-background/70" />
       <div className="fixed inset-0 z-[2] bg-gradient-to-b from-black/60 via-black/20 to-background/90 dark:to-black/90" />
@@ -509,7 +514,7 @@ export function AnalyzerPage() {
                   ref={inputRef}
                   aria-label="Введите домен или ссылку для проверки"
                   className="w-full bg-transparent py-3.5 text-xl font-medium text-foreground outline-none placeholder:text-foreground/30 placeholder:font-normal transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
-                  id="domain-input"
+                  id="analyzer-domain-input"
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Домен или ссылка..."
                   value={draft}

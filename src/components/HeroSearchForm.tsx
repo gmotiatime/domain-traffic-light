@@ -5,25 +5,25 @@ import { Button } from "@/components/ui/button";
 import { writeAnalyzerPrefill } from "@/lib/analyzer-prefill";
 import { routeHref } from "@/lib/site-router";
 
+const heroPlaceholders = [
+  "Вставьте домен или ссылку...",
+  "Какую ссылку проверим сегодня? 🐾",
+  "Чую подозрительный URL...",
+  "https://suspicious-site.com",
+  "Бросайте ссылку, я поймаю!"
+];
+
 export function HeroSearchForm() {
   const [heroInput, setHeroInput] = useState("");
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
 
-  const placeholders = [
-    "Вставьте домен или ссылку...",
-    "Какую ссылку проверим сегодня? 🐾",
-    "Чую подозрительный URL...",
-    "https://suspicious-site.com",
-    "Бросайте ссылку, я поймаю!"
-  ];
-
   useEffect(() => {
     const placeholderInterval = setInterval(() => {
-      setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
+      setCurrentPlaceholder((prev) => (prev + 1) % heroPlaceholders.length);
     }, 4000);
 
     return () => clearInterval(placeholderInterval);
-  }, [placeholders.length]);
+  }, []);
 
   function openAnalyzerWithInput(input: string) {
     writeAnalyzerPrefill(input);
@@ -50,11 +50,11 @@ export function HeroSearchForm() {
               transition={{ duration: 0.4, ease: "easeInOut" }}
               className="pointer-events-none absolute inset-0 flex items-center text-xl text-foreground/30"
             >
-              {!heroInput && placeholders[currentPlaceholder]}
+              {!heroInput && heroPlaceholders[currentPlaceholder]}
             </motion.div>
           </AnimatePresence>
           <input
-            id="domain-input"
+            id="hero-domain-input"
             aria-label="Введите домен или ссылку для проверки"
             className="w-full bg-transparent text-xl font-medium text-foreground outline-none relative z-10 transition-shadow focus:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
             onChange={(event) => setHeroInput(event.target.value)}

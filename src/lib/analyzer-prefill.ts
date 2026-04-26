@@ -28,7 +28,7 @@ export function consumeAnalyzerPrefill() {
     const urlPrefill = urlParams.get('prefill');
     if (urlPrefill) {
       // Очищаем URL от параметра
-      const newUrl = window.location.pathname + hashParts[0];
+      const newUrl = window.location.pathname + window.location.search + hashParts[0];
       window.history.replaceState({}, '', newUrl);
       return urlPrefill.trim();
     }
