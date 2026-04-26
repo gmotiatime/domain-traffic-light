@@ -673,14 +673,22 @@ function hasPhishingPrefix(host: string): string | null {
 }
 
 function matchesKnownPhishingPattern(host: string): boolean {
-  // Сначала проверяем, не является ли домен легитимным
   const hostLower = host.toLowerCase();
   const canonicalHost = hostLower.startsWith("www.") ? hostLower.slice(4) : hostLower;
-  
+
   if (legitimateDomains.has(canonicalHost)) {
-    return false; // Легитимный домен - не фишинг
+    return false;
   }
-  
+
+  const isOfficialBrandDomain = protectedBrands.some((brand) =>
+    brand.domains.some(
+      (domain) => canonicalHost === domain || canonicalHost.endsWith(`.${domain}`),
+    ),
+  );
+  if (isOfficialBrandDomain) {
+    return false;
+  }
+
   return knownPhishingPatterns.some(pattern => pattern.test(host));
 }
 

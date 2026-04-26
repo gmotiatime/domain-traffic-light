@@ -616,12 +616,12 @@ async function saveRawCacheRecord(record) {
   if (redisCache) {
     // Для Redis: удалить старую запись для этого хоста, если она есть
     if (nextRecord.host) {
-      const oldRecord = await redisCache.get(getCacheHostKey(nextRecord.host));
-      if (oldRecord?.key && oldRecord.key !== nextRecord.key) {
-        // Удалить старую запись из индекса и по ключу
+      const oldValue = await redisCache.get(getCacheHostKey(nextRecord.host));
+      const oldKey = typeof oldValue === 'string' ? oldValue : oldValue?.key;
+      if (oldKey && oldKey !== nextRecord.key) {
         await Promise.all([
-          redisCache.del(getCacheRecordKey(oldRecord.key)),
-          redisCache.srem(cacheIndexKey, getCacheRecordKey(oldRecord.key)),
+          redisCache.del(getCacheRecordKey(oldKey)),
+          redisCache.srem(cacheIndexKey, getCacheRecordKey(oldKey)),
         ]);
       }
     }
@@ -1817,6 +1817,14 @@ const compoundSuffixes = [
   "com.by",
   "net.by",
   "org.by",
+  "com.ru",
+  "net.ru",
+  "org.ru",
+  "pp.ru",
+  "co.uk",
+  "org.uk",
+  "gov.uk",
+  "ac.uk",
 ];
 
 function buildGroqRequest(model, prompt) {
@@ -3647,6 +3655,16 @@ export default app;
 
 // ─── extractClientIp ──────────────────────────────────────────────────────────
 export function extractClientIp(req) {
+  const realIp = req.headers?.["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim();
+  }
+
+  const vercelForwarded = req.headers?.["x-vercel-forwarded-for"];
+  if (typeof vercelForwarded === "string" && vercelForwarded.trim()) {
+    return vercelForwarded.split(",")[0].trim();
+  }
+
   const forwarded = req.headers?.["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.trim()) {
     return forwarded.split(",")[0].trim();
@@ -3654,7 +3672,8 @@ export function extractClientIp(req) {
   if (Array.isArray(forwarded) && forwarded.length > 0) {
     return String(forwarded[0]).trim();
   }
-  return req.ip || req.connection?.remoteAddress || "unknown";
+
+  return req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || "unknown";
 }
 
 // ─── Articles CRUD ────────────────────────────────────────────────────────────

@@ -22,11 +22,8 @@ function readRoute(): SitePath | "404" {
     return "/" as SitePath;
   }
 
-  const hash = window.location.hash.replace(/^#/, "") || "/";
-  if ((sitePaths as readonly string[]).includes(hash)) {
-    return hash as SitePath;
-  }
-  return hash === "/" ? "/" as SitePath : "404";
+  const result = normalizeHashRoute(window.location.hash || "/");
+  return result === "/404" ? "404" : result;
 }
 
 const routeTitles: Record<SitePath | "404", string> = {

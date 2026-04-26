@@ -239,9 +239,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("[API] Report handler error:", error.message);
     if (!res.headersSent) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Ошибка при обработке жалобы.",
-        message: error.message
       });
     }
   }

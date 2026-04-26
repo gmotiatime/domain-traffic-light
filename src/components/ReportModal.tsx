@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,14 @@ export function ReportModal({ isOpen, onClose, host, verdict, score }: ReportMod
   const [reportText, setReportText] = useState("");
   const [reportStatus, setReportStatus] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setReportText("");
+      setReportStatus("");
+      setIsSubmittingReport(false);
+    }
+  }, [isOpen]);
 
   async function handleReportSubmit() {
     if (!reportText.trim() || !host || host === "—") {
