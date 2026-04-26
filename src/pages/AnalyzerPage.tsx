@@ -3,23 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
-  ChevronDown,
   ExternalLink,
   Loader2,
   Search,
   ShieldAlert,
-  ShieldCheck,
   ShieldQuestion,
-  Sparkles,
-  TriangleAlert,
-  Scale,
-  Cat,
   Globe,
-  Lock,
   Activity,
   Zap,
-  Flag,
-  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +25,7 @@ import { useHistory } from "@/lib/history-store";
 import { officialDomains, ruleReference, analyzerVideo } from "@/lib/site-content";
 import { routeHref } from "@/lib/site-router";
 import { ReportModal } from "@/components/ReportModal";
+import { StickersLayer, StickerData } from "@/components/StickersLayer";
 import { VerdictCard, SideColumn, SignalsRow, AiInsights, CyberLawSection, ReferenceSections } from "./AnalyzerPageComponents";
 
 
@@ -171,7 +163,7 @@ function sameReason(left: AnalyzerReason, right: AnalyzerReason) {
   );
 }
 
-import { StickersLayer, StickerData } from "@/components/StickersLayer";
+
 const analyzerStickers: StickerData[] = [
   { src: "/sticker/1-64-256b.png", side: "left", top: "25%", rotation: -12 },
   { src: "/sticker/1-54-256b.png", side: "right", top: "55%", rotation: 10 },
@@ -305,18 +297,18 @@ export function AnalyzerPage() {
     setStatusNote("AI уточняет…"); setIsAiEnriching(true); setStreamingText("");
 
     try {
+      let completed = false;
       const controller = new AbortController();
       abortControllerRef.current = controller;
       const timeoutId = window.setTimeout(() => controller.abort(), 35000);
 
+      try {
       const response = await fetch(getApiUrl("/api/analyze-stream"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({ input: nextInput, localAnalysis: baseResult, telemetryConsent }),
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok || !response.body) {
         throw new Error("Stream unavailable");
@@ -325,7 +317,6 @@ export function AnalyzerPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let completed = false;
       let currentEvent = "";
       let streamedText = "";
 
@@ -409,6 +400,10 @@ export function AnalyzerPage() {
           }
           currentEvent = "";
         }
+      }
+      } finally {
+        // Clear timeout AFTER stream is fully consumed (BUG-7 fix)
+        clearTimeout(timeoutId);
       }
 
       if (!completed && activeRequestRef.current === requestId) {

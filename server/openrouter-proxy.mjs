@@ -32,8 +32,8 @@ if (trustProxy) {
 }
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "256kb" }));
+app.use(express.urlencoded({ extended: true, limit: "256kb" }));
 
 // ─── Rate Limiter (простой in-memory) ────────────────────────────────────────
 const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
@@ -108,6 +108,7 @@ const hasRedisCache = Boolean(cacheEnabled && redisRestUrl && redisRestToken);
 const cacheStorage = hasRedisCache ? "redis" : "memory";
 const adminToken = process.env.ADMIN_TOKEN || "";
 const responseCache = new Map();
+const MAX_MEMORY_CACHE = 500;
 const redisCache = hasRedisCache
   ? new Redis({
       url: redisRestUrl,
@@ -423,6 +424,11 @@ async function setCachedResponse(key, data, telemetryConsent = false) {
       }
     }
 
+    // Evict oldest entry if memory cache is full
+    if (responseCache.size >= MAX_MEMORY_CACHE) {
+      const firstKey = responseCache.keys().next().value;
+      if (firstKey !== undefined) responseCache.delete(firstKey);
+    }
     responseCache.set(key, record);
     console.log(`[Cache] Saved to memory: ${host}`);
   } catch (error) {
@@ -639,11 +645,9 @@ async function saveRawCacheRecord(record) {
       writes.push(redisCache.set(getCacheHostKey(nextRecord.host), nextRecord.key));
     }
 
-    // Update stats atomically
-    const verdict = nextRecord.data?.aiAdjustedResult?.verdict || nextRecord.data?.enrichedLocalResult?.verdict || nextRecord.data?.analysis?.verdict || 'low';
+    // Note: stats are NOT incremented here to avoid double-counting.
+    // Stats are only incremented in setCachedResponse() for genuinely new entries.
     writes.push(
-      redisCache.hincrby(cacheStatsKey, 'total', 1),
-      redisCache.hincrby(cacheStatsKey, `verdict:${verdict}`, 1),
       redisCache.hset(cacheStatsKey, { newestRecord: String(nextRecord.updatedAt || Date.now()) }),
     );
 
@@ -1770,7 +1774,7 @@ function log(level, message, meta = {}) {
 }
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "256kb" }));
+// Note: express.json() is already registered at the top of the file with { limit: "256kb" }
 
 app.use((req, res, next) => {
   if (corsOrigin) {
@@ -3259,13 +3263,21 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   const telemetryConsent = body?.telemetryConsent === true;
   const rateLimitHit = consumeRateLimit(meta.ip || "unknown");
 
-  // SSE helpers
-  function sendEvent(event, data) {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    if (res.flush) res.flush();
+  // Validate BEFORE opening SSE stream so we can return proper HTTP status codes
+  if (rateLimitHit) {
+    applyResponseHeaders(res);
+    res.status(429).json(rateLimitHit);
+    return;
   }
 
-  // Setup SSE headers
+  const normalized = normalizeInput(input);
+  if ("error" in normalized) {
+    applyResponseHeaders(res);
+    res.status(400).json({ error: normalized.error });
+    return;
+  }
+
+  // Setup SSE headers (only after validation passes)
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
@@ -3275,17 +3287,10 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
 
-  if (rateLimitHit) {
-    sendEvent("error", rateLimitHit);
-    res.end();
-    return;
-  }
-
-  const normalized = normalizeInput(input);
-  if ("error" in normalized) {
-    sendEvent("error", { error: normalized.error });
-    res.end();
-    return;
+  // SSE helpers (must be after writeHead)
+  function sendEvent(event, data) {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    if (res.flush) res.flush();
   }
 
   log("info", "Analyze stream request", { host: normalized.host });

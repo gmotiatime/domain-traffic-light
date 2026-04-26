@@ -874,7 +874,7 @@ class DomainAnalyzerSession {
     }
 
     // ── 5b. Кириллическо-латинские гомоглифы
-    if (!hasMixedScripts(this.rawHost) && hasCyrLatHomoglyphs(this.rawHost)) {
+    if (hasCyrLatHomoglyphs(this.rawHost)) {
       this.pushReason(
         "Кириллическо-латинские гомоглифы",
         "Домен содержит символы, визуально идентичные между кириллицей и латиницей (а↔a, е↔e, о↔o и т.п.). Это техника маскировки.",
