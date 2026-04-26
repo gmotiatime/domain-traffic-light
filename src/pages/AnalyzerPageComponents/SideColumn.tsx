@@ -35,7 +35,7 @@ export function SideColumn({
                 onClick={() => telemetryConsent ? setShowReportModal(true) : null}
                 disabled={!telemetryConsent}
                 aria-haspopup="dialog"
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/50 ${
                   telemetryConsent
                     ? "border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
                     : "border-foreground/5 bg-foreground/[0.01] text-foreground/30 cursor-not-allowed"
