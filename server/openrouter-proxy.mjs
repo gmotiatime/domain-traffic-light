@@ -1818,6 +1818,71 @@ const configuredModels = (
 
 const modelCandidates = [...new Set(configuredModels)];
 
+// ─── OpenRouter config ────────────────────────────────────────────────────────
+const openRouterApiUrl =
+  process.env.OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions";
+const openRouterReferer = process.env.OPENROUTER_REFERER || "https://gmotia.tech";
+const openRouterAppTitle = process.env.OPENROUTER_APP_TITLE || "Domain Traffic Light";
+const defaultAiTimeoutMs = Number(process.env.AI_TIMEOUT_MS) || 25_000;
+const defaultAiTemperature = (() => {
+  const raw = Number(process.env.AI_TEMPERATURE);
+  return Number.isFinite(raw) && raw >= 0 && raw <= 2 ? raw : 0.08;
+})();
+
+/**
+ * Shared OpenRouter Chat Completions caller.
+ *
+ * Handles the three things every call site needs to do identically:
+ * - set Authorization / HTTP-Referer / X-Title / Content-Type headers
+ * - enforce an abort-based timeout
+ * - accept an externally owned AbortSignal (so callers can cancel on client disconnect)
+ *
+ * Returns `{ response, dispose }`. The caller MUST invoke `dispose()` once it is
+ * done consuming the response body — including after long-running SSE reads —
+ * otherwise the timeout and abort link stay live. For the streaming path this
+ * is critical: without keeping the timeout alive across the body-read loop,
+ * a stalled upstream would hang the server, and client-disconnect would no
+ * longer propagate to the upstream fetch.
+ */
+async function callOpenRouter({ apiKey, body, timeoutMs = defaultAiTimeoutMs, signal }) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const onAbort = () => controller.abort();
+  let removeListener = () => {};
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+      removeListener = () => signal.removeEventListener("abort", onAbort);
+    }
+  }
+
+  const dispose = () => {
+    clearTimeout(timeoutId);
+    removeListener();
+  };
+
+  try {
+    const response = await fetch(openRouterApiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": openRouterReferer,
+        "X-Title": openRouterAppTitle,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify(body),
+    });
+    return { response, dispose };
+  } catch (error) {
+    dispose();
+    throw error;
+  }
+}
+
 const compoundSuffixes = [
   "edu.gov.by",
   "gov.by",
@@ -1838,7 +1903,7 @@ const compoundSuffixes = [
 function buildGroqRequest(model, prompt) {
   return {
     model,
-    temperature: 0.08,
+    temperature: defaultAiTemperature,
     max_tokens: Number(process.env.AI_MAX_TOKENS) || 2000,
     response_format: { type: "json_object" },
     messages: [
@@ -2639,89 +2704,75 @@ ${whoisSummary}
 }
 
 // ─── Groq request with retry ──────────────────────────────────────────────────
+function extractMessageContent(data, model) {
+  const message = data?.choices?.[0]?.message;
+  // Reasoning models (like Kimi K2.5) may put the JSON in `content`,
+  // but if `content` is empty, fall back to `reasoning` / `reasoning_details`.
+  if (message?.content) return message.content;
+
+  if (message?.reasoning) {
+    log("debug", "Content empty, extracting from reasoning", { model });
+    return message.reasoning;
+  }
+
+  if (Array.isArray(message?.reasoning_details)) {
+    log("debug", "Content empty, extracting from reasoning_details", { model });
+    return message.reasoning_details
+      .map((d) => (typeof d === "string" ? d : d?.content || ""))
+      .join("\n");
+  }
+
+  return "";
+}
+
 async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    let dispose = () => {};
     try {
-      const controller = new AbortController();
-      const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 25_000;
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const requestBody = buildGroqRequest(model, prompt);
+      const call = await callOpenRouter({ apiKey, body: requestBody });
+      const response = call.response;
+      dispose = call.dispose;
 
+      const responseText = await response.text();
+      let data = null;
       try {
-        const requestBody = buildGroqRequest(model, prompt);
-        const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "HTTP-Referer": "https://gmotia.tech", // Site URL
-              "X-Title": "Domain Traffic Light", // Site Name
-              "Content-Type": "application/json",
-            },
-            signal: controller.signal,
-            body: JSON.stringify(requestBody),
-          },
-        );
-
-        const responseText = await response.text();
-        let data = null;
-
-        try {
-          data = responseText ? JSON.parse(responseText) : null;
-        } catch {
-          data = null;
-        }
-
-        log("debug", "Upstream response", {
-          model,
-          status: response.status,
-          contentLength: responseText.length,
-          finishReason: data?.choices?.[0]?.finish_reason ?? null,
-          hasContent: Boolean(data?.choices?.[0]?.message?.content),
-          hasReasoning: Boolean(
-            data?.choices?.[0]?.message?.reasoning ||
-              data?.choices?.[0]?.message?.reasoning_details?.length,
-          ),
-        });
-
-        if (!response.ok) {
-          if (response.status === 429 && attempt < retries) {
-            const retryAfter = Number(response.headers.get("retry-after")) || 2;
-            await new Promise((resolve) =>
-              setTimeout(resolve, retryAfter * 1000),
-            );
-            continue;
-          }
-
-          throw new Error(
-            `${model}: HTTP ${response.status} — ${sanitizeString(responseText || response.statusText, 200)}`,
-          );
-        }
-
-        if (!data) {
-          throw new Error(`${model}: upstream returned non-JSON payload.`);
-        }
-
-        const message = data?.choices?.[0]?.message;
-        // Reasoning models (like Kimi K2.5) may put the JSON in content,
-        // but if content is empty, fall back to reasoning output
-        let content = message?.content;
-        if (!content && message?.reasoning) {
-          log("debug", "Content empty, extracting from reasoning", { model });
-          content = message.reasoning;
-        }
-        if (!content && Array.isArray(message?.reasoning_details)) {
-          log("debug", "Content empty, extracting from reasoning_details", { model });
-          content = message.reasoning_details
-            .map(d => typeof d === 'string' ? d : d?.content || '')
-            .join('\n');
-        }
-        return extractJson(content);
-      } finally {
-        clearTimeout(timeoutId);
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        data = null;
       }
+
+      log("debug", "Upstream response", {
+        model,
+        status: response.status,
+        contentLength: responseText.length,
+        finishReason: data?.choices?.[0]?.finish_reason ?? null,
+        hasContent: Boolean(data?.choices?.[0]?.message?.content),
+        hasReasoning: Boolean(
+          data?.choices?.[0]?.message?.reasoning ||
+            data?.choices?.[0]?.message?.reasoning_details?.length,
+        ),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429 && attempt < retries) {
+          const retryAfter = Number(response.headers.get("retry-after")) || 2;
+          await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+          continue;
+        }
+
+        throw new Error(
+          `${model}: HTTP ${response.status} — ${sanitizeString(responseText || response.statusText, 200)}`,
+        );
+      }
+
+      if (!data) {
+        throw new Error(`${model}: upstream returned non-JSON payload.`);
+      }
+
+      return extractJson(extractMessageContent(data, model));
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         lastError = new Error(`${model}: upstream request timed out.`);
@@ -2730,8 +2781,13 @@ async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
       }
 
       if (attempt < retries) {
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        // Exponential backoff with jitter so simultaneous retries don't thunder.
+        const base = 1000 * (attempt + 1);
+        const jitter = Math.floor(Math.random() * 250);
+        await new Promise((resolve) => setTimeout(resolve, base + jitter));
       }
+    } finally {
+      dispose();
     }
   }
 
@@ -3428,31 +3484,36 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   // Phase 2: Streaming AI request
   const prompt = buildPrompt(input, normalized, enrichedLocalAnalysis, networkSignals, whoisSignals, threatIntel, urlAbuseIntel);
 
+  // Cancel upstream request when the client disconnects.
+  const clientAbort = new AbortController();
+  const onClientClose = () => clientAbort.abort();
+  res.once("close", onClientClose);
+
   for (const model of modelCandidates) {
     let collectedContent = "";
     let collectedReasoning = "";
-    const controller = new AbortController();
-    const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 30000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    // `dispose` holds the timeout/abort cleanup from callOpenRouter. It MUST
+    // stay live for the entire SSE body-read loop below — if we let the helper
+    // clean up as soon as headers arrive, a stalled upstream would hang here
+    // and a client disconnect wouldn't propagate to fetch.
+    let dispose = () => {};
 
     try {
-      const requestBody = buildGroqRequest(model, prompt);
-      requestBody.stream = true;
-
-      const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://gmotia.tech",
-          "X-Title": "Domain Traffic Light",
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-        body: JSON.stringify(requestBody),
+      const requestBody = { ...buildGroqRequest(model, prompt), stream: true };
+      const call = await callOpenRouter({
+        apiKey,
+        body: requestBody,
+        signal: clientAbort.signal,
+        // Stream can take longer than the default single-shot AI timeout.
+        timeoutMs: Number(process.env.AI_STREAM_TIMEOUT_MS) || 60_000,
       });
+      const aiResponse = call.response;
+      dispose = call.dispose;
 
       if (!aiResponse.ok) {
-        const errText = await aiResponse.text().catch(() => "");
+        // Drain the body so the connection is released back to the pool
+        // instead of waiting for GC to clean up an unconsumed stream.
+        await aiResponse.text().catch(() => "");
         log("warn", "Stream model failed", { model, status: aiResponse.status });
         continue; // try next model
       }
@@ -3485,46 +3546,50 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
           // Only process data lines
           if (!trimmed.startsWith("data: ")) continue;
 
+          let chunk;
           try {
-            const chunk = JSON.parse(trimmed.slice(6));
-
-            // Mid-stream error handling
-            if (chunk.error) {
-              log("warn", "Mid-stream error", { model, error: chunk.error.message });
-              sendEvent("ai-token", { text: `\n⚠️ ${chunk.error.message || "AI ошибка"}`, type: "error" });
-              break;
-            }
-
-            const choice = chunk?.choices?.[0];
-            const delta = choice?.delta;
-
-            // Check for error finish_reason
-            if (choice?.finish_reason === "error") {
-              log("warn", "Stream finished with error", { model });
-              break;
-            }
-
-            if (!delta) continue;
-
-            // Reasoning text (human-readable thinking) 
-            if (delta.reasoning_content || delta.reasoning) {
-              const reasonText = delta.reasoning_content || delta.reasoning;
-              collectedReasoning += reasonText;
-              sendEvent("ai-token", { text: reasonText, type: "reasoning" });
-            }
-
-            // Content (JSON result)
-            if (delta.content) {
-              collectedContent += delta.content;
-              
-              // If model lacks native reasoning_content, stream the content 
-              // so the user sees live progress instead of a frozen screen.
-              if (!delta.reasoning_content && !delta.reasoning) {
-                sendEvent("ai-token", { text: delta.content, type: "reasoning" });
-              }
-            }
+            chunk = JSON.parse(trimmed.slice(6));
           } catch {
             // Ignore non-JSON payloads (per SSE spec recommendation)
+            continue;
+          }
+
+          // Mid-stream error: bubble up as a proper SSE `error` event so the
+          // client stops waiting for a `complete` event that will never arrive.
+          if (chunk.error) {
+            const midMsg = sanitizeString(chunk.error.message || "AI ошибка", 300);
+            log("warn", "Mid-stream error", { model, error: midMsg });
+            sendEvent("ai-token", { text: `\n⚠️ ${midMsg}`, type: "error" });
+            throw new Error(midMsg);
+          }
+
+          const choice = chunk?.choices?.[0];
+          const delta = choice?.delta;
+
+          // Check for error finish_reason
+          if (choice?.finish_reason === "error") {
+            log("warn", "Stream finished with error", { model });
+            break;
+          }
+
+          if (!delta) continue;
+
+          // Reasoning text (human-readable thinking)
+          if (delta.reasoning_content || delta.reasoning) {
+            const reasonText = delta.reasoning_content || delta.reasoning;
+            collectedReasoning += reasonText;
+            sendEvent("ai-token", { text: reasonText, type: "reasoning" });
+          }
+
+          // Content (JSON result)
+          if (delta.content) {
+            collectedContent += delta.content;
+
+            // If model lacks native reasoning_content, stream the content
+            // so the user sees live progress instead of a frozen screen.
+            if (!delta.reasoning_content && !delta.reasoning) {
+              sendEvent("ai-token", { text: delta.content, type: "reasoning" });
+            }
           }
         }
       }
@@ -3602,26 +3667,44 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
 
       sendEvent("complete", responseData);
       res.end();
+      res.off("close", onClientClose);
       return;
 
     } catch (error) {
       const errorMsg = error instanceof Error ? sanitizeString(error.message, 300) : "Stream error";
       log("warn", "Stream model error", { model, error: errorMsg });
-      // Don't continue to next model if we already sent reasoning tokens
-      if (collectedReasoning.length > 0) {
+
+      // If the client already disconnected, stop here — there's no one to
+      // receive the error event and we shouldn't try the next model.
+      if (clientAbort.signal.aborted) {
+        res.off("close", onClientClose);
+        return;
+      }
+
+      // Don't continue to next model if we already emitted any `ai-token`
+      // events — either as reasoning OR as raw content for models without a
+      // native reasoning channel (see line where we forward delta.content as
+      // a reasoning-typed token). Switching models mid-stream would tack a
+      // second, unrelated token stream onto the first and produce garbled
+      // output on the client.
+      if (collectedReasoning.length > 0 || collectedContent.length > 0) {
         sendEvent("error", { error: `AI ошибка: ${errorMsg}`, enrichedLocalResult: enrichedLocalAnalysis });
         res.end();
+        res.off("close", onClientClose);
         return;
       }
       continue;
     } finally {
-      clearTimeout(timeoutId);
+      // Must fire AFTER the body-read loop above has exited, not when headers
+      // first arrive. See `callOpenRouter` doc comment.
+      dispose();
     }
   }
 
   // All models failed
   sendEvent("error", { error: "Все AI-модели недоступны.", enrichedLocalResult: enrichedLocalAnalysis });
   res.end();
+  res.off("close", onClientClose);
 }
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -3821,64 +3904,87 @@ export async function generateArticleResponse(topic, headers = {}) {
     return { status: 503, body: { error: "AI-ключ не настроен." } };
   }
 
+  if (!modelCandidates.length) {
+    return { status: 503, body: { error: "Список AI-моделей пуст. Проверьте OPENROUTER_MODELS." } };
+  }
+
+  const safeTopic = sanitizeString(topic, 200);
+  const userPrompt = `Напиши образовательную статью на тему "${safeTopic}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
+
+  let dispose = () => {};
   try {
-    const userPrompt = `Напиши образовательную статью на тему "${sanitizeString(topic, 200)}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
+    const call = await callOpenRouter({
+      apiKey,
+      timeoutMs: Number(process.env.AI_ARTICLE_TIMEOUT_MS) || defaultAiTimeoutMs,
+      body: {
+        model: modelCandidates[0],
+        messages: [
+          {
+            role: "system",
+            content:
+              "Ты — автор образовательных статей по кибербезопасности. Отвечай ТОЛЬКО текстом статьи в формате Markdown. Не оборачивай ответ в JSON. Не добавляй комментариев. Только Markdown-текст статьи.",
+          },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: Number(process.env.AI_ARTICLE_MAX_TOKENS) || 4000,
+        temperature: 0.7,
+      },
+    });
+    const response = call.response;
+    dispose = call.dispose;
 
-    const controller = new AbortController();
-    const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 25_000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://gmotia.tech",
-          "X-Title": "Domain Traffic Light",
-          "Content-Type": "application/json",
+    // Surface upstream errors instead of silently returning an empty article.
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      console.error(
+        "[Articles] generateArticleResponse upstream error:",
+        response.status,
+        sanitizeString(errText, 200),
+      );
+      return {
+        status: 502,
+        body: {
+          error: "AI отклонил запрос.",
+          detail: `HTTP ${response.status}: ${sanitizeString(errText || response.statusText, 200)}`,
         },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: modelCandidates[0],
-          messages: [
-            { role: "system", content: "Ты — автор образовательных статей по кибербезопасности. Отвечай ТОЛЬКО текстом статьи в формате Markdown. Не оборачивай ответ в JSON. Не добавляй комментариев. Только Markdown-текст статьи." },
-            { role: "user", content: userPrompt },
-          ],
-          max_tokens: 4000,
-          temperature: 0.7,
-        }),
-      });
-
-      const data = await response.json();
-      let content = data?.choices?.[0]?.message?.content || "";
-
-      // If content is empty, try reasoning field (reasoning models)
-      if (!content && data?.choices?.[0]?.message?.reasoning) {
-        content = data.choices[0].message.reasoning;
-      }
-
-      // Unwrap if AI still returned JSON
-      if (content.trim().startsWith("{")) {
-        try {
-          const parsed = JSON.parse(content.trim());
-          content = parsed.markdown || parsed.content || parsed.text || parsed.article || content;
-        } catch { /* not JSON, use as-is */ }
-      }
-
-      // Clean up escaped newlines
-      content = String(content).trim().replace(/\\n/g, "\n");
-
-      if (!content) {
-        return { status: 502, body: { error: "AI не вернул текст статьи." } };
-      }
-
-      return { status: 200, body: { ok: true, topic, content } };
-    } finally {
-      clearTimeout(timeoutId);
+      };
     }
+
+    const data = await response.json().catch(() => null);
+    if (!data) {
+      return { status: 502, body: { error: "AI вернул некорректный ответ." } };
+    }
+
+    let content = extractMessageContent(data, modelCandidates[0]);
+
+    // Unwrap if AI still returned JSON
+    if (content.trim().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(content.trim());
+        content = parsed.markdown || parsed.content || parsed.text || parsed.article || content;
+      } catch {
+        // not JSON, use as-is
+      }
+    }
+
+    // Clean up escaped newlines
+    content = String(content).trim().replace(/\\n/g, "\n");
+
+    if (!content) {
+      return { status: 502, body: { error: "AI не вернул текст статьи." } };
+    }
+
+    // Return a `title` field so the admin UI has a sensible default.
+    return { status: 200, body: { ok: true, topic: safeTopic, title: safeTopic, content } };
   } catch (error) {
-    console.error("[Articles] generateArticleResponse error:", error.message);
-    return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail: error.message } };
+    const detail =
+      error?.name === "AbortError"
+        ? "Таймаут генерации статьи."
+        : sanitizeString(error?.message || String(error), 300);
+    console.error("[Articles] generateArticleResponse error:", detail);
+    return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail } };
+  } finally {
+    dispose();
   }
 }
 
