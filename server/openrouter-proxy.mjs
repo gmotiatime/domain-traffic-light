@@ -3678,8 +3678,13 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         return;
       }
 
-      // Don't continue to next model if we already sent reasoning tokens
-      if (collectedReasoning.length > 0) {
+      // Don't continue to next model if we already emitted any `ai-token`
+      // events — either as reasoning OR as raw content for models without a
+      // native reasoning channel (see line where we forward delta.content as
+      // a reasoning-typed token). Switching models mid-stream would tack a
+      // second, unrelated token stream onto the first and produce garbled
+      // output on the client.
+      if (collectedReasoning.length > 0 || collectedContent.length > 0) {
         sendEvent("error", { error: `AI ошибка: ${errorMsg}`, enrichedLocalResult: enrichedLocalAnalysis });
         res.end();
         res.off("close", onClientClose);
