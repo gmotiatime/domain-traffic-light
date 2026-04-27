@@ -33,7 +33,7 @@ export const adminCacheGetSchema = z.object({
 
 export const adminCachePatchSchema = z.object({
   host: z.string().trim().min(1, "Параметр host обязателен."),
-  edits: z.record(z.any()).optional().default({}),
+  edits: z.record(z.string(), z.any()).optional().default({}),
 });
 
 export const adminCacheDeleteSchema = z.object({
