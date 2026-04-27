@@ -1837,20 +1837,35 @@ const defaultAiTemperature = (() => {
  * - enforce an abort-based timeout
  * - accept an externally owned AbortSignal (so callers can cancel on client disconnect)
  *
- * Returns the raw `fetch` Response so callers can decide between JSON and SSE.
+ * Returns `{ response, dispose }`. The caller MUST invoke `dispose()` once it is
+ * done consuming the response body — including after long-running SSE reads —
+ * otherwise the timeout and abort link stay live. For the streaming path this
+ * is critical: without keeping the timeout alive across the body-read loop,
+ * a stalled upstream would hang the server, and client-disconnect would no
+ * longer propagate to the upstream fetch.
  */
 async function callOpenRouter({ apiKey, body, timeoutMs = defaultAiTimeoutMs, signal }) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const onAbort = () => controller.abort();
+  let removeListener = () => {};
   if (signal) {
-    if (signal.aborted) controller.abort();
-    else signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+      removeListener = () => signal.removeEventListener("abort", onAbort);
+    }
   }
 
+  const dispose = () => {
+    clearTimeout(timeoutId);
+    removeListener();
+  };
+
   try {
-    return await fetch(openRouterApiUrl, {
+    const response = await fetch(openRouterApiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -1861,9 +1876,10 @@ async function callOpenRouter({ apiKey, body, timeoutMs = defaultAiTimeoutMs, si
       signal: controller.signal,
       body: JSON.stringify(body),
     });
-  } finally {
-    clearTimeout(timeoutId);
-    if (signal) signal.removeEventListener("abort", onAbort);
+    return { response, dispose };
+  } catch (error) {
+    dispose();
+    throw error;
   }
 }
 
@@ -2713,9 +2729,12 @@ async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    let dispose = () => {};
     try {
       const requestBody = buildGroqRequest(model, prompt);
-      const response = await callOpenRouter({ apiKey, body: requestBody });
+      const call = await callOpenRouter({ apiKey, body: requestBody });
+      const response = call.response;
+      dispose = call.dispose;
 
       const responseText = await response.text();
       let data = null;
@@ -2767,6 +2786,8 @@ async function requestGroq({ apiKey, model, prompt, retries = 0 }) {
         const jitter = Math.floor(Math.random() * 250);
         await new Promise((resolve) => setTimeout(resolve, base + jitter));
       }
+    } finally {
+      dispose();
     }
   }
 
@@ -3471,14 +3492,23 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   for (const model of modelCandidates) {
     let collectedContent = "";
     let collectedReasoning = "";
+    // `dispose` holds the timeout/abort cleanup from callOpenRouter. It MUST
+    // stay live for the entire SSE body-read loop below — if we let the helper
+    // clean up as soon as headers arrive, a stalled upstream would hang here
+    // and a client disconnect wouldn't propagate to fetch.
+    let dispose = () => {};
 
     try {
       const requestBody = { ...buildGroqRequest(model, prompt), stream: true };
-      const aiResponse = await callOpenRouter({
+      const call = await callOpenRouter({
         apiKey,
         body: requestBody,
         signal: clientAbort.signal,
+        // Stream can take longer than the default single-shot AI timeout.
+        timeoutMs: Number(process.env.AI_STREAM_TIMEOUT_MS) || 60_000,
       });
+      const aiResponse = call.response;
+      dispose = call.dispose;
 
       if (!aiResponse.ok) {
         log("warn", "Stream model failed", { model, status: aiResponse.status });
@@ -3656,6 +3686,10 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
         return;
       }
       continue;
+    } finally {
+      // Must fire AFTER the body-read loop above has exited, not when headers
+      // first arrive. See `callOpenRouter` doc comment.
+      dispose();
     }
   }
 
@@ -3869,8 +3903,9 @@ export async function generateArticleResponse(topic, headers = {}) {
   const safeTopic = sanitizeString(topic, 200);
   const userPrompt = `Напиши образовательную статью на тему "${safeTopic}" для сайта по кибербезопасности. Статья должна быть на русском языке, в формате Markdown, с заголовками и списками. Объем: 300-600 слов.`;
 
+  let dispose = () => {};
   try {
-    const response = await callOpenRouter({
+    const call = await callOpenRouter({
       apiKey,
       timeoutMs: Number(process.env.AI_ARTICLE_TIMEOUT_MS) || defaultAiTimeoutMs,
       body: {
@@ -3887,6 +3922,8 @@ export async function generateArticleResponse(topic, headers = {}) {
         temperature: 0.7,
       },
     });
+    const response = call.response;
+    dispose = call.dispose;
 
     // Surface upstream errors instead of silently returning an empty article.
     if (!response.ok) {
@@ -3938,6 +3975,8 @@ export async function generateArticleResponse(topic, headers = {}) {
         : sanitizeString(error?.message || String(error), 300);
     console.error("[Articles] generateArticleResponse error:", detail);
     return { status: 502, body: { error: "Не удалось сгенерировать статью.", detail } };
+  } finally {
+    dispose();
   }
 }
 
