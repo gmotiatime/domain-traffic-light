@@ -3027,6 +3027,90 @@ export async function adminCacheDeleteResponse(query = {}, headers = {}) {
   };
 }
 
+export async function adminCacheDeduplicateResponse(headers = {}) {
+  const authError = assertAdminAccess(headers);
+  if (authError) return authError;
+
+  if (!redisCache) {
+    return {
+      status: 200,
+      body: { ok: true, scanned: 0, uniqueHosts: 0, duplicatesRemoved: 0, storage: "memory" },
+    };
+  }
+
+  try {
+    const keys = await redisCache.smembers(cacheIndexKey);
+    const keyList = Array.isArray(keys) ? keys : [];
+
+    if (keyList.length === 0) {
+      return {
+        status: 200,
+        body: { ok: true, scanned: 0, uniqueHosts: 0, duplicatesRemoved: 0, storage: "redis" },
+      };
+    }
+
+    const batchSize = 50;
+    const collected = [];
+    for (let i = 0; i < keyList.length; i += batchSize) {
+      const batch = keyList.slice(i, i + batchSize);
+      const values = await redisCache.mget(...batch);
+      values.forEach((value, idx) => {
+        if (value) {
+          collected.push({ recordKey: batch[idx], record: value });
+        }
+      });
+    }
+
+    const hostToEntries = new Map();
+    for (const entry of collected) {
+      const host = entry.record?.host;
+      if (!host) continue;
+      if (!hostToEntries.has(host)) hostToEntries.set(host, []);
+      hostToEntries.get(host).push(entry);
+    }
+
+    let duplicatesRemoved = 0;
+    const removals = [];
+    for (const entries of hostToEntries.values()) {
+      if (entries.length <= 1) continue;
+      entries.sort((a, b) => {
+        const ta = Number(a.record?.updatedAt || a.record?.createdAt || 0);
+        const tb = Number(b.record?.updatedAt || b.record?.createdAt || 0);
+        return tb - ta;
+      });
+      const [, ...rest] = entries;
+      for (const dup of rest) {
+        removals.push(
+          redisCache.del(dup.recordKey),
+          redisCache.srem(cacheIndexKey, dup.recordKey),
+        );
+        duplicatesRemoved += 1;
+      }
+    }
+
+    if (removals.length > 0) {
+      await Promise.all(removals);
+    }
+
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        scanned: collected.length,
+        uniqueHosts: hostToEntries.size,
+        duplicatesRemoved,
+        storage: "redis",
+      },
+    };
+  } catch (error) {
+    console.error("[Cache] adminCacheDeduplicateResponse error:", error?.message);
+    return {
+      status: 500,
+      body: { error: "Не удалось выполнить дедупликацию.", detail: error?.message || String(error) },
+    };
+  }
+}
+
 export async function analyzeResponse(body = {}, meta = {}) {
   const startTime = Date.now();
   const apiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY;
