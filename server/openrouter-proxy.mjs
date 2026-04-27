@@ -3771,6 +3771,10 @@ app.post("/api/analyze", async (req, res) => {
   res.status(response.status).json(response.body);
 });
 
+app.post("/api/analyze-stream", async (req, res) => {
+  await analyzeResponseStream(req.body, { ip: req.ip }, res);
+});
+
 import reportHandler from "../api/report.mjs";
 
 app.all("/api/report", async (req, res) => {
