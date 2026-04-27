@@ -3511,6 +3511,9 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
       dispose = call.dispose;
 
       if (!aiResponse.ok) {
+        // Drain the body so the connection is released back to the pool
+        // instead of waiting for GC to clean up an unconsumed stream.
+        await aiResponse.text().catch(() => "");
         log("warn", "Stream model failed", { model, status: aiResponse.status });
         continue; // try next model
       }
