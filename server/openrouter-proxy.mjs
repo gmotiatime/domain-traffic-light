@@ -1780,8 +1780,8 @@ app.use((req, res, next) => {
   if (corsOrigin) {
     res.header("Access-Control-Allow-Origin", corsOrigin);
   }
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
   // Безопасность
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "DENY");
@@ -2798,8 +2798,8 @@ function applyResponseHeaders(res) {
   if (corsOrigin) {
     res.header("Access-Control-Allow-Origin", corsOrigin);
   }
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "DENY");
   res.header("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -2808,8 +2808,8 @@ function applyResponseHeaders(res) {
 export function standardHeaders() {
   return {
     ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-token",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -3424,7 +3424,7 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
     ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-token",
   });
 
   // SSE helpers (must be after writeHead)
@@ -3487,7 +3487,27 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   // Cancel upstream request when the client disconnects.
   const clientAbort = new AbortController();
   const onClientClose = () => clientAbort.abort();
-  res.once("close", onClientClose);
+  const attachCloseHandler =
+    typeof res.once === "function"
+      ? () => {
+          res.once("close", onClientClose);
+          return true;
+        }
+      : typeof res.on === "function"
+        ? () => {
+            res.on("close", onClientClose);
+            return true;
+          }
+        : () => false;
+  const closeHandlerAttached = attachCloseHandler();
+  const detachCloseHandler = () => {
+    if (!closeHandlerAttached) return;
+    if (typeof res.off === "function") {
+      res.off("close", onClientClose);
+    } else if (typeof res.removeListener === "function") {
+      res.removeListener("close", onClientClose);
+    }
+  };
 
   for (const model of modelCandidates) {
     let collectedContent = "";
@@ -3667,7 +3687,7 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
 
       sendEvent("complete", responseData);
       res.end();
-      res.off("close", onClientClose);
+      detachCloseHandler();
       return;
 
     } catch (error) {
@@ -3677,7 +3697,7 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
       // If the client already disconnected, stop here — there's no one to
       // receive the error event and we shouldn't try the next model.
       if (clientAbort.signal.aborted) {
-        res.off("close", onClientClose);
+        detachCloseHandler();
         return;
       }
 
@@ -3690,7 +3710,7 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
       if (collectedReasoning.length > 0 || collectedContent.length > 0) {
         sendEvent("error", { error: `AI ошибка: ${errorMsg}`, enrichedLocalResult: enrichedLocalAnalysis });
         res.end();
-        res.off("close", onClientClose);
+        detachCloseHandler();
         return;
       }
       continue;
@@ -3704,7 +3724,7 @@ export async function analyzeResponseStream(body = {}, meta = {}, res) {
   // All models failed
   sendEvent("error", { error: "Все AI-модели недоступны.", enrichedLocalResult: enrichedLocalAnalysis });
   res.end();
-  res.off("close", onClientClose);
+  detachCloseHandler();
 }
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -3749,6 +3769,10 @@ app.delete("/api/admin-cache", async (req, res) => {
 app.post("/api/analyze", async (req, res) => {
   const response = await analyzeResponse(req.body, { ip: req.ip });
   res.status(response.status).json(response.body);
+});
+
+app.post("/api/analyze-stream", async (req, res) => {
+  await analyzeResponseStream(req.body, { ip: req.ip }, res);
 });
 
 import reportHandler from "../api/report.mjs";

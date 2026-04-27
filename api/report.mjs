@@ -27,8 +27,6 @@ export default async function handler(req, res) {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
     });
-    // Add custom header for this specific endpoint
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token");
     res.setHeader("Content-Type", "application/json");
 
     if (req.method === "OPTIONS") {
