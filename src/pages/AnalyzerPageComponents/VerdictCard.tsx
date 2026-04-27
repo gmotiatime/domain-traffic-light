@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { GlassCard } from "./GlassCard";
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles, Copy, CheckCircle2 } from "lucide-react";
 import type { AnalysisResult, AiExplanation } from "@/lib/domain-analyzer";
 
 interface VerdictCardProps {
@@ -21,6 +22,20 @@ export function VerdictCard({
   aiShiftLabel,
   isModerated
 }: VerdictCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyReport = async () => {
+    const aiText = aiExplanation ? `(${aiExplanation.model}) ` : "";
+    const text = `🚦 Доменный светофор: ${result.host}\n\nВердикт: ${result.verdictLabel}\nОценка безопасности: ${result.score}/100\n\n${aiText}${result.summary}\n\nАнализ: https://gmotia.tech/#/analyzer`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <GlassCard className="lg:col-span-7 p-8" glow={cfg.bgGlow}>
       <div className="flex flex-wrap items-center gap-2">
@@ -48,16 +63,37 @@ export function VerdictCard({
         )}
       </div>
 
-      <h2
-        className={`mt-8 text-6xl font-bold tracking-[-0.04em] sm:text-7xl md:text-8xl drop-shadow-[0_0_25px_currentColor] transition-colors duration-500 ${cfg.textClass}`}
-        style={{ filter: "brightness(1.1)" }}
-      >
-        {result.verdictLabel}
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-8">
+        <div>
+          <h2
+            className={`text-6xl font-bold tracking-[-0.04em] sm:text-7xl md:text-8xl drop-shadow-[0_0_25px_currentColor] transition-colors duration-500 ${cfg.textClass}`}
+            style={{ filter: "brightness(1.1)" }}
+          >
+            {result.verdictLabel}
+          </h2>
 
-      <p className="mt-5 max-w-xl text-base leading-relaxed text-foreground/60 sm:text-lg">
-        {result.summary}
-      </p>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-foreground/60 sm:text-lg">
+            {result.summary}
+          </p>
+        </div>
+        <button
+          onClick={handleCopyReport}
+          title="Скопировать отчет"
+          className="shrink-0 mb-1 inline-flex items-center justify-center gap-2 rounded-xl bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95 text-foreground/80 self-start sm:self-auto"
+        >
+          {copied ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span className="text-emerald-400">Скопировано</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" />
+              <span>Поделиться</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {isModerated && (
         <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-400">

@@ -146,14 +146,20 @@ function ArticleList({ articles }: { articles: Article[] }) {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold mb-6">Опубликованные статьи</h2>
       {articles.length === 0 ? (
-        <p className="text-white/50 text-center py-12 border border-white/10 rounded-2xl border-dashed">
-          Пока нет опубликованных статей.
-        </p>
+        <div className="flex flex-col items-center justify-center text-white/50 text-center py-16 border border-white/10 rounded-2xl border-dashed bg-white/[0.01]">
+          <img src="/education.svg" alt="Библиотека пуста" className="w-32 h-32 mb-6 opacity-40 mix-blend-screen" />
+          <p className="text-lg">Пока нет опубликованных статей.</p>
+          <p className="text-sm mt-2 opacity-70">Новые материалы появятся позже.</p>
+        </div>
       ) : (
         articles.map((article) => {
           const isExpanded = expandedId === article.id;
           const title = article.title?.trim() || article.topic?.trim() || "Без названия";
           const topic = article.topic?.trim() || "";
+
+          // Estimate reading time based on ~200 words per minute
+          const wordsCount = article.content ? article.content.split(/\s+/).length : 0;
+          const readTimeMinutes = Math.max(1, Math.ceil(wordsCount / 200));
           return (
             <motion.div
               key={article.id}
@@ -168,8 +174,10 @@ function ArticleList({ articles }: { articles: Article[] }) {
               >
                 <div>
                   <h3 className="text-xl font-semibold text-white/90">{title}</h3>
-                  <div className="mt-1 space-y-1 text-xs text-white/40">
+                  <div className="mt-2 flex items-center gap-4 text-xs text-white/40 font-medium">
                     <p>{new Date(article.createdAt).toLocaleDateString("ru-RU")}</p>
+                    <div className="w-1 h-1 rounded-full bg-white/20"></div>
+                    <p>~{readTimeMinutes} мин. чтения</p>
                   </div>
                 </div>
                 {isExpanded ? (
